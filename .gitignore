@@ -1,0 +1,10 @@
+__pycache__/
+*.pyc
+.venv/
+.pytest_cache/
+build/
+install/
+log/
+.robotbase/
+*.egg-info/
+.superpowers/
