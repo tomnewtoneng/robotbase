@@ -7,10 +7,18 @@ structured, size-capped data.
 """
 from __future__ import annotations
 
+import json
+import math
+import os
 import subprocess
 import time
 
+from robotbase.results import Metrics
+
 MAX_OUTPUT_LINES = 200
+
+# A near-touch LiDAR reading (metres) is treated as a collision.
+COLLISION_RANGE_M = 0.12
 
 
 class RuntimeUnavailable(RuntimeError):
@@ -64,6 +72,9 @@ class Runtime:
     def launch(self, wait_seconds: float = 45.0) -> dict:
         self.stop()  # guarantee a single clean sim instance
         time.sleep(2)
+        # Create the scratch dir host-side so it is owned by the host user, not
+        # by root inside the container (which would block host-side writes).
+        os.makedirs(os.path.join(self.project_dir, ".robotbase"), exist_ok=True)
         self._ros(
             "mkdir -p /workspace/.robotbase && "
             "ros2 launch warehouse_bot_bringup simulation.launch.py "
@@ -82,7 +93,8 @@ class Runtime:
     def stop(self) -> dict:
         self._ros(
             "pkill -f 'ros2 launch'; pkill -f 'gz sim'; pkill -f parameter_bridge; "
-            "pkill -f robot_state_publisher; pkill -f ros_gz_sim; true",
+            "pkill -f robot_state_publisher; pkill -f ros_gz_sim; "
+            "pkill -f obstacle_controller; pkill -f metrics_collector; true",
             timeout=20,
         )
         return {"running": False}
@@ -127,3 +139,80 @@ class Runtime:
         )
         sample = "\n".join(self._cap(proc.stdout))[:4000]
         return {"topic": topic, "received": bool(proc.stdout.strip()), "sample": sample}
+
+    # ---- scenario setup ------------------------------------------------
+    def set_robot_pose(self, pose) -> None:
+        z = math.sin(pose.yaw / 2.0)
+        w = math.cos(pose.yaw / 2.0)
+        req = (
+            f'name: "warehouse_bot", '
+            f"position: {{x: {pose.x}, y: {pose.y}, z: 0.1}}, "
+            f"orientation: {{x: 0, y: 0, z: {z}, w: {w}}}"
+        )
+        self._ros(
+            f"gz service -s /world/{self.world}/set_pose "
+            "--reqtype gz.msgs.Pose --reptype gz.msgs.Boolean "
+            f"--timeout 3000 --req '{req}'",
+            timeout=15,
+        )
+
+    def spawn_box(self, obstacle) -> None:
+        p, s = obstacle.pose, obstacle.size
+        sdf = (
+            '<?xml version="1.0"?><sdf version="1.9">'
+            f'<model name="{obstacle.id}"><static>true</static>'
+            f"<pose>{p.x} {p.y} {p.z} 0 0 0</pose><link name=\"link\">"
+            f'<collision name="c"><geometry><box><size>{s.x} {s.y} {s.z}</size>'
+            "</box></geometry></collision>"
+            f'<visual name="v"><geometry><box><size>{s.x} {s.y} {s.z}</size></box></geometry>'
+            "<material><ambient>0.8 0.2 0.2 1</ambient><diffuse>0.9 0.2 0.2 1</diffuse>"
+            "</material></visual></link></model></sdf>"
+        )
+        rb_dir = os.path.join(self.project_dir, ".robotbase")
+        os.makedirs(rb_dir, exist_ok=True)
+        rel = f".robotbase/obs_{obstacle.id}.sdf"
+        with open(os.path.join(self.project_dir, rel), "w") as f:
+            f.write(sdf)
+        self._ros(
+            f"ros2 run ros_gz_sim create -world {self.world} "
+            f"-name {obstacle.id} -file /workspace/{rel}",
+            timeout=20,
+        )
+
+    # ---- actions -------------------------------------------------------
+    def run_action(self, action) -> None:
+        t = action.type
+        if t == "wait":
+            time.sleep(action.duration_seconds or 1.0)
+        elif t == "wait_for_topic":
+            self._wait_for_topic(action.topic, action.timeout_seconds or 5.0)
+        elif t == "run_node":
+            self._ros(
+                f"ros2 run {action.package} {action.executable} "
+                "> /workspace/.robotbase/node.log 2>&1",
+                detached=True,
+                timeout=20,
+            )
+        # unknown/other action types are ignored (forward-compatible).
+
+    def _wait_for_topic(self, topic: str, timeout_seconds: float) -> None:
+        deadline = time.monotonic() + timeout_seconds
+        while time.monotonic() < deadline:
+            if any(t["name"] == topic for t in self.list_topics()):
+                return
+            time.sleep(1)
+
+    # ---- metrics -------------------------------------------------------
+    def collect_metrics(self, duration_seconds: float = 3.0) -> Metrics:
+        proc = self._ros(
+            f"python3 /workspace/scripts/metrics_collector.py --duration {duration_seconds}",
+            timeout=duration_seconds + 25,
+        )
+        for line in reversed(proc.stdout.splitlines()):
+            line = line.strip()
+            if line.startswith("{"):
+                try:
+                    return Metrics(**json.loads(line))
+                except (json.JSONDecodeError, TypeError):
+                    continue
+        return Metrics()
