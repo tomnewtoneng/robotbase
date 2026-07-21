@@ -1,0 +1,12 @@
+services:
+  ros:
+    build: .
+    image: warehouse-bot:latest
+    working_dir: /workspace
+    volumes:
+      - ./:/workspace
+    environment:
+      - LIBGL_ALWAYS_SOFTWARE=1
+      - OGRE_RTT_MODE=Copy
+    command: sleep infinity
+    network_mode: host
