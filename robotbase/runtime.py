@@ -51,6 +51,23 @@ class Runtime:
         )
         return self._compose("bash", "-lc", setup + cmd, detached=detached, timeout=timeout)
 
+    def _restart_container(self) -> None:
+        # Restart the whole compose service for a pristine slate. This is the
+        # only reliable way to clear a prior sim: the `gz sim` server orphans
+        # itself and survives pkill, so stale spawned entities leak between
+        # runs. The mounted build/install volume persists across the restart.
+        try:
+            subprocess.run(
+                ["docker", "compose", "restart", self.service],
+                cwd=self.project_dir,
+                capture_output=True,
+                text=True,
+                timeout=120,
+            )
+        except subprocess.TimeoutExpired as e:
+            raise RuntimeUnavailable("container restart timed out") from e
+        time.sleep(3)
+
     @staticmethod
     def _cap(text: str) -> list[str]:
         return text.splitlines()[-MAX_OUTPUT_LINES:]
@@ -70,8 +87,7 @@ class Runtime:
 
     # ---- simulation lifecycle -----------------------------------------
     def launch(self, wait_seconds: float = 45.0) -> dict:
-        self.stop()  # guarantee a single clean sim instance
-        time.sleep(2)
+        self._restart_container()  # pristine slate: no leaked sim/bridge/controller
         # Create the scratch dir host-side so it is owned by the host user, not
         # by root inside the container (which would block host-side writes).
         os.makedirs(os.path.join(self.project_dir, ".robotbase"), exist_ok=True)
@@ -100,9 +116,9 @@ class Runtime:
         return {"running": False}
 
     def reset(self) -> dict:
-        # Deterministic reset = full teardown + relaunch (design open-risk #2:
-        # prefer determinism over in-place gz-service world reset). launch()
-        # already tears down any running sim first.
+        # Deterministic reset = pristine container + relaunch (design open-risk
+        # #2: prefer determinism over in-place gz-service world reset). launch()
+        # restarts the container, so no prior state can leak in.
         return self.launch()
 
     def simulation_status(self) -> dict:
@@ -175,7 +191,8 @@ class Runtime:
             f.write(sdf)
         self._ros(
             f"ros2 run ros_gz_sim create -world {self.world} "
-            f"-name {obstacle.id} -file /workspace/{rel}",
+            f"-name {obstacle.id} -file /workspace/{rel} "
+            f"-x {p.x} -y {p.y} -z {p.z}",  # -x/-y/-z: create ignores the SDF <pose>
             timeout=20,
         )
 
@@ -187,8 +204,12 @@ class Runtime:
         elif t == "wait_for_topic":
             self._wait_for_topic(action.topic, action.timeout_seconds or 5.0)
         elif t == "run_node":
+            # use_sim_time keeps the control loop synced to simulation time, so
+            # a wall-clock timer can't overshoot when the sim runs faster than
+            # real time. Applied by the harness so any agent controller benefits.
             self._ros(
                 f"ros2 run {action.package} {action.executable} "
+                "--ros-args -p use_sim_time:=true "
                 "> /workspace/.robotbase/node.log 2>&1",
                 detached=True,
                 timeout=20,
