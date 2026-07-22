@@ -9,6 +9,7 @@ from __future__ import annotations
 import os
 import re
 import shutil
+from importlib import resources
 
 from robotbase.naming import to_snake_identifier
 
@@ -30,9 +31,8 @@ def _kebab(name: str) -> str:
 
 
 def default_template_dir() -> str:
-    """The reference `warehouse-bot` project shipped alongside this package."""
-    pkg_dir = os.path.dirname(os.path.abspath(__file__))
-    return os.path.join(os.path.dirname(pkg_dir), "warehouse-bot")
+    """The reference project template packaged inside robotbase (ships with pip)."""
+    return str(resources.files("robotbase") / "template")
 
 
 def create_project(name: str, dest_parent: str, template_dir: str) -> str:

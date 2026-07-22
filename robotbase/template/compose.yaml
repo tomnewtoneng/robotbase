@@ -1,0 +1,15 @@
+services:
+  ros:
+    build: .
+    # Shared across all Robotbase projects: the image is a generic ROS 2 + Gazebo
+    # environment (no project code baked in — the workspace is mounted), so
+    # generated projects reuse it instead of each building a multi-GB image.
+    image: robotbase-runtime:latest
+    working_dir: /workspace
+    volumes:
+      - ./:/workspace
+    environment:
+      - LIBGL_ALWAYS_SOFTWARE=1
+      - OGRE_RTT_MODE=Copy
+    command: sleep infinity
+    network_mode: host
