@@ -17,6 +17,7 @@ def evaluate(spec: AssertionSpec, metrics: Metrics) -> AssertionResult:
         lin_ok = abs(metrics.final_linear_velocity) <= (spec.linear_velocity_tolerance or 0.0)
         ang_ok = abs(metrics.final_angular_velocity) <= (spec.angular_velocity_tolerance or 0.0)
         return AssertionResult(type=t, passed=lin_ok and ang_ok,
+                               expected=spec.linear_velocity_tolerance,
                                actual=metrics.final_linear_velocity)
 
     if t == "required_topic_messages":

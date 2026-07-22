@@ -30,3 +30,8 @@ def test_required_topic_messages():
 
 def test_unknown_type_fails():
     assert evaluate(AssertionSpec(type="teleport_check"), m()).passed is False
+
+def test_robot_moved_minimum_distance():
+    spec = AssertionSpec(type="robot_moved_minimum_distance", minimum_distance_metres=1.0)
+    assert evaluate(spec, m(distance_travelled_metres=2.0)).passed is True
+    assert evaluate(spec, m(distance_travelled_metres=0.5)).passed is False

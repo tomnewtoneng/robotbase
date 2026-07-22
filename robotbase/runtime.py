@@ -17,9 +17,6 @@ from robotbase.results import Metrics
 
 MAX_OUTPUT_LINES = 200
 
-# A near-touch LiDAR reading (metres) is treated as a collision.
-COLLISION_RANGE_M = 0.12
-
 
 class RuntimeUnavailable(RuntimeError):
     """The container or ROS graph could not be reached within the timeout."""

@@ -1,13 +1,9 @@
 from __future__ import annotations
-import json, os, uuid
-from datetime import datetime, timezone
+import os, uuid
 from pydantic import BaseModel, model_validator
 
 def new_run_id() -> str:
     return "run_" + uuid.uuid4().hex[:12]
-
-def _now() -> str:
-    return datetime.now(timezone.utc).isoformat()
 
 class Metrics(BaseModel):
     collision_count: int = 0
