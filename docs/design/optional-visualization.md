@@ -70,9 +70,13 @@ A **two-tier** approach, plus a near-free artifact:
     foxglove: {enabled: false, port: 8765}
   ```
   The `--gui` flag overrides the manifest for a single run.
-- **Runtime:** `Runtime.launch(gui: str = "none")`. The scenario runner always calls it
-  with `gui="none"` (scenarios are headless and deterministic). Only the CLI/MCP
-  human-facing launch path passes a real value.
+- **Runtime:** the runtime carries a `gui` setting (default `"none"`). The scenario runner
+  never changes it, so agent-driven runs stay headless and deterministic; only human-facing
+  entry points set it.
+- **MCP (human opt-in):** the MCP server reads `ROBOTBASE_GUI` (default `none`). Set
+  `ROBOTBASE_GUI=foxglove` before launching the agent to watch *its* scenario runs live in
+  Foxglove — the agent never chooses this, so determinism/performance are unaffected unless
+  a human asks.
 
 ## Implementation sketch
 

@@ -35,6 +35,10 @@ def _scenario_paths() -> dict[str, str]:
 
 mcp = FastMCP("robotbase")
 _runtime = Runtime(PROJECT_DIR)
+# Human opt-in: set ROBOTBASE_GUI=foxglove before launching the agent to watch
+# its scenario runs live in Foxglove. Defaults to headless; the agent never
+# chooses this, so determinism/performance are unaffected unless a human asks.
+_runtime.gui = os.environ.get("ROBOTBASE_GUI", "none")
 
 
 @mcp.tool()
