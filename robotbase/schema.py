@@ -77,6 +77,7 @@ class Manifest(BaseModel):
     scenarios_dir: str
     mcp_port: int
     world_name: str = "warehouse"
+    robot_name: str = "warehouse_bot"
 
     @classmethod
     def from_yaml(cls, path: str) -> "Manifest":
@@ -92,6 +93,7 @@ class Manifest(BaseModel):
                 scenarios_dir=data["scenarios"]["directory"],
                 mcp_port=data["agent"]["mcp"]["port"],
                 world_name=data.get("simulation", {}).get("world_name", "warehouse"),
+                robot_name=data.get("robot", {}).get("name", "warehouse_bot"),
             )
         except (KeyError, TypeError, ValidationError) as e:
             raise ManifestError(f"Invalid manifest: {e}") from e

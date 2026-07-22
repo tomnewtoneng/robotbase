@@ -16,6 +16,7 @@ workspace:
 
 robot:
   template: differential-drive
+  name: warehouse_bot
   namespace: ""
 
 sensors:

@@ -32,6 +32,7 @@ class Runtime:
         self.launch_package = "warehouse_bot_bringup"
         self.launch_file = "simulation.launch.py"
         self.world = "warehouse"
+        self.robot_name = "warehouse_bot"
         manifest_path = os.path.join(project_dir, "robotbase.yaml")
         if os.path.exists(manifest_path):
             try:
@@ -39,6 +40,7 @@ class Runtime:
                 self.launch_package = m.launch_package
                 self.launch_file = m.launch_file
                 self.world = m.world_name
+                self.robot_name = m.robot_name
             except ManifestError:
                 pass  # keep defaults on a malformed manifest
 
@@ -172,7 +174,7 @@ class Runtime:
         z = math.sin(pose.yaw / 2.0)
         w = math.cos(pose.yaw / 2.0)
         req = (
-            f'name: "warehouse_bot", '
+            f'name: "{self.robot_name}", '
             f"position: {{x: {pose.x}, y: {pose.y}, z: 0.1}}, "
             f"orientation: {{x: 0, y: 0, z: {z}, w: {w}}}"
         )

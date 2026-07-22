@@ -26,11 +26,11 @@ def _scenarios(project: str) -> dict[str, str]:
 
 
 def main() -> None:
-    project = os.environ.get("ROBOTBASE_PROJECT_DIR", ".")
-    rt = Runtime(project)
-
     parser = argparse.ArgumentParser(prog="robotbase")
     sub = parser.add_subparsers(dest="cmd", required=True)
+    create = sub.add_parser("create", help="generate a new project from the template")
+    create.add_argument("name")
+    create.add_argument("--path", default=".", help="parent directory for the new project")
     sub.add_parser("build", help="build the ROS workspace")
     sub.add_parser("launch", help="start the headless simulation")
     sub.add_parser("status", help="report simulation status")
@@ -40,6 +40,20 @@ def main() -> None:
     test.add_argument("--list", action="store_true", help="list scenario names")
     args = parser.parse_args()
 
+    if args.cmd == "create":
+        from robotbase.generator import create_project, default_template_dir
+
+        dest = create_project(args.name, args.path, default_template_dir())
+        print(f"Created Robotbase project: {dest}")
+        print("\nNext steps:")
+        print(f"  cd {dest}")
+        print("  docker compose up -d")
+        print("  robotbase build")
+        print("  robotbase test --list")
+        return
+
+    project = os.environ.get("ROBOTBASE_PROJECT_DIR", ".")
+    rt = Runtime(project)
     scenarios = _scenarios(project)
 
     if args.cmd == "build":
