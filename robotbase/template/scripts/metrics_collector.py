@@ -1,23 +1,31 @@
-"""Sample /scan and /odom for a window and emit scenario metrics as JSON.
+"""Record scenario metrics across the WHOLE episode and write them to a file.
 
-Runs inside the ROS container (needs rclpy). The runtime module invokes this
-and parses the final JSON line into a robotbase Metrics model.
+Runs inside the ROS container from sim launch until it is killed. It tracks the
+minimum LiDAR range and collision flag over the entire run (not just a trailing
+window), so `no_collision` truly means "no collision occurred during the run".
+The runtime kills it at collect time and reads the JSON it leaves behind.
 """
 import argparse
 import json
 import math
+import signal
+import sys
 
 import rclpy
 from nav_msgs.msg import Odometry
 from rclpy.node import Node
 from sensor_msgs.msg import LaserScan
 
+COLLISION_RANGE_M = 0.12
+
 
 class Collector(Node):
-    def __init__(self):
+    def __init__(self, output: str):
         super().__init__("metrics_collector")
+        self.output = output
         self.min_range = math.inf
         self.scan_count = 0
+        self.collision = 0
         self.last_odom = None
         self.create_subscription(LaserScan, "/scan", self._scan, 10)
         self.create_subscription(Odometry, "/odom", self._odom, 10)
@@ -27,41 +35,63 @@ class Collector(Node):
         for r in msg.ranges:
             if msg.range_min <= r <= msg.range_max and r < self.min_range:
                 self.min_range = r
+        if self.min_range < COLLISION_RANGE_M:
+            self.collision = 1
+        if self.scan_count % 20 == 0:
+            self.write()  # periodic flush so a hard kill still leaves fresh data
 
     def _odom(self, msg: Odometry):
         self.last_odom = msg
 
+    def metrics(self) -> dict:
+        if self.last_odom is not None:
+            pos = self.last_odom.pose.pose.position
+            tw = self.last_odom.twist.twist
+            px, py, lin, ang = pos.x, pos.y, tw.linear.x, tw.angular.z
+        else:
+            px = py = lin = ang = 0.0
+        return {
+            "collision_count": self.collision,
+            "minimum_obstacle_distance_metres": None if math.isinf(self.min_range) else self.min_range,
+            "distance_travelled_metres": math.hypot(px, py),
+            "final_linear_velocity": lin,
+            "final_angular_velocity": ang,
+            "topic_message_counts": {"/scan": self.scan_count},
+        }
+
+    def write(self) -> None:
+        try:
+            with open(self.output, "w") as f:
+                json.dump(self.metrics(), f)
+        except OSError:
+            pass
+
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("--duration", type=float, default=3.0)
+    ap.add_argument("--output", required=True)
     args = ap.parse_args()
 
     rclpy.init()
-    node = Collector()
-    end = node.get_clock().now().nanoseconds + int(args.duration * 1e9)
-    while rclpy.ok() and node.get_clock().now().nanoseconds < end:
-        rclpy.spin_once(node, timeout_sec=0.2)
+    node = Collector(args.output)
+    node.write()  # reset the output file so a prior run's data can't be read
 
-    if node.last_odom is not None:
-        pos = node.last_odom.pose.pose.position
-        tw = node.last_odom.twist.twist
-        px, py, lin, ang = pos.x, pos.y, tw.linear.x, tw.angular.z
-    else:
-        px = py = lin = ang = 0.0
+    def _handle(_signum, _frame):
+        node.write()
+        raise SystemExit(0)
 
-    min_r = None if math.isinf(node.min_range) else node.min_range
-    metrics = {
-        "collision_count": 1 if (min_r is not None and min_r < 0.12) else 0,
-        "minimum_obstacle_distance_metres": min_r,
-        "distance_travelled_metres": math.hypot(px, py),
-        "final_linear_velocity": lin,
-        "final_angular_velocity": ang,
-        "topic_message_counts": {"/scan": node.scan_count},
-    }
-    print(json.dumps(metrics))
-    node.destroy_node()
-    rclpy.shutdown()
+    signal.signal(signal.SIGTERM, _handle)
+    signal.signal(signal.SIGINT, _handle)
+
+    try:
+        rclpy.spin(node)
+    except SystemExit:
+        pass
+    finally:
+        node.write()
+        node.destroy_node()
+        if rclpy.ok():
+            rclpy.shutdown()
 
 
 if __name__ == "__main__":

@@ -115,9 +115,20 @@ class Runtime:
         while time.monotonic() < deadline:
             topics = [t["name"] for t in self.list_topics()]
             if "/scan" in topics and "/odom" in topics:
+                self._start_recorder()
                 return {"running": True, "topics": sorted(topics)}
             time.sleep(2)
         return {"running": False, "topics": sorted(t["name"] for t in self.list_topics())}
+
+    def _start_recorder(self) -> None:
+        # Record metrics across the whole episode (from launch until collect).
+        # The recorder resets its output file on startup, so no stale data leaks.
+        self._ros(
+            "python3 /workspace/scripts/metrics_collector.py "
+            "--output /workspace/.robotbase/metrics.json",
+            detached=True,
+            timeout=15,
+        )
 
     def stop(self) -> dict:
         self._ros(
@@ -237,16 +248,13 @@ class Runtime:
             time.sleep(1)
 
     # ---- metrics -------------------------------------------------------
-    def collect_metrics(self, duration_seconds: float = 3.0) -> Metrics:
-        proc = self._ros(
-            f"python3 /workspace/scripts/metrics_collector.py --duration {duration_seconds}",
-            timeout=duration_seconds + 25,
-        )
-        for line in reversed(proc.stdout.splitlines()):
-            line = line.strip()
-            if line.startswith("{"):
-                try:
-                    return Metrics(**json.loads(line))
-                except (json.JSONDecodeError, TypeError):
-                    continue
-        return Metrics()
+    def collect_metrics(self, settle_seconds: float = 1.0) -> Metrics:
+        # Stop the whole-episode recorder and read the metrics it accumulated.
+        self._ros("pkill -f metrics_collector; true", timeout=15)
+        time.sleep(settle_seconds)
+        path = os.path.join(self.project_dir, ".robotbase", "metrics.json")
+        try:
+            with open(path) as f:
+                return Metrics(**json.load(f))
+        except (OSError, json.JSONDecodeError, TypeError):
+            return Metrics()
