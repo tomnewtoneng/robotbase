@@ -138,10 +138,25 @@ class Runtime:
         self._ros(
             "pkill -f 'ros2 launch'; pkill -f 'gz sim'; pkill -f parameter_bridge; "
             "pkill -f robot_state_publisher; pkill -f ros_gz_sim; "
-            "pkill -f obstacle_controller; pkill -f metrics_collector; true",
+            "pkill -f obstacle_controller; pkill -f metrics_collector; "
+            "pkill -f foxglove_bridge; true",
             timeout=20,
         )
         return {"running": False}
+
+    def down(self) -> dict:
+        # Stop and remove the compose container (frees ports; image stays cached).
+        try:
+            subprocess.run(
+                ["docker", "compose", "down"],
+                cwd=self.project_dir,
+                capture_output=True,
+                text=True,
+                timeout=90,
+            )
+        except subprocess.TimeoutExpired as e:
+            raise RuntimeUnavailable("container down timed out") from e
+        return {"running": False, "container": "down"}
 
     def reset(self) -> dict:
         # Deterministic reset = pristine container + relaunch (design open-risk

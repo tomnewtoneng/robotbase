@@ -39,6 +39,8 @@ def main() -> None:
     )
     sub.add_parser("status", help="report simulation status")
     sub.add_parser("topics", help="list ROS topics")
+    sub.add_parser("stop", help="stop the simulation (keep the container)")
+    sub.add_parser("down", help="stop and remove the container")
     test = sub.add_parser("test", help="run a scenario (or --list)")
     test.add_argument("scenario", nargs="?")
     test.add_argument("--list", action="store_true", help="list scenario names")
@@ -73,6 +75,10 @@ def main() -> None:
         print(json.dumps(rt.simulation_status(), indent=2))
     elif args.cmd == "topics":
         print("\n".join(f"{t['name']}\t{t['type']}" for t in rt.list_topics()))
+    elif args.cmd == "stop":
+        print(json.dumps(rt.stop(), indent=2))
+    elif args.cmd == "down":
+        print(json.dumps(rt.down(), indent=2))
     elif args.cmd == "test":
         if args.list or not args.scenario:
             print("\n".join(sorted(scenarios)))
