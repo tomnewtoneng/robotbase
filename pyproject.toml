@@ -1,6 +1,9 @@
 [project]
 name = "robotbase"
 version = "0.1.0"
+description = "The batteries-included developer-experience layer for agent-driven robotics."
+readme = "README.md"
+license = { text = "MIT" }
 requires-python = ">=3.12"
 dependencies = [
     "pydantic>=2.6",
