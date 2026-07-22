@@ -85,8 +85,15 @@ build → launch → run scenarios → agent fixes the controller. It ships one 
 unit tests and a code-reviewed core.
 
 Known limitations: developed on Windows/WSL2 (other hosts untested); no PyPI package or
-published image yet; scenario library is intentionally small. Roadmap and design live under
-`docs/`.
+published image yet; scenario library is intentionally small.
+
+## Docs
+
+- [VISION.md](docs/VISION.md) — what Robotbase is and where it's going, strategically.
+- [ROADMAP.md](docs/ROADMAP.md) — the build path: widening to more robots, sensors, scenarios.
+- [SCENARIO-FORMAT.md](docs/SCENARIO-FORMAT.md) — the versioned manifest/scenario/result spec.
+- [design/optional-visualization.md](docs/design/optional-visualization.md) — proposed optional GUI (headless stays default).
+- [PROOF.md](PROOF.md) — the canonical proof: an agent teaching itself obstacle avoidance.
 
 ## License
 
