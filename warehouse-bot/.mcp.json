@@ -1,0 +1,11 @@
+{
+  "mcpServers": {
+    "robotbase": {
+      "command": "/home/tom/robotbase/.venv/bin/python",
+      "args": ["-m", "robotbase.mcp_server"],
+      "env": {
+        "ROBOTBASE_PROJECT_DIR": "."
+      }
+    }
+  }
+}
