@@ -144,6 +144,23 @@ class Runtime:
         )
         return {"running": False}
 
+    def up(self) -> dict:
+        # Bring the project to a ready state: start the container (building the
+        # shared image on first run) and build the ROS workspace.
+        try:
+            proc = subprocess.run(
+                ["docker", "compose", "up", "-d"],
+                cwd=self.project_dir,
+                capture_output=True,
+                text=True,
+                timeout=1800,
+            )
+        except subprocess.TimeoutExpired as e:
+            raise RuntimeUnavailable("container startup timed out") from e
+        if proc.returncode != 0:
+            raise RuntimeUnavailable(f"docker compose up failed: {proc.stderr[-400:]}")
+        return {"container": "up", "build": self.build()}
+
     def down(self) -> dict:
         # Stop and remove the compose container (frees ports; image stays cached).
         try:
