@@ -14,6 +14,7 @@ import subprocess
 import time
 
 from robotbase.results import Metrics
+from robotbase.schema import Manifest, ManifestError
 
 MAX_OUTPUT_LINES = 200
 
@@ -23,10 +24,23 @@ class RuntimeUnavailable(RuntimeError):
 
 
 class Runtime:
-    def __init__(self, project_dir: str, service: str = "ros", world: str = "warehouse"):
+    def __init__(self, project_dir: str, service: str = "ros"):
         self.project_dir = project_dir
         self.service = service
-        self.world = world
+        # Defaults; overridden by the project's robotbase.yaml when present so
+        # the runtime is project-agnostic (the open-core seam).
+        self.launch_package = "warehouse_bot_bringup"
+        self.launch_file = "simulation.launch.py"
+        self.world = "warehouse"
+        manifest_path = os.path.join(project_dir, "robotbase.yaml")
+        if os.path.exists(manifest_path):
+            try:
+                m = Manifest.from_yaml(manifest_path)
+                self.launch_package = m.launch_package
+                self.launch_file = m.launch_file
+                self.world = m.world_name
+            except ManifestError:
+                pass  # keep defaults on a malformed manifest
 
     # ---- low-level exec ------------------------------------------------
     def _compose(self, *args: str, detached: bool = False, timeout: float = 60.0):
@@ -90,7 +104,7 @@ class Runtime:
         os.makedirs(os.path.join(self.project_dir, ".robotbase"), exist_ok=True)
         self._ros(
             "mkdir -p /workspace/.robotbase && "
-            "ros2 launch warehouse_bot_bringup simulation.launch.py "
+            f"ros2 launch {self.launch_package} {self.launch_file} "
             "> /workspace/.robotbase/launch.log 2>&1",
             detached=True,
             timeout=30,

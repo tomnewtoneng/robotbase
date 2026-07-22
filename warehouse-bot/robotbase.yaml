@@ -35,6 +35,7 @@ launch:
 
 simulation:
   world: src/warehouse_bot_description/worlds/warehouse.sdf
+  world_name: warehouse
   headless: true
   reset_service: /world/warehouse/control
 
