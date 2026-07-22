@@ -32,12 +32,20 @@ def main() -> None:
     create.add_argument("name")
     create.add_argument("--path", default=".", help="parent directory for the new project")
     sub.add_parser("build", help="build the ROS workspace")
-    sub.add_parser("launch", help="start the headless simulation")
+    launch_p = sub.add_parser("launch", help="start the simulation")
+    launch_p.add_argument(
+        "--gui", nargs="?", const="foxglove", default="none",
+        help="start a viewer (foxglove); default is headless",
+    )
     sub.add_parser("status", help="report simulation status")
     sub.add_parser("topics", help="list ROS topics")
     test = sub.add_parser("test", help="run a scenario (or --list)")
     test.add_argument("scenario", nargs="?")
     test.add_argument("--list", action="store_true", help="list scenario names")
+    test.add_argument(
+        "--gui", nargs="?", const="foxglove", default="none",
+        help="watch the scenario in a viewer (foxglove); default is headless",
+    )
     args = parser.parse_args()
 
     if args.cmd == "create":
@@ -54,6 +62,7 @@ def main() -> None:
 
     project = os.environ.get("ROBOTBASE_PROJECT_DIR", ".")
     rt = Runtime(project)
+    rt.gui = getattr(args, "gui", "none")
     scenarios = _scenarios(project)
 
     if args.cmd == "build":

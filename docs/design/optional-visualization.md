@@ -1,7 +1,8 @@
 # Design — Optional Visualization (human view of the simulation)
 
-> Status: **Proposed** (not yet implemented). This spec defines an optional, lightweight
-> way for humans to *see* the simulation, without ever making a GUI a requirement.
+> Status: **Foxglove path implemented** — `robotbase launch --gui` / `robotbase test --gui`
+> start a Foxglove bridge on `ws://localhost:8765`; headless stays the default. The native
+> Gazebo client and the screenshot artifact remain proposed.
 
 ## Goal
 

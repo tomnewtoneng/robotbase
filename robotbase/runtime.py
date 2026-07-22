@@ -27,6 +27,7 @@ class Runtime:
     def __init__(self, project_dir: str, service: str = "ros"):
         self.project_dir = project_dir
         self.service = service
+        self.gui = "none"  # "none" | "foxglove"; set by the CLI for human-facing launches
         # Defaults; overridden by the project's robotbase.yaml when present so
         # the runtime is project-agnostic (the open-core seam).
         self.launch_package = "warehouse_bot_bringup"
@@ -106,7 +107,7 @@ class Runtime:
         os.makedirs(os.path.join(self.project_dir, ".robotbase"), exist_ok=True)
         self._ros(
             "mkdir -p /workspace/.robotbase && "
-            f"ros2 launch {self.launch_package} {self.launch_file} "
+            f"ros2 launch {self.launch_package} {self.launch_file} gui:={self.gui} "
             "> /workspace/.robotbase/launch.log 2>&1",
             detached=True,
             timeout=30,
@@ -116,7 +117,10 @@ class Runtime:
             topics = [t["name"] for t in self.list_topics()]
             if "/scan" in topics and "/odom" in topics:
                 self._start_recorder()
-                return {"running": True, "topics": sorted(topics)}
+                result = {"running": True, "topics": sorted(topics)}
+                if self.gui == "foxglove":
+                    result["visualization"] = "Foxglove: connect to ws://localhost:8765"
+                return result
             time.sleep(2)
         return {"running": False, "topics": sorted(t["name"] for t in self.list_topics())}
 

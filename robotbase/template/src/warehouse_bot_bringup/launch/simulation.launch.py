@@ -3,7 +3,9 @@ import os
 import xacro
 from ament_index_python.packages import get_package_share_directory
 from launch import LaunchDescription
-from launch.actions import ExecuteProcess, TimerAction
+from launch.actions import DeclareLaunchArgument, ExecuteProcess, TimerAction
+from launch.conditions import IfCondition
+from launch.substitutions import EqualsSubstitution, LaunchConfiguration
 from launch_ros.actions import Node
 
 
@@ -53,4 +55,23 @@ def generate_launch_description():
         ],
     )
 
-    return LaunchDescription([gz, robot_state_publisher, bridge, spawn])
+    # Optional visualization: a Foxglove bridge, started only when gui:=foxglove.
+    # Headless (gui:=none) stays the default; the scenario runner never enables it.
+    foxglove = Node(
+        package="foxglove_bridge",
+        executable="foxglove_bridge",
+        output="screen",
+        parameters=[{"port": 8765, "address": "0.0.0.0"}],
+        condition=IfCondition(EqualsSubstitution(LaunchConfiguration("gui"), "foxglove")),
+    )
+
+    return LaunchDescription(
+        [
+            DeclareLaunchArgument("gui", default_value="none"),
+            gz,
+            robot_state_publisher,
+            bridge,
+            spawn,
+            foxglove,
+        ]
+    )

@@ -18,6 +18,12 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
       python3-numpy \
     && rm -rf /var/lib/apt/lists/*
 
+# Optional visualization: foxglove_bridge (only used when a project is launched
+# with --gui). Kept in its own layer so it doesn't invalidate the base install.
+RUN apt-get update && apt-get install -y --no-install-recommends \
+      ros-jazzy-foxglove-bridge \
+    && rm -rf /var/lib/apt/lists/*
+
 # Headless software rendering (Mesa llvmpipe); no host GPU assumed.
 ENV LIBGL_ALWAYS_SOFTWARE=1
 ENV OGRE_RTT_MODE=Copy
