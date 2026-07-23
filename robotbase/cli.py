@@ -91,8 +91,13 @@ def _build_parser() -> argparse.ArgumentParser:
 
     create = sub.add_parser("create", help="generate a new project")
     create.add_argument("name")
+    create.add_argument(
+        "--template", default="differential-drive",
+        help="robot template to use (see: robotbase templates)",
+    )
     create.add_argument("--path", default=".", help="parent directory for the new project")
 
+    sub.add_parser("templates", help="list available robot templates")
     sub.add_parser("up", help="start the container and build the workspace")
     sub.add_parser("stop", help="stop the simulation (keep the container)")
     sub.add_parser("down", help="stop and remove the container")
@@ -127,11 +132,22 @@ def main() -> None:
         print(HELP)
         return
 
-    if args.cmd == "create":
-        from robotbase.generator import create_project, default_template_dir
+    if args.cmd == "templates":
+        from robotbase.generator import list_templates
 
-        dest = create_project(args.name, args.path, default_template_dir())
-        print(f"Created Robotbase project: {dest}")
+        print("\n".join(list_templates()))
+        return
+
+    if args.cmd == "create":
+        from robotbase.generator import create_project, template_dir
+
+        try:
+            tdir = template_dir(args.template)
+        except ValueError as e:
+            print(e)
+            sys.exit(2)
+        dest = create_project(args.name, args.path, tdir)
+        print(f"Created Robotbase project: {dest}  (template: {args.template})")
         _hint(f"Next:  cd {dest} && robotbase up   (then: robotbase test --gui)")
         return
 

@@ -23,10 +23,10 @@ build-backend = "setuptools.build_meta"
 
 [tool.setuptools.packages.find]
 include = ["robotbase*"]
-exclude = ["robotbase.template*"]
+exclude = ["robotbase.templates*"]
 
 [tool.setuptools.package-data]
-robotbase = ["template/**/*"]
+robotbase = ["templates/**/*"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

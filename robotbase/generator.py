@@ -30,9 +30,24 @@ def _kebab(name: str) -> str:
     return kebab
 
 
-def default_template_dir() -> str:
-    """The reference project template packaged inside robotbase (ships with pip)."""
-    return str(resources.files("robotbase") / "template")
+DEFAULT_TEMPLATE = "differential-drive"
+
+
+def _templates_root():
+    return resources.files("robotbase") / "templates"
+
+
+def list_templates() -> list[str]:
+    """Names of the robot templates packaged with robotbase."""
+    return sorted(p.name for p in _templates_root().iterdir() if p.is_dir())
+
+
+def template_dir(name: str = DEFAULT_TEMPLATE) -> str:
+    """Resolve a template name to its packaged directory."""
+    path = _templates_root() / name
+    if not path.is_dir():
+        raise ValueError(f"Unknown template {name!r}. Available: {list_templates()}")
+    return str(path)
 
 
 def create_project(name: str, dest_parent: str, template_dir: str) -> str:
