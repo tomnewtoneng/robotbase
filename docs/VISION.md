@@ -60,6 +60,17 @@ The sharpened thesis, beyond "streamline robotics": Robotbase is the substrate f
    standardized behavioral eval infrastructure. "The CI/evals layer for robot behaviors" is
    a sharper story than "streamlining," and it compounds: every scenario run accumulates a
    benchmark library and behavioral data a competitor can't clone by copying the CLI.
+3. **The episode record** — every run emits a standard **MCAP episode**: the full,
+   scenario-labelled trace, not just a pass/fail flag. This is what makes runs *debuggable
+   by agents* (query the trace behind a failure instead of guessing) and *replayable by
+   humans* (MCAP is Foxglove-native). Because MCAP is the ecosystem standard — Foxglove,
+   Rerun, and robot-data platforms all read it — our episodes are portable outward, and the
+   accumulating labelled dataset is the un-clonable asset the eval/data layers are built on.
+   See `design/mcap-recording.md`.
+
+**Human DX and agent-operability, again:** the same recorded episode serves both — a human
+scrubs it in Foxglove, an agent queries a bounded slice of it around a failure. One artifact,
+two audiences, zero divergence.
 
 ## Business model — open-core
 
@@ -84,7 +95,13 @@ between "spreads the standard" (free) and "collaboration / hosted compute / priv
   runners, team dashboards, RBAC/SSO.
 - **Layer 3 — data & evals (paid, Physical-AI-native):** eval-as-a-service / benchmark
   leaderboards for policies and embodied foundation models; sim-to-data pipelines
-  (scenarios → labeled training data).
+  (scenarios → labeled training data). Built on the **MCAP episode record** (Layer 0) —
+  every scenario run already leaves a standard, labelled trace, so this layer aggregates
+  what the core produces rather than needing new instrumentation. It sits at the *inner-loop
+  / pre-deployment* end of the robot-data lifecycle; **fleet-operations data platforms**
+  (e.g. Alloy) own the *post-deployment* end. Same MCAP format, adjacent not overlapping —
+  Robotbase episodes flow *into* those tools, which is a partnership surface, not a
+  collision.
 - **Layer 4 — agent (frontier):** a robotics-specialized coding agent living on the MCP
   tools — English → scenarios → implementation → verified behavior.
 - **Layer 5 — community & education (OSS/content):** docs, an "Academy," build-in-public.
