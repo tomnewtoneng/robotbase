@@ -68,6 +68,12 @@ class Scenario(BaseModel):
         except ValidationError as e:
             raise ScenarioError(str(e)) from e
 
+class RecordingSpec(BaseModel):
+    enabled: bool = True
+    topics: list[str] = []       # [] = record all available topics
+    exclude: list[str] = []      # deny-list, e.g. [/image] to skip heavy camera frames
+    max_duration_seconds: int = 60
+
 class Manifest(BaseModel):
     project_name: str
     ros_distribution: str
@@ -78,6 +84,7 @@ class Manifest(BaseModel):
     mcp_port: int
     world_name: str = "warehouse"
     robot_name: str = "warehouse_bot"
+    recording: RecordingSpec = RecordingSpec()
 
     @classmethod
     def from_yaml(cls, path: str) -> "Manifest":
@@ -94,6 +101,7 @@ class Manifest(BaseModel):
                 mcp_port=data["agent"]["mcp"]["port"],
                 world_name=data.get("simulation", {}).get("world_name", "warehouse"),
                 robot_name=data.get("robot", {}).get("name", "warehouse_bot"),
+                recording=RecordingSpec(**(data.get("recording") or {})),
             )
         except (KeyError, TypeError, ValidationError) as e:
             raise ManifestError(f"Invalid manifest: {e}") from e

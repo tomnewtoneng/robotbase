@@ -13,8 +13,9 @@ import os
 import subprocess
 import time
 
+from robotbase.recording import record_command, record_selection
 from robotbase.results import Metrics
-from robotbase.schema import Manifest, ManifestError
+from robotbase.schema import Manifest, ManifestError, RecordingSpec
 
 MAX_OUTPUT_LINES = 200
 
@@ -34,6 +35,8 @@ class Runtime:
         self.launch_file = "simulation.launch.py"
         self.world = "warehouse"
         self.robot_name = "warehouse_bot"
+        self.recording = RecordingSpec()
+        self._recorded_topics: list[str] = []
         manifest_path = os.path.join(project_dir, "robotbase.yaml")
         if os.path.exists(manifest_path):
             try:
@@ -42,6 +45,7 @@ class Runtime:
                 self.launch_file = m.launch_file
                 self.world = m.world_name
                 self.robot_name = m.robot_name
+                self.recording = m.recording
             except ManifestError:
                 pass  # keep defaults on a malformed manifest
 
@@ -116,6 +120,8 @@ class Runtime:
         while time.monotonic() < deadline:
             topics = [t["name"] for t in self.list_topics()]
             if "/scan" in topics and "/odom" in topics:
+                if self.recording.enabled:
+                    self._start_bag(topics)
                 self._start_recorder()
                 result = {"running": True, "topics": sorted(topics)}
                 if self.gui == "foxglove":
@@ -134,8 +140,22 @@ class Runtime:
             timeout=15,
         )
 
+    def _start_bag(self, topics: list[str]) -> None:
+        # Record the whole episode to a portable MCAP file (Foxglove/Rerun/Alloy read
+        # it). Stages into .robotbase/current/episode; finalize_episode() relocates it
+        # into the run dir once the scenario runner has minted the run_id.
+        dest = "/workspace/.robotbase/current/episode"
+        selection = record_selection(self.recording.topics, self.recording.exclude, topics)
+        self._recorded_topics = topics if selection == ["-a"] else selection
+        self._ros(
+            record_command(dest, selection) + " > /workspace/.robotbase/bag.log 2>&1",
+            detached=True,
+            timeout=20,
+        )
+
     def stop(self) -> dict:
         self._ros(
+            "pkill -INT -f 'bag record'; "
             "pkill -f 'ros2 launch'; pkill -f 'gz sim'; pkill -f parameter_bridge; "
             "pkill -f robot_state_publisher; pkill -f ros_gz_sim; "
             "pkill -f obstacle_controller; pkill -f metrics_collector; "
@@ -285,7 +305,12 @@ class Runtime:
 
     # ---- metrics -------------------------------------------------------
     def collect_metrics(self, settle_seconds: float = 1.0) -> Metrics:
-        # Stop the whole-episode recorder and read the metrics it accumulated.
+        # Stop the whole-episode recorders and read the metrics accumulated. SIGINT the
+        # bag (not SIGKILL) so it writes the MCAP footer + chunk index cleanly, then give
+        # it a moment to flush before finalize_episode() moves the file.
+        if self.recording.enabled:
+            self._ros("pkill -INT -f 'bag record'; true", timeout=15)
+            time.sleep(2)
         self._ros("pkill -f metrics_collector; true", timeout=15)
         time.sleep(settle_seconds)
         path = os.path.join(self.project_dir, ".robotbase", "metrics.json")
@@ -294,3 +319,22 @@ class Runtime:
                 return Metrics(**json.load(f))
         except (OSError, json.JSONDecodeError, TypeError):
             return Metrics()
+
+    def finalize_episode(self, dest_dir: str) -> dict | None:
+        # Move the staged episode MCAP into the run directory (container-side, so the
+        # root-owned bag file never needs a host-side write). Returns recording metadata
+        # for the episode.json sidecar, or None if nothing was recorded.
+        if not self.recording.enabled:
+            return None
+        rel = os.path.relpath(dest_dir, self.project_dir).replace(os.sep, "/")
+        container_dest = f"/workspace/{rel}"
+        cmd = (
+            "shopt -s nullglob; "
+            "f=(/workspace/.robotbase/current/episode/*.mcap); "
+            'if [ ${#f[@]} -gt 0 ]; then mkdir -p ' + container_dest
+            + ' && mv "${f[0]}" ' + container_dest + '/episode.mcap && echo moved; fi'
+        )
+        proc = self._ros(cmd, timeout=30)
+        if "moved" in proc.stdout:
+            return {"mcap": "episode.mcap", "storage": "mcap", "topics": self._recorded_topics}
+        return None

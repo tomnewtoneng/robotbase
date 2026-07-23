@@ -5,10 +5,13 @@ with a fake and reused unchanged against the real Runtime.
 """
 from __future__ import annotations
 
+import json
+import os
 import time
 from datetime import datetime, timezone
 
 from robotbase.assertions import evaluate
+from robotbase.recording import episode_sidecar
 from robotbase.results import ScenarioResult, new_run_id
 from robotbase.schema import Scenario
 
@@ -39,5 +42,12 @@ def run_scenario(scenario: Scenario, runtime, run_dir: str) -> ScenarioResult:
         started_at=started_at,
         finished_at=finished_at,
     )
-    result.write(f"{run_dir}/{result.run_id}")
+    run_path = f"{run_dir}/{result.run_id}"
+    result.write(run_path)
+
+    # Finalize the recorded MCAP episode and write the self-describing sidecar next to
+    # the result, so the run dir is a portable, interpretable record of the episode.
+    episode = runtime.finalize_episode(run_path) if hasattr(runtime, "finalize_episode") else None
+    with open(os.path.join(run_path, "episode.json"), "w") as f:
+        json.dump(episode_sidecar(scenario, result, episode), f, indent=2)
     return result

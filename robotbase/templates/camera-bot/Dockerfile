@@ -24,6 +24,13 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
       ros-jazzy-foxglove-bridge \
     && rm -rf /var/lib/apt/lists/*
 
+# Episode recording: rosbag2 + the MCAP storage plugin. Every scenario run is
+# recorded to a portable .mcap (Foxglove/Rerun-openable). Own layer, and ros-base
+# does not ship rosbag2, so install it explicitly.
+RUN apt-get update && apt-get install -y --no-install-recommends \
+      ros-jazzy-rosbag2 ros-jazzy-rosbag2-storage-mcap \
+    && rm -rf /var/lib/apt/lists/*
+
 # Headless software rendering (Mesa llvmpipe); no host GPU assumed.
 ENV LIBGL_ALWAYS_SOFTWARE=1
 ENV OGRE_RTT_MODE=Copy

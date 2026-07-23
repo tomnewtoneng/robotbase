@@ -40,6 +40,11 @@ simulation:
   headless: true
   reset_service: /world/warehouse/control
 
+recording:
+  enabled: true      # record every scenario run to a portable .robotbase/runs/<id>/episode.mcap
+  topics: []         # [] = all topics; or an allow-list
+  exclude: []        # deny-list, e.g. [/image] to skip heavy camera frames
+
 scenarios:
   directory: simulation/scenarios
 

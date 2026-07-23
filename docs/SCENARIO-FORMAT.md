@@ -51,6 +51,11 @@ simulation:
   world_name: warehouse          # the SDF <world name="...">
   headless: true
 
+recording:
+  enabled: true                  # record each run to an MCAP episode (default true)
+  topics: []                     # [] = all topics; or an allow-list
+  exclude: []                    # deny-list, e.g. [/image] to skip heavy camera frames
+
 scenarios:
   directory: simulation/scenarios
 
@@ -62,7 +67,9 @@ agent:
 `runtime.ros_distribution` (must be a supported distro), `runtime.simulator` (must be a
 supported simulator), `launch.package`, `launch.file`, `scenarios.directory`,
 `agent.mcp.port`. `simulation.world_name` and `robot.name` default to `warehouse` /
-`warehouse_bot` if omitted. Validation errors must be clear and actionable.
+`warehouse_bot` if omitted. The optional `recording` block controls episode capture
+(§3.2); omitted, it defaults to recording all topics. Validation errors must be clear and
+actionable.
 
 ---
 
@@ -170,6 +177,21 @@ Metrics are measured across the **whole episode**, not a trailing window:
   not path length).
 - `final_linear_velocity` / `final_angular_velocity` — from the last odometry sample.
 - `topic_message_counts` — message counts observed per topic.
+
+### 3.2 Episode artifacts
+Alongside `result.json`, a run directory `.robotbase/runs/<run-id>/` contains the recorded
+episode (unless `recording.enabled` is false):
+
+- **`episode.mcap`** — the full topic trace for the episode in [MCAP](https://mcap.dev),
+  recorded with sim time. Openable directly in Foxglove/Rerun; the same file downstream
+  robot-data tools ingest. This is the evidence behind the assertions.
+- **`episode.json`** — a self-describing sidecar bundling `version`, the `run_id`, the
+  `scenario_spec`, the full `result`, the `recording` metadata (`mcap` filename, `storage`,
+  recorded `topics`), and a coarse `events` list (e.g. `collision`). It makes the run
+  directory interpretable on its own, independent of the tool that produced it.
+
+The episode layout is versioned with this document; richer per-event timestamps and
+self-contained MCAP attachments are planned additive extensions (they do not change v1).
 
 ---
 
