@@ -50,12 +50,15 @@ what "pass" means (e.g. `robot_reached_pose` wants a final position near a targe
   `nav_msgs/Odometry`), `/bumper` (contact sensor, `ros_gz_interfaces/Contacts` — fires on a
   real collision), `/tf`
 - **`/odom` is wheel odometry (dead-reckoned):** it drifts when the wheels slip, so a robot
-  stalled against a wall keeps reporting an advancing position even though it isn't moving.
-  If `final_x`/`distance_travelled` look impossibly large, the robot is stuck — check
-  `contact_count`/`no_contact`.
-- The robot is ~0.35 m long × 0.30 m wide (footprint radius ~0.23 m). It starts at the
-  origin facing +x. The arena is an 8 m × 8 m room (walls at x, y = ±4); overshooting into a
-  wall counts as a collision.
+  stalled against something keeps reporting an advancing position even though it isn't
+  moving. If `final_x`/`distance_travelled` look impossibly large, the robot is stuck —
+  cross-check `contact_count`/`no_contact`.
+- **For exact geometry, read the source of truth — don't assume, and don't trust numbers
+  restated in prose (this file deliberately doesn't hardcode them, so they can't drift):**
+  the robot is defined in its URDF (`src/warehouse_bot_description/urdf/warehouse_bot.urdf.xacro`)
+  and the world — arena walls, obstacles, goal markers — in
+  `src/warehouse_bot_description/worlds/warehouse.sdf`. The starting pose is whatever the
+  scenario's `setup.robot.pose` specifies.
 
 You do **not** need to rebuild after editing the controller (the workspace is symlink-
 installed); just run the scenario again. `robotbase build` is harmless if you prefer.
