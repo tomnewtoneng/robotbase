@@ -180,9 +180,18 @@ rosbag2 — install it explicitly.)
    topic around a moment; images return dimensions/encoding, never pixels). This is what
    makes the data *interpretable by agents* — the templates' `AGENTS.md` now points agents
    at it after a failure.
-3. **Self-contained + polish** — MCAP attachments/annotations topic, image thumbnailing,
-   `robotbase clean` retention, richer event derivation. Add the "Episode & Result
-   artifacts" section to `SCENARIO-FORMAT.md`.
+3. **Self-contained + polish** — PARTIAL:
+   - **Richer event derivation — DONE.** `episode events` now derives `collision` (bumper
+     ground truth, or the LiDAR heuristic as fallback), `closest_approach` (min obstacle
+     distance *with the robot's position* at that moment), and `stopped` (when the robot
+     came to rest after moving), sorted by time.
+   - **`robotbase clean` retention — DONE.** `robotbase clean [--keep N]` prunes old runs
+     (default keep 20). Enabled by finalize_episode now `chown`-ing the recorded MCAP back
+     to the run dir's (host) owner, so host tools can manage it — this also retired the
+     long-standing root-owned-mcap annoyance.
+   - **Still open:** MCAP attachments/annotations topic (embed scenario+result *inside* the
+     .mcap so it's fully self-contained), image thumbnailing for `/image` queries. Add the
+     "Episode & Result artifacts" section to `SCENARIO-FORMAT.md`.
 
 ## Open risks
 

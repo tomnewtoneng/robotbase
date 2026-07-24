@@ -397,7 +397,11 @@ class Runtime:
             "shopt -s nullglob; "
             "f=(/workspace/.robotbase/current/episode/*.mcap); "
             'if [ ${#f[@]} -gt 0 ]; then mkdir -p ' + container_dest
-            + ' && mv "${f[0]}" ' + container_dest + '/episode.mcap && echo moved; fi'
+            + ' && mv "${f[0]}" ' + container_dest + '/episode.mcap'
+            # The container writes as root; hand the file back to the run dir's owner (the
+            # host user) so host tools — Foxglove, `robotbase clean`, rm — can manage it.
+            + ' && chown "$(stat -c %u:%g ' + container_dest + ')" ' + container_dest + '/episode.mcap'
+            + ' && echo moved; fi'
         )
         proc = self._ros(cmd, timeout=30)
         if "moved" in proc.stdout:

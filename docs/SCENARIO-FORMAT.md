@@ -217,7 +217,11 @@ The episode layout is versioned with this document; self-contained MCAP attachme
 image thumbnails are planned additive extensions (they do not change v1). An implementation
 SHOULD offer bounded queries over the episode (Robotbase provides `robotbase episode
 summary | events | query`, and the matching MCP tools) so an agent can read *why* a run
-failed — a downsampled slice of a topic around a timestamp — without a raw dump.
+failed — a downsampled slice of a topic around a timestamp — without a raw dump. `episode
+events` derives a timeline from the trace: `collision` (contact/bumper ground truth, or a
+LiDAR-proximity fallback), `closest_approach` (nearest obstacle distance and the robot's
+position at that instant), and `stopped` (when the robot came to rest). Old runs are pruned
+with `robotbase clean`.
 
 ---
 

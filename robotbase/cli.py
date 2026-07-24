@@ -11,6 +11,7 @@ import argparse
 import glob
 import json
 import os
+import shutil
 import sys
 
 from robotbase.runtime import Runtime
@@ -40,6 +41,7 @@ Inspect a recorded run:
   episode events [RUN]           the derived event timeline (e.g. collision)
   episode query [RUN] --topic T [--around SEC] [--window SEC]
                                  a bounded, downsampled slice of one topic
+  clean [--keep N]               delete old recorded runs (keep the newest N, default 20)
 
 Author behaviours:
   scenario add <name>            scaffold a new scenario to work on
@@ -130,6 +132,9 @@ def _build_parser() -> argparse.ArgumentParser:
     scen.add_argument("action", choices=["add", "list"])
     scen.add_argument("name", nargs="?")
 
+    clean = sub.add_parser("clean", help="delete old recorded runs")
+    clean.add_argument("--keep", type=int, default=20, help="how many recent runs to keep")
+
     ep = sub.add_parser("episode", help="inspect a recorded run (summary | events | query)")
     ep.add_argument("action", choices=["summary", "events", "query"])
     ep.add_argument("run", nargs="?", default="latest")
@@ -208,6 +213,18 @@ def main() -> None:
         if result.get("visualization"):
             _hint("Watch: connect Foxglove to ws://localhost:8765")
         _hint("Run scenarios:  robotbase test <name>    Stop:  robotbase stop")
+
+    elif args.cmd == "clean":
+        runs_dir = os.path.join(project, ".robotbase", "runs")
+        runs = sorted((d for d in glob.glob(os.path.join(runs_dir, "*")) if os.path.isdir(d)),
+                      key=os.path.getmtime, reverse=True)
+        removed = 0
+        for d in runs[args.keep:]:
+            shutil.rmtree(d, ignore_errors=True)
+            removed += not os.path.exists(d)
+        kept = min(len(runs), args.keep)
+        print(json.dumps({"kept": kept, "removed": removed}, indent=2))
+        _hint(f"Removed {removed} old run(s); kept the {kept} most recent.")
 
     elif args.cmd == "status":
         print(json.dumps(rt.simulation_status(), indent=2))

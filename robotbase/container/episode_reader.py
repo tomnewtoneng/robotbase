@@ -14,6 +14,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import math
 import sys
 
 COLLISION_RANGE_M = 0.12
@@ -97,44 +98,72 @@ def summary(path: str) -> dict:
     }
 
 
+MOVING_SPEED = 0.05  # m/s above which the robot counts as moving
+
+
 def events(path: str) -> dict:
     from rclpy.serialization import deserialize_message
     from rosidl_runtime_py.utilities import get_message
 
     reader = _open(path)
     types = _topic_types(reader)
-    # Prefer the contact/bumper sensor (ground truth); fall back to the LiDAR-proximity
-    # heuristic when the episode has no /bumper (older robots/recordings).
+    # Prefer the contact/bumper sensor for collisions (ground truth); fall back to the
+    # LiDAR-proximity heuristic when the episode has no /bumper.
     use_contact = "/bumper" in types
     scan_cls = get_message(types["/scan"]) if "/scan" in types else None
     bumper_cls = get_message(types["/bumper"]) if use_contact else None
+    odom_cls = get_message(types["/odom"]) if "/odom" in types else None
+
     t0 = None
     found: list[dict] = []
     collided = False
+    last_pos = None                 # latest odom (x, y), to tag the closest-approach event
+    min_range = math.inf
+    min_range_t = None
+    min_range_pos = None
+    moved = False
+    stopped_t = None
+
     while reader.has_next():
         topic, data, t = reader.read_next()
         t0 = t if t0 is None else t0
-        if collided:
-            continue
-        if use_contact and topic == "/bumper":
-            msg = deserialize_message(data, bumper_cls)
-            if msg.contacts:
-                found.append({
-                    "type": "collision",
-                    "timestamp": round((t - t0) / 1e9, 3),
-                    "detail": "contact sensor triggered (ground truth)",
-                })
+        rel = round((t - t0) / 1e9, 3)
+
+        if odom_cls and topic == "/odom":
+            m = deserialize_message(data, odom_cls)
+            p = m.pose.pose.position
+            last_pos = [round(p.x, 3), round(p.y, 3)]
+            speed = abs(m.twist.twist.linear.x)
+            if speed > MOVING_SPEED:
+                moved, stopped_t = True, None
+            elif moved and stopped_t is None:
+                stopped_t = rel        # first time it comes to rest after moving
+
+        elif scan_cls and topic == "/scan":
+            m = deserialize_message(data, scan_cls)
+            valid = [r for r in m.ranges if m.range_min <= r <= m.range_max]
+            if valid and min(valid) < min_range:
+                min_range, min_range_t, min_range_pos = min(valid), rel, last_pos
+            if not use_contact and not collided and valid and min(valid) < COLLISION_RANGE_M:
+                found.append({"type": "collision", "timestamp": rel,
+                              "detail": f"minimum LiDAR range dropped below {COLLISION_RANGE_M} m"})
                 collided = True
-        elif not use_contact and topic == "/scan" and scan_cls:
-            msg = deserialize_message(data, scan_cls)
-            valid = [r for r in msg.ranges if msg.range_min <= r <= msg.range_max]
-            if valid and min(valid) < COLLISION_RANGE_M:
-                found.append({
-                    "type": "collision",
-                    "timestamp": round((t - t0) / 1e9, 3),
-                    "detail": f"minimum LiDAR range dropped below {COLLISION_RANGE_M} m",
-                })
+
+        elif use_contact and not collided and topic == "/bumper":
+            m = deserialize_message(data, bumper_cls)
+            if m.contacts:
+                found.append({"type": "collision", "timestamp": rel,
+                              "detail": "contact sensor triggered (ground truth)"})
                 collided = True
+
+    if min_range_t is not None:
+        found.append({"type": "closest_approach", "timestamp": min_range_t,
+                      "detail": f"closest obstacle distance {round(min_range, 3)} m",
+                      "position": min_range_pos})
+    if stopped_t is not None:
+        found.append({"type": "stopped", "timestamp": stopped_t,
+                      "detail": "robot came to rest after moving"})
+    found.sort(key=lambda e: e["timestamp"])
     return {"events": found}
 
 
