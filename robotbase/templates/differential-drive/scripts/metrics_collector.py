@@ -37,6 +37,8 @@ class Collector(Node):
         self.contact_count = 0
         self._last_contact_t = -math.inf
         self.last_odom = None
+        self.path_length = 0.0
+        self._prev_pos = None
         self.create_subscription(LaserScan, "/scan", self._scan, 10)
         self.create_subscription(Odometry, "/odom", self._odom, 10)
         if Contacts is not None:
@@ -55,6 +57,12 @@ class Collector(Node):
     def _odom(self, msg: Odometry):
         self.last_odom = msg
         self.odom_count += 1
+        p = msg.pose.pose.position
+        if self._prev_pos is not None:
+            step = math.hypot(p.x - self._prev_pos[0], p.y - self._prev_pos[1])
+            if step > 0.001:  # deadband: don't accumulate odom jitter while stationary
+                self.path_length += step
+        self._prev_pos = (p.x, p.y)
 
     def _bumper(self, msg):
         # The contact sensor only publishes while touching, so any message with a
@@ -82,6 +90,7 @@ class Collector(Node):
             "contact_count": self.contact_count,
             "minimum_obstacle_distance_metres": None if math.isinf(self.min_range) else self.min_range,
             "distance_travelled_metres": math.hypot(px, py),
+            "path_length_metres": self.path_length,
             "final_x": px,
             "final_y": py,
             "final_yaw": yaw,

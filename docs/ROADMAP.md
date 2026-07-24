@@ -69,8 +69,10 @@ vocabulary (in `assertions.py` + the metrics collector, and documented in
   `robot_reached_pose` assertion + `final_x/y/yaw` metrics and an off-axis `reach-goal`
   example (ships failing: the straight-driving starter misses it). Still open: `turn-around`
   and a true path-length metric.
-- **`turn-around-obstacle`:** navigate past an obstacle. Needs a "progressed past x" /
-  waypoint assertion and true path length (vs. the current displacement-from-origin).
+- **`turn-around`:** **shipped** — navigate around a blocking wall to a goal beyond it.
+  Added the `path_length_metres` metric (integrated odometry) and the `minimum_path_length`
+  assertion (proves a detour); the scenario combines `/scan` avoidance with `/odom`
+  goal-seeking and ships failing.
 - **Completion-time / timeout assertions:** enforce `scenario.timeout_seconds` (today
   advisory) and add `max_completion_time`.
 - **Manipulation assertions** (with the arm): joint reached, end-effector at pose, object
@@ -113,7 +115,7 @@ Full design in `design/optional-visualization.md`.
 - The contact sensor now provides ground truth (`no_contact`); consider deprecating the
   LiDAR `no_collision` heuristic once scenarios have migrated.
 - Enforce `scenario.timeout_seconds`.
-- Path-length vs. displacement metric.
+- ~~Path-length vs. displacement metric.~~ **done** (`path_length_metres`).
 - Verify non-Windows hosts (Linux, macOS/Docker Desktop); add CI.
 - De-duplicate `robotbase/template` vs. the `warehouse-bot` reference (generate one from the
   other, or make the reference a generated example).

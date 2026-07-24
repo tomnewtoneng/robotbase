@@ -130,7 +130,8 @@ reported, not fatal.
 | `minimum_obstacle_distance` | `minimum_metres` | closest approach to any obstacle ≥ value |
 | `robot_stopped` | `linear_velocity_tolerance`, `angular_velocity_tolerance` | final velocity within tolerances |
 | `required_topic_messages` | `topic`, `minimum_count` | at least N messages seen on the topic |
-| `robot_moved_minimum_distance` | `minimum_distance_metres` | distance travelled ≥ value |
+| `robot_moved_minimum_distance` | `minimum_distance_metres` | displacement from start ≥ value |
+| `minimum_path_length` | `minimum_metres` | total path travelled ≥ value (e.g. proves a detour) |
 | `robot_reached_pose` | `target_x`, `target_y`, `position_tolerance_metres` | final position within tolerance of the target |
 
 Unknown assertion types MUST fail (a scenario cannot silently pass on an unrecognized
@@ -179,8 +180,13 @@ Metrics are measured across the **whole episode**, not a trailing window:
   prefer `contact_count`/`no_contact` where a contact sensor is present).
 - `minimum_obstacle_distance_metres` — the closest the robot came to any obstacle over the
   run (`null` if no LiDAR data).
-- `distance_travelled_metres` — final displacement from the start pose (note: displacement,
-  not path length).
+- `distance_travelled_metres` — straight-line displacement from the start pose (not path
+  length; see `path_length_metres`).
+- `path_length_metres` — total distance travelled along the path (odometry integrated over
+  the run, with a small deadband against jitter). Exceeds `distance_travelled_metres`
+  whenever the robot turns or detours. Note: it is wheel-odometry based, so it over-reads
+  while the robot is stalled against something and its wheels slip — pair it with
+  `no_contact` when using it as evidence of a real detour.
 - `final_x` / `final_y` / `final_yaw` — the robot's final pose from the last odometry sample
   (metres / radians); the basis for `robot_reached_pose`.
 - `final_linear_velocity` / `final_angular_velocity` — from the last odometry sample.

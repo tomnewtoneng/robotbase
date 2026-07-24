@@ -37,6 +37,14 @@ def evaluate(spec: AssertionSpec, metrics: Metrics) -> AssertionResult:
         return AssertionResult(type=t, passed=ok, expected=target,
                                actual=metrics.distance_travelled_metres)
 
+    if t == "minimum_path_length":
+        # Total path travelled (integrated odometry) ≥ value — e.g. to prove the robot
+        # took a detour around an obstacle rather than a straight shot.
+        target = spec.minimum_metres or 0.0
+        ok = metrics.path_length_metres >= target
+        return AssertionResult(type=t, passed=ok, expected=target,
+                               actual=round(metrics.path_length_metres, 3))
+
     if t == "robot_reached_pose":
         import math
         dist = math.hypot(metrics.final_x - (spec.target_x or 0.0),

@@ -10,6 +10,7 @@ class Metrics(BaseModel):
     contact_count: int = 0
     minimum_obstacle_distance_metres: float | None = None
     distance_travelled_metres: float = 0.0
+    path_length_metres: float = 0.0
     final_x: float = 0.0
     final_y: float = 0.0
     final_yaw: float = 0.0

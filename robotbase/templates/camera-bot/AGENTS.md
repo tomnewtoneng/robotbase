@@ -33,6 +33,8 @@ Available scenarios (each `.yaml` in `simulation/scenarios/` defines its own set
 - `stop-before-obstacle` — a box is spawned ahead; stop before hitting it (uses `/scan`).
 - `reach-goal` — drive to a target **pose** (off to one side) and stop there; needs
   `/odom` heading control, not obstacle avoidance.
+- `turn-around` — a wall blocks the direct path to a goal beyond it; go around it
+  (combine `/scan` avoidance with `/odom` goal-seeking) without colliding.
 
 ## The controller
 
