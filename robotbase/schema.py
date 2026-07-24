@@ -49,6 +49,9 @@ class AssertionSpec(BaseModel):
     angular_velocity_tolerance: float | None = None
     topic: str | None = None
     minimum_count: int | None = None
+    target_x: float | None = None
+    target_y: float | None = None
+    position_tolerance_metres: float | None = None
 
 class Scenario(BaseModel):
     version: int

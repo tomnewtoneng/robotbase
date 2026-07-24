@@ -37,4 +37,12 @@ def evaluate(spec: AssertionSpec, metrics: Metrics) -> AssertionResult:
         return AssertionResult(type=t, passed=ok, expected=target,
                                actual=metrics.distance_travelled_metres)
 
+    if t == "robot_reached_pose":
+        import math
+        dist = math.hypot(metrics.final_x - (spec.target_x or 0.0),
+                          metrics.final_y - (spec.target_y or 0.0))
+        tol = spec.position_tolerance_metres or 0.0
+        return AssertionResult(type=t, passed=dist <= tol, expected=tol, actual=round(dist, 3),
+                               detail=f"distance to goal ({spec.target_x}, {spec.target_y})")
+
     return AssertionResult(type=t, passed=False, detail=f"Unknown assertion type: {t}")

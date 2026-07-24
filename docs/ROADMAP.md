@@ -65,8 +65,10 @@ New scenarios usually need new **assertion types** and **metrics**. Extending th
 vocabulary (in `assertions.py` + the metrics collector, and documented in
 `SCENARIO-FORMAT.md`) is itself the deepening work.
 
-- **`reach-goal`:** robot reaches a target pose. Needs a `robot_reached_pose` assertion and
-  a final-position metric (x, y, yaw) + distance-to-goal.
+- **`reach-goal`:** **shipped** — robot drives to a target pose. Added the
+  `robot_reached_pose` assertion + `final_x/y/yaw` metrics and an off-axis `reach-goal`
+  example (ships failing: the straight-driving starter misses it). Still open: `turn-around`
+  and a true path-length metric.
 - **`turn-around-obstacle`:** navigate past an obstacle. Needs a "progressed past x" /
   waypoint assertion and true path length (vs. the current displacement-from-origin).
 - **Completion-time / timeout assertions:** enforce `scenario.timeout_seconds` (today
@@ -149,8 +151,8 @@ substrate every primitive feeds, and the thing an agent needs to interpret its o
    summary | events | query` (+ MCP tools) make the data interpretable by agents.
 4. ~~**Contact sensor**~~ — **done**; ground-truth collisions via `/bumper` (`contact_count`
    + `no_contact`), on both templates.
-5. **`reach-goal` / `turn-around` + the assertion/metric vocabulary** — richer behaviors,
-   shipped as primitives + one worked example each.
+5. **`reach-goal`** — **done** (`robot_reached_pose` + `final_x/y/yaw`, off-axis example);
+   `turn-around` + a path-length metric still open.
 6. **Multi-template generator + a second robot (arm)** — prove the format generalizes.
    (The generator + a `camera-bot` template already exist; the arm is the next stretch.)
 7. **A second sim adapter** — begin owning "any sim," not just Gazebo.

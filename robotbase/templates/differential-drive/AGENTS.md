@@ -24,7 +24,8 @@ List scenarios:
 
     robotbase test --list
 
-Available scenarios: `drive-forward`, `stop-before-obstacle`.
+Available scenarios: `drive-forward`, `stop-before-obstacle`, `reach-goal` (drive to the
+goal pose defined in `simulation/scenarios/reach-goal.yaml`).
 
 ## The task
 

@@ -66,17 +66,23 @@ class Collector(Node):
         self._last_contact_t = now
 
     def metrics(self) -> dict:
+        px = py = yaw = lin = ang = 0.0
         if self.last_odom is not None:
             pos = self.last_odom.pose.pose.position
+            ori = self.last_odom.pose.pose.orientation
             tw = self.last_odom.twist.twist
             px, py, lin, ang = pos.x, pos.y, tw.linear.x, tw.angular.z
-        else:
-            px = py = lin = ang = 0.0
+            # yaw from quaternion (z-axis rotation)
+            yaw = math.atan2(2.0 * (ori.w * ori.z + ori.x * ori.y),
+                             1.0 - 2.0 * (ori.y * ori.y + ori.z * ori.z))
         return {
             "collision_count": self.collision,
             "contact_count": self.contact_count,
             "minimum_obstacle_distance_metres": None if math.isinf(self.min_range) else self.min_range,
             "distance_travelled_metres": math.hypot(px, py),
+            "final_x": px,
+            "final_y": py,
+            "final_yaw": yaw,
             "final_linear_velocity": lin,
             "final_angular_velocity": ang,
             "topic_message_counts": {"/scan": self.scan_count},

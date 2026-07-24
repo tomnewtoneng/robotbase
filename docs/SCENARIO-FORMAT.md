@@ -131,6 +131,7 @@ reported, not fatal.
 | `robot_stopped` | `linear_velocity_tolerance`, `angular_velocity_tolerance` | final velocity within tolerances |
 | `required_topic_messages` | `topic`, `minimum_count` | at least N messages seen on the topic |
 | `robot_moved_minimum_distance` | `minimum_distance_metres` | distance travelled ≥ value |
+| `robot_reached_pose` | `target_x`, `target_y`, `position_tolerance_metres` | final position within tolerance of the target |
 
 Unknown assertion types MUST fail (a scenario cannot silently pass on an unrecognized
 check).
@@ -180,6 +181,8 @@ Metrics are measured across the **whole episode**, not a trailing window:
   run (`null` if no LiDAR data).
 - `distance_travelled_metres` — final displacement from the start pose (note: displacement,
   not path length).
+- `final_x` / `final_y` / `final_yaw` — the robot's final pose from the last odometry sample
+  (metres / radians); the basis for `robot_reached_pose`.
 - `final_linear_velocity` / `final_angular_velocity` — from the last odometry sample.
 - `topic_message_counts` — message counts observed per topic.
 

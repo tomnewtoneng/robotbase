@@ -41,3 +41,11 @@ def test_robot_moved_minimum_distance():
     spec = AssertionSpec(type="robot_moved_minimum_distance", minimum_distance_metres=1.0)
     assert evaluate(spec, m(distance_travelled_metres=2.0)).passed is True
     assert evaluate(spec, m(distance_travelled_metres=0.5)).passed is False
+
+def test_robot_reached_pose():
+    spec = AssertionSpec(type="robot_reached_pose", target_x=2.0, target_y=1.5,
+                         position_tolerance_metres=0.35)
+    assert evaluate(spec, m(final_x=2.1, final_y=1.4)).passed is True   # ~0.14 m away
+    r = evaluate(spec, m(final_x=4.0, final_y=0.0))                     # straight-driver miss
+    assert r.passed is False
+    assert r.actual == 2.5   # hypot(4-2, 0-1.5)
