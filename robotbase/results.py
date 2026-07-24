@@ -1,6 +1,6 @@
 from __future__ import annotations
 import os, uuid
-from pydantic import BaseModel, model_validator
+from pydantic import BaseModel, field_serializer, model_validator
 
 def new_run_id() -> str:
     return "run_" + uuid.uuid4().hex[:12]
@@ -47,6 +47,15 @@ class ScenarioResult(BaseModel):
         object.__setattr__(self, "passed",
                            bool(self.assertions) and all(a.passed for a in self.assertions))
         return self
+
+    @field_serializer("metrics")
+    def _serialize_metrics(self, m: Metrics) -> dict:
+        # Emit only the metrics the collector actually measured, so a result reflects its
+        # robot: a mobile run shows pose/collision fields, an arm run shows joint_positions,
+        # neither is cluttered with the other's irrelevant defaults. model_fields_set is the
+        # set of fields the collector provided when Metrics was built from its JSON.
+        provided = m.model_fields_set
+        return m.model_dump(include=set(provided)) if provided else m.model_dump()
 
     def write(self, run_dir: str) -> str:
         os.makedirs(run_dir, exist_ok=True)
