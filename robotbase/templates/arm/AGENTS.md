@@ -13,6 +13,7 @@ scenarios, and read structured results.
 
 ## Commands (run from this directory)
 
+    robotbase describe              # robot facts (joints + limits, command topics), world, scenarios
     robotbase build                 # build the workspace
     robotbase test <scenario-name>  # run a scenario (exit 0 = pass, 1 = fail; JSON result)
     robotbase test --list           # list scenarios

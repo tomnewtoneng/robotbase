@@ -53,12 +53,10 @@ what "pass" means (e.g. `robot_reached_pose` wants a final position near a targe
   stalled against something keeps reporting an advancing position even though it isn't
   moving. If `final_x`/`distance_travelled` look impossibly large, the robot is stuck —
   cross-check `contact_count`/`no_contact`.
-- **For exact geometry, read the source of truth — don't assume, and don't trust numbers
-  restated in prose (this file deliberately doesn't hardcode them, so they can't drift):**
-  the robot is defined in its URDF (`src/warehouse_bot_description/urdf/warehouse_bot.urdf.xacro`)
-  and the world — arena walls, obstacles, goal markers — in
-  `src/warehouse_bot_description/worlds/warehouse.sdf`. The starting pose is whatever the
-  scenario's `setup.robot.pose` specifies.
+- **For exact geometry, run `robotbase describe`** — it reports the robot's dimensions and
+  joints, the world's models and arena bounds, and every scenario's assertions, as
+  structured data read straight from the project files (so it can't drift, unlike numbers
+  restated in prose). The starting pose is whatever the scenario's `setup.robot.pose` says.
 
 You do **not** need to rebuild after editing the controller (the workspace is symlink-
 installed); just run the scenario again. `robotbase build` is harmless if you prefer.

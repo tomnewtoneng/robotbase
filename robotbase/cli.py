@@ -28,6 +28,7 @@ Start a project:
   down                           stop and remove the container
 
 Run & inspect:
+  describe                       report the robot, world, and scenarios (structured facts)
   build                          build the ROS workspace
   launch [--gui]                 start the simulation (--gui to watch in Foxglove)
   test [NAME] [--gui] [--list]   run a scenario, or --list them
@@ -108,6 +109,7 @@ def _build_parser() -> argparse.ArgumentParser:
     create.add_argument("--path", default=".", help="parent directory for the new project")
 
     sub.add_parser("templates", help="list available robot templates")
+    sub.add_parser("describe", help="report robot/world/scenario facts")
     sub.add_parser("up", help="start the container and build the workspace")
     sub.add_parser("stop", help="stop the simulation (keep the container)")
     sub.add_parser("down", help="stop and remove the container")
@@ -167,6 +169,14 @@ def main() -> None:
         dest = create_project(args.name, args.path, tdir)
         print(f"Created Robotbase project: {dest}  (template: {args.template})")
         _hint(f"Next:  cd {dest} && robotbase up   (then: robotbase test --gui)")
+        return
+
+    if args.cmd == "describe":
+        from robotbase.describe import describe
+
+        project = os.environ.get("ROBOTBASE_PROJECT_DIR", ".")
+        print(json.dumps(describe(project), indent=2))
+        _hint("Ground truth for this project — robot geometry, world layout, and scenarios.")
         return
 
     project = os.environ.get("ROBOTBASE_PROJECT_DIR", ".")

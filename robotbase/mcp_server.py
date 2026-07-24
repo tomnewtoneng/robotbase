@@ -13,7 +13,7 @@ import os
 from mcp.server.fastmcp import FastMCP
 
 from robotbase.runtime import Runtime
-from robotbase.schema import Manifest, Scenario
+from robotbase.schema import Scenario
 from robotbase.scenario_runner import run_scenario
 
 PROJECT_DIR = os.environ.get("ROBOTBASE_PROJECT_DIR", ".")
@@ -43,23 +43,15 @@ _runtime.gui = os.environ.get("ROBOTBASE_GUI", "none")
 
 @mcp.tool()
 def project_describe() -> dict:
-    """Describe the project's ROS/simulation configuration and scenarios."""
-    info: dict = {"scenarios": sorted(_scenario_paths())}
+    """Report structured ground truth for the project: the robot (dimensions, joints,
+    sensors, control topics), the world (models + arena bounds), and the scenarios (each
+    with its description and assertions). Prefer this over reading URDF/world files."""
+    from robotbase.describe import describe
+
     try:
-        m = Manifest.from_yaml(os.path.join(PROJECT_DIR, "robotbase.yaml"))
-        info.update(
-            {
-                "project": m.project_name,
-                "ros_distribution": m.ros_distribution,
-                "simulator": m.simulator,
-                "launch_package": m.launch_package,
-                "launch_file": m.launch_file,
-                "mcp_port": m.mcp_port,
-            }
-        )
-    except Exception as e:  # manifest optional/malformed — report, don't crash
-        info["manifest_error"] = str(e)
-    return info
+        return describe(PROJECT_DIR)
+    except Exception as e:  # manifest/files optional or malformed — report, don't crash
+        return {"error": str(e)}
 
 
 @mcp.tool()
