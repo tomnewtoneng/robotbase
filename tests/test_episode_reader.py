@@ -1,6 +1,6 @@
 from types import SimpleNamespace
 
-from robotbase.container.episode_reader import compact, downsample
+from robotbase.container.episode_reader import compact, downsample, image_summary
 
 
 def test_downsample_shrinks_to_max_and_keeps_ends():
@@ -37,11 +37,29 @@ def test_compact_twist():
     assert compact("geometry_msgs/msg/Twist", msg) == {"vx": 0.5, "wz": 0.2}
 
 
-def test_compact_image_never_returns_pixels():
+def test_compact_image_returns_bounded_summary_not_pixels():
     msg = SimpleNamespace(width=320, height=240, encoding="rgb8", data=b"\x00" * 230400)
     out = compact("sensor_msgs/msg/Image", msg)
-    assert out == {"width": 320, "height": 240, "encoding": "rgb8"}
-    assert "data" not in out
+    assert out["width"] == 320 and out["height"] == 240 and out["encoding"] == "rgb8"
+    assert "data" not in out                       # never the raw frame
+    assert out["mean_rgb"] == [0, 0, 0]
+    assert len(out["thumbnail_gray"]) == 8 and len(out["thumbnail_gray"][0]) == 8
+
+
+def test_compact_image_non_rgb8_skips_thumbnail():
+    msg = SimpleNamespace(width=4, height=2, encoding="mono8", data=b"\x00" * 8)
+    out = compact("sensor_msgs/msg/Image", msg)
+    assert out == {"width": 4, "height": 2, "encoding": "mono8"}
+
+
+def test_image_summary_captures_brightness():
+    # 2x2 rgb8: top row white, bottom row black — thumbnail should reflect the split.
+    white, black = bytes([255, 255, 255]), bytes([0, 0, 0])
+    msg = SimpleNamespace(width=2, height=2, encoding="rgb8", data=white * 2 + black * 2)
+    out = image_summary(msg, n=2)
+    assert out["mean_rgb"] == [127, 127, 127]
+    assert out["thumbnail_gray"][0] == [255, 255]   # top row bright
+    assert out["thumbnail_gray"][1] == [0, 0]       # bottom row dark
 
 
 def test_compact_contacts_reports_count():

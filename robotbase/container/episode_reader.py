@@ -31,6 +31,28 @@ def downsample(items: list, max_samples: int) -> list:
     return [items[int(i * stride)] for i in range(max_samples)]
 
 
+def image_summary(msg, n: int = 8) -> dict:
+    """A tiny, bounded summary of an rgb8 image: mean RGB plus an n×n grayscale thumbnail
+    (nearest-neighbour sampled). Lets an agent reason about the frame — bright/dark regions,
+    overall colour — without ever emitting the raw pixels.
+    """
+    w, h, data = msg.width, msg.height, msg.data
+    grid = []
+    rs = gs = bs = 0
+    for gy in range(n):
+        row = []
+        for gx in range(n):
+            px = min(w - 1, gx * w // n + w // (2 * n))
+            py = min(h - 1, gy * h // n + h // (2 * n))
+            i = (py * w + px) * 3
+            r, g, b = data[i], data[i + 1], data[i + 2]
+            rs += r; gs += g; bs += b
+            row.append((r * 299 + g * 587 + b * 114) // 1000)  # luma 0-255
+        grid.append(row)
+    k = n * n
+    return {"mean_rgb": [rs // k, gs // k, bs // k], "thumbnail_gray": grid}
+
+
 def compact(type_name: str, msg) -> dict:
     """Reduce a deserialized message to a small, bounded dict.
 
@@ -52,7 +74,10 @@ def compact(type_name: str, msg) -> dict:
     if type_name.endswith("Twist"):
         return {"vx": round(msg.linear.x, 3), "wz": round(msg.angular.z, 3)}
     if type_name.endswith("Image"):
-        return {"width": msg.width, "height": msg.height, "encoding": msg.encoding}
+        out = {"width": msg.width, "height": msg.height, "encoding": msg.encoding}
+        if msg.encoding == "rgb8" and len(msg.data) >= msg.width * msg.height * 3:
+            out.update(image_summary(msg))  # bounded thumbnail, never the raw frame
+        return out
     if type_name.endswith("Contacts"):
         return {"num_contacts": len(msg.contacts)}
     # Generic fallback: a truncated dict so an unknown type is still legible but bounded.
