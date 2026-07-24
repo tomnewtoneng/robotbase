@@ -38,6 +38,8 @@ class Runtime:
         self.launch_file = "simulation.launch.py"
         self.world = "warehouse"
         self.robot_name = "warehouse_bot"
+        self.ready_topics = ["/scan", "/odom"]
+        self.fixed_base = False
         self.recording = RecordingSpec()
         self._recorded_topics: list[str] = []
         manifest_path = os.path.join(project_dir, "robotbase.yaml")
@@ -48,6 +50,8 @@ class Runtime:
                 self.launch_file = m.launch_file
                 self.world = m.world_name
                 self.robot_name = m.robot_name
+                self.ready_topics = m.ready_topics
+                self.fixed_base = m.fixed_base
                 self.recording = m.recording
             except ManifestError:
                 pass  # keep defaults on a malformed manifest
@@ -122,7 +126,7 @@ class Runtime:
         deadline = time.monotonic() + wait_seconds
         while time.monotonic() < deadline:
             topics = [t["name"] for t in self.list_topics()]
-            if "/scan" in topics and "/odom" in topics:
+            if all(t in topics for t in self.ready_topics):
                 if self.recording.enabled:
                     self._start_bag(topics)
                 self._start_recorder()
@@ -241,6 +245,8 @@ class Runtime:
 
     # ---- scenario setup ------------------------------------------------
     def set_robot_pose(self, pose) -> None:
+        if self.fixed_base:
+            return  # a fixed-base robot (e.g. an arm) has no base pose to set
         z = math.sin(pose.yaw / 2.0)
         w = math.cos(pose.yaw / 2.0)
         req = (

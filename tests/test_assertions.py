@@ -34,6 +34,15 @@ def test_required_topic_messages():
     assert evaluate(spec, m(topic_message_counts={"/scan": 20})).passed is True
     assert evaluate(spec, m(topic_message_counts={"/scan": 2})).passed is False
 
+def test_joint_positions_reached():
+    spec = AssertionSpec(type="joint_positions_reached",
+                         joint_targets={"shoulder_joint": 1.0, "elbow_joint": -1.4},
+                         joint_tolerance=0.15)
+    assert evaluate(spec, m(joint_positions={"shoulder_joint": 1.01, "elbow_joint": -1.41})).passed is True
+    r = evaluate(spec, m(joint_positions={"shoulder_joint": 0.0, "elbow_joint": 0.0}))
+    assert r.passed is False
+    assert r.actual == 1.4  # worst-joint error (elbow)
+
 def test_unknown_type_fails():
     assert evaluate(AssertionSpec(type="teleport_check"), m()).passed is False
 

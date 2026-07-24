@@ -7,10 +7,11 @@ scenarios). Priorities are a recommendation, not a contract.
 ## Status (2026-07)
 
 **Alpha, MVP proven.** The full local loop works end-to-end (create → build → launch → run
-scenarios → agent fixes the controller). A multi-template library with two robot templates
-(`differential-drive`, `camera-bot`) reachable via `robotbase create --template`, two
-scenarios, 22 unit tests, code-reviewed core, MIT-licensed, on GitHub. The scenario/manifest
-formats are a versioned open spec (`SCENARIO-FORMAT.md`).
+scenarios → agent fixes the controller). A multi-template library with three robot templates
+across two robot classes (`differential-drive`, `camera-bot`, and a fixed-base `arm`)
+reachable via `robotbase create --template`, a growing scenario/assertion/metric vocabulary,
+42 unit tests, code-reviewed core, MIT-licensed, on GitHub. The scenario/manifest formats are
+a versioned open spec (`SCENARIO-FORMAT.md`).
 
 ## Now — distribution (Track A, mostly human-driven)
 
@@ -33,9 +34,12 @@ Widening means more entries in it.
   templates registered and discoverable via `robotbase templates`.
 - **Second mobile base:** Ackermann/car-like steering — exercises a different drive plugin
   and control model while reusing the world/sensor stack.
-- **Manipulator (arm):** a fixed robotic arm — introduces joint-space control, a very
-  different scenario family (reach a joint configuration, reach a cartesian pose, later
-  grasp), and validates that the format generalizes beyond mobile robots.
+- **Manipulator (arm):** **shipped** — a fixed-base 2-DOF arm (`arm` template) with
+  per-joint position control, the `joint_positions` metric + `joint_positions_reached`
+  assertion, and a `reach-configuration` scenario. Proves the format generalizes beyond
+  mobile robots: it drove two runtime generalizations — `ready_topics` (wait for
+  `/joint_states`, not `/scan`+`/odom`) and `fixed_base` (no base pose to set). Still open:
+  cartesian end-effector reach (needs FK/IK) and grasping.
 - **Later:** quadruped, quadrotor/drone. Higher complexity; good "wow" once the framework
   is proven across mobile + arm.
 
@@ -155,7 +159,8 @@ substrate every primitive feeds, and the thing an agent needs to interpret its o
    + `no_contact`), on both templates.
 5. **`reach-goal`** — **done** (`robot_reached_pose` + `final_x/y/yaw`, off-axis example);
    `turn-around` + a path-length metric still open.
-6. **Multi-template generator + a second robot (arm)** — prove the format generalizes.
-   (The generator + a `camera-bot` template already exist; the arm is the next stretch.)
+6. ~~**Multi-template generator + a second robot (arm)**~~ — **done**; the generator plus
+   three templates (`differential-drive`, `camera-bot`, `arm`) prove the format generalizes
+   across robot classes.
 7. **A second sim adapter** — begin owning "any sim," not just Gazebo.
 8. **Ecosystem layers** — when adoption justifies them.

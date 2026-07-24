@@ -68,9 +68,12 @@ agent:
 `runtime.ros_distribution` (must be a supported distro), `runtime.simulator` (must be a
 supported simulator), `launch.package`, `launch.file`, `scenarios.directory`,
 `agent.mcp.port`. `simulation.world_name` and `robot.name` default to `warehouse` /
-`warehouse_bot` if omitted. The optional `recording` block controls episode capture
-(§3.2); omitted, it defaults to recording all topics. Validation errors must be clear and
-actionable.
+`warehouse_bot` if omitted. Two optional `runtime` fields adapt the harness to non-mobile
+robots: `ready_topics` (list — the topics whose presence means the sim is up; default
+`[/scan, /odom]`, e.g. `[/joint_states]` for an arm) and `fixed_base` (bool — skip setting a
+base pose for a bolted-down robot like an arm). The optional `recording` block controls
+episode capture (§3.2); omitted, it defaults to recording all topics. Validation errors must
+be clear and actionable.
 
 ---
 
@@ -133,6 +136,7 @@ reported, not fatal.
 | `robot_moved_minimum_distance` | `minimum_distance_metres` | displacement from start ≥ value |
 | `minimum_path_length` | `minimum_metres` | total path travelled ≥ value (e.g. proves a detour) |
 | `robot_reached_pose` | `target_x`, `target_y`, `position_tolerance_metres` | final position within tolerance of the target |
+| `joint_positions_reached` | `joint_targets` (map name→radians), `joint_tolerance` | every named joint within tolerance of its target (arm) |
 
 Unknown assertion types MUST fail (a scenario cannot silently pass on an unrecognized
 check).
@@ -190,7 +194,12 @@ Metrics are measured across the **whole episode**, not a trailing window:
 - `final_x` / `final_y` / `final_yaw` — the robot's final pose from the last odometry sample
   (metres / radians); the basis for `robot_reached_pose`.
 - `final_linear_velocity` / `final_angular_velocity` — from the last odometry sample.
+- `joint_positions` — final angle (radians) of each actuated joint, keyed by name (arm
+  robots); the basis for `joint_positions_reached`.
 - `topic_message_counts` — message counts observed per topic.
+
+Which metrics a run reports depends on the robot: mobile robots populate the pose/collision
+fields, an arm populates `joint_positions`. Unused fields keep their defaults.
 
 ### 3.2 Episode artifacts
 Alongside `result.json`, a run directory `.robotbase/runs/<run-id>/` contains the recorded

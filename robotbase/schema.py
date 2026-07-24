@@ -52,6 +52,8 @@ class AssertionSpec(BaseModel):
     target_x: float | None = None
     target_y: float | None = None
     position_tolerance_metres: float | None = None
+    joint_targets: dict[str, float] | None = None
+    joint_tolerance: float | None = None
 
 class Scenario(BaseModel):
     version: int
@@ -87,6 +89,8 @@ class Manifest(BaseModel):
     mcp_port: int
     world_name: str = "warehouse"
     robot_name: str = "warehouse_bot"
+    ready_topics: list[str] = ["/scan", "/odom"]
+    fixed_base: bool = False
     recording: RecordingSpec = RecordingSpec()
 
     @classmethod
@@ -104,6 +108,8 @@ class Manifest(BaseModel):
                 mcp_port=data["agent"]["mcp"]["port"],
                 world_name=data.get("simulation", {}).get("world_name", "warehouse"),
                 robot_name=data.get("robot", {}).get("name", "warehouse_bot"),
+                ready_topics=data.get("runtime", {}).get("ready_topics", ["/scan", "/odom"]),
+                fixed_base=data.get("runtime", {}).get("fixed_base", False),
                 recording=RecordingSpec(**(data.get("recording") or {})),
             )
         except (KeyError, TypeError, ValidationError) as e:

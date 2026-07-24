@@ -1,0 +1,19 @@
+version: 1
+name: reach-configuration
+description: >
+  Move the 2-joint arm to the target joint configuration: shoulder = 1.0 rad,
+  elbow = -1.4 rad. The starter controller never commands the joints, so the arm droops
+  under gravity and fails. Command the joints (publish targets on /shoulder_cmd and
+  /elbow_cmd) and keep publishing so the position controllers hold the pose until the
+  joints settle within tolerance.
+timeout_seconds: 30
+setup:
+  reset_world: true
+actions:
+  - {type: wait_for_topic, topic: /joint_states, timeout_seconds: 5}
+  - {type: run_node, package: warehouse_bot, executable: obstacle_controller}
+  - {type: wait, duration_seconds: 10}
+assertions:
+  - type: joint_positions_reached
+    joint_targets: {shoulder_joint: 1.0, elbow_joint: -1.4}
+    joint_tolerance: 0.15

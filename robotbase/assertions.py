@@ -53,4 +53,14 @@ def evaluate(spec: AssertionSpec, metrics: Metrics) -> AssertionResult:
         return AssertionResult(type=t, passed=dist <= tol, expected=tol, actual=round(dist, 3),
                                detail=f"distance to goal ({spec.target_x}, {spec.target_y})")
 
+    if t == "joint_positions_reached":
+        # Every named joint must be within tolerance of its target angle (radians).
+        targets = spec.joint_targets or {}
+        tol = spec.joint_tolerance or 0.0
+        errors = {j: abs(metrics.joint_positions.get(j, 1e9) - tgt) for j, tgt in targets.items()}
+        worst = max(errors.values(), default=0.0)
+        worst_joint = max(errors, key=errors.get) if errors else ""
+        return AssertionResult(type=t, passed=worst <= tol, expected=tol, actual=round(worst, 3),
+                               detail=f"largest joint error at {worst_joint!r}")
+
     return AssertionResult(type=t, passed=False, detail=f"Unknown assertion type: {t}")
