@@ -13,7 +13,7 @@ setup:
       size: {x: 0.5, y: 1.0, z: 0.5}
 actions:
   - {type: wait_for_topic, topic: /scan, timeout_seconds: 5}
-  - {type: run_node, package: warehouse_bot, executable: obstacle_controller}
+  - {type: run_node, package: warehouse_bot, executable: controller}
   - {type: wait, duration_seconds: 10}
 assertions:
   - {type: no_contact}          # ground-truth collision check (bumper sensor)

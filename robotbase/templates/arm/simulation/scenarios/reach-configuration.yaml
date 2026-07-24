@@ -11,7 +11,7 @@ setup:
   reset_world: true
 actions:
   - {type: wait_for_topic, topic: /joint_states, timeout_seconds: 5}
-  - {type: run_node, package: warehouse_bot, executable: obstacle_controller}
+  - {type: run_node, package: warehouse_bot, executable: controller}
   - {type: wait, duration_seconds: 10}
 assertions:
   - type: joint_positions_reached

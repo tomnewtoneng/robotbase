@@ -18,7 +18,7 @@ setup(
     license="MIT",
     entry_points={
         "console_scripts": [
-            "obstacle_controller = warehouse_bot.obstacle_controller:main",
+            "controller = warehouse_bot.controller:main",
         ],
     },
 )

@@ -165,7 +165,7 @@ class Runtime:
             "pkill -INT -f 'bag record'; "
             "pkill -f 'ros2 launch'; pkill -f 'gz sim'; pkill -f parameter_bridge; "
             "pkill -f robot_state_publisher; pkill -f ros_gz_sim; "
-            "pkill -f obstacle_controller; pkill -f metrics_collector; "
+            "pkill -f controller; pkill -f metrics_collector; "
             "pkill -f foxglove_bridge; true",
             timeout=20,
         )

@@ -3,7 +3,7 @@ from rclpy.node import Node
 from std_msgs.msg import Float64
 
 
-class ObstacleController(Node):
+class Controller(Node):
     """Starter arm controller — deliberately incomplete.
 
     It sets up the joint-command publishers but never commands a target, so the arm just
@@ -11,11 +11,10 @@ class ObstacleController(Node):
     the target configuration the scenario asks for: publish the target angle (radians) on
     `/shoulder_cmd` and `/elbow_cmd` (`std_msgs/Float64`), and keep publishing so the
     position controllers hold the pose. Read the current angles on `/joint_states`.
-    (The node keeps its name for compatibility with the scenarios that launch it.)
     """
 
     def __init__(self):
-        super().__init__("obstacle_controller")
+        super().__init__("controller")
         self.shoulder = self.create_publisher(Float64, "/shoulder_cmd", 10)
         self.elbow = self.create_publisher(Float64, "/elbow_cmd", 10)
         self.create_timer(0.1, self._tick)
@@ -27,7 +26,7 @@ class ObstacleController(Node):
 
 def main():
     rclpy.init()
-    node = ObstacleController()
+    node = Controller()
     rclpy.spin(node)
     node.destroy_node()
     rclpy.shutdown()

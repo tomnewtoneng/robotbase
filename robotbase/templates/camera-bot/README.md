@@ -21,7 +21,7 @@ The starter controller drives forward and **ignores the LiDAR**, so
 
 ## Where things are
 
-- `src/warehouse_bot/warehouse_bot/obstacle_controller.py` — **the controller you edit.**
+- `src/warehouse_bot/warehouse_bot/controller.py` — **the controller you edit.**
 - `src/warehouse_bot_description/` — the robot (URDF) and the Gazebo world.
 - `simulation/scenarios/` — the behaviours to satisfy (YAML). Add one with
   `robotbase scenario add <name>`.

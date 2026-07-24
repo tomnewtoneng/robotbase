@@ -4,18 +4,17 @@ from geometry_msgs.msg import Twist
 from sensor_msgs.msg import LaserScan
 
 
-class ObstacleController(Node):
+class Controller(Node):
     """Starter controller — deliberately incomplete.
 
     It just drives straight forward and ignores every sensor, so it fails all
     scenarios. Rewrite it to satisfy the scenario you're solving: read that
     scenario's assertions, then use the robot's sensors (`/scan` for obstacles,
-    `/odom` for pose) to command `/cmd_vel` accordingly. (The node keeps its
-    name for compatibility with the scenarios that launch it.)
+    `/odom` for pose) to command `/cmd_vel` accordingly.
     """
 
     def __init__(self):
-        super().__init__("obstacle_controller")
+        super().__init__("controller")
         self.pub = self.create_publisher(Twist, "/cmd_vel", 10)
         # Starter subscribes to /scan but ignores it; add /odom etc. as your task needs.
         self.create_subscription(LaserScan, "/scan", self._on_scan, 10)
@@ -33,7 +32,7 @@ class ObstacleController(Node):
 
 def main():
     rclpy.init()
-    node = ObstacleController()
+    node = Controller()
     rclpy.spin(node)
     node.destroy_node()
     rclpy.shutdown()

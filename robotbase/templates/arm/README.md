@@ -21,7 +21,7 @@ just holds/droops). Your job is to make it pass.
 
 ## Where things are
 
-- `src/warehouse_bot/warehouse_bot/obstacle_controller.py` — **the controller you edit.**
+- `src/warehouse_bot/warehouse_bot/controller.py` — **the controller you edit.**
 - `src/warehouse_bot_description/` — the arm (URDF) and the world.
 - `simulation/scenarios/` — the tasks to satisfy (YAML).
 - `robotbase.yaml` — the project manifest (`fixed_base: true`, `ready_topics: [/joint_states]`).

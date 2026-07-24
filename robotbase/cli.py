@@ -85,7 +85,7 @@ setup:
 
 actions:
   - {{type: wait_for_topic, topic: /scan, timeout_seconds: 5}}
-  - {{type: run_node, package: {package}, executable: obstacle_controller}}
+  - {{type: run_node, package: {package}, executable: controller}}
   - {{type: wait, duration_seconds: 10}}
 
 assertions:
@@ -250,7 +250,7 @@ def main() -> None:
         else:
             _hint(
                 f"{args.scenario} failed — inspect the assertions above, edit "
-                f"src/{controller_pkg}/{controller_pkg}/obstacle_controller.py, and rerun. "
+                f"src/{controller_pkg}/{controller_pkg}/controller.py, and rerun. "
                 "Or let a coding agent fix it."
             )
         sys.exit(0 if result.passed else 1)

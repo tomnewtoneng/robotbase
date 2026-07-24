@@ -11,7 +11,7 @@ setup:
   robot: {pose: {x: 0.0, y: 0.0, yaw: 0.0}}
 actions:
   - {type: wait_for_topic, topic: /odom, timeout_seconds: 5}
-  - {type: run_node, package: warehouse_bot, executable: obstacle_controller}
+  - {type: run_node, package: warehouse_bot, executable: controller}
   - {type: wait, duration_seconds: 15}
 assertions:
   - {type: robot_reached_pose, target_x: 2.0, target_y: 1.5, position_tolerance_metres: 0.35}

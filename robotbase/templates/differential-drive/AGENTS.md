@@ -38,7 +38,7 @@ Available scenarios (each `.yaml` in `simulation/scenarios/` defines its own set
 
 ## The controller
 
-The starter controller (`src/warehouse_bot/warehouse_bot/obstacle_controller.py`) just
+The starter controller (`src/warehouse_bot/warehouse_bot/controller.py`) just
 drives straight forward and ignores its sensors — so it fails every scenario. Rewrite it to
 satisfy whichever scenario you're working on. Read that scenario's assertions to see exactly
 what "pass" means (e.g. `robot_reached_pose` wants a final position near a target;

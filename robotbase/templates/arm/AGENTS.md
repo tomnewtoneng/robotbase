@@ -31,7 +31,7 @@ Command each joint's target angle (radians) by publishing `std_msgs/Float64` on
 Read the current angles from `/joint_states` (`sensor_msgs/JointState`; the `name`/`position`
 arrays include `shoulder_joint` and `elbow_joint`).
 
-The starter controller (`src/warehouse_bot/warehouse_bot/obstacle_controller.py`) sets up the
+The starter controller (`src/warehouse_bot/warehouse_bot/controller.py`) sets up the
 publishers but **never commands a target**, so the arm droops/holds the wrong pose and fails.
 Rewrite it to command the target configuration the scenario asks for, and keep publishing so
 the controllers hold the pose while it settles.
