@@ -7,9 +7,12 @@ structured, size-capped data.
 """
 from __future__ import annotations
 
+import glob
+import importlib.resources as ir
 import json
 import math
 import os
+import shlex
 import subprocess
 import time
 
@@ -319,6 +322,62 @@ class Runtime:
                 return Metrics(**json.load(f))
         except (OSError, json.JSONDecodeError, TypeError):
             return Metrics()
+
+    # ---- episode inspection (Phase 2) ---------------------------------
+    def _ensure_reader(self) -> str:
+        # Materialize the packaged container-side reader into the mounted .robotbase so
+        # it can run in the container (which has rosbag2/message types but not the
+        # robotbase package). Returns its container path.
+        src = ir.files("robotbase.container").joinpath("episode_reader.py").read_text()
+        dst_dir = os.path.join(self.project_dir, ".robotbase")
+        os.makedirs(dst_dir, exist_ok=True)
+        with open(os.path.join(dst_dir, "episode_reader.py"), "w") as f:
+            f.write(src)
+        return "/workspace/.robotbase/episode_reader.py"
+
+    def _resolve_run(self, run_id: str | None) -> tuple[str, str]:
+        runs = os.path.join(self.project_dir, ".robotbase", "runs")
+        if run_id in (None, "latest", ""):
+            candidates = [d for d in glob.glob(os.path.join(runs, "*")) if os.path.isdir(d)]
+            if not candidates:
+                raise RuntimeUnavailable("no recorded runs found")
+            run_id = os.path.basename(max(candidates, key=os.path.getmtime))
+        mcap = os.path.join(runs, run_id, "episode.mcap")
+        if not os.path.exists(mcap):
+            raise RuntimeUnavailable(f"no episode.mcap for run {run_id!r}")
+        return run_id, f"/workspace/.robotbase/runs/{run_id}/episode.mcap"
+
+    def _run_reader(self, args: list[str]) -> dict:
+        reader = self._ensure_reader()
+        cmd = "python3 " + reader + " " + " ".join(shlex.quote(a) for a in args)
+        proc = self._ros(cmd, timeout=90)
+        try:
+            return json.loads(proc.stdout)
+        except json.JSONDecodeError as e:
+            detail = (proc.stderr or proc.stdout)[-400:]
+            raise RuntimeUnavailable(f"episode reader failed: {detail}") from e
+
+    def episode_summary(self, run_id: str | None = None) -> dict:
+        rid, mcap = self._resolve_run(run_id)
+        return {"run_id": rid, **self._run_reader(["summary", mcap])}
+
+    def episode_events(self, run_id: str | None = None) -> dict:
+        rid, mcap = self._resolve_run(run_id)
+        return {"run_id": rid, **self._run_reader(["events", mcap])}
+
+    def episode_query(
+        self,
+        run_id: str | None,
+        topic: str,
+        around: float | None = None,
+        window: float = 2.0,
+        max_samples: int = 40,
+    ) -> dict:
+        rid, mcap = self._resolve_run(run_id)
+        args = ["query", mcap, "--topic", topic, "--window", str(window), "--max", str(max_samples)]
+        if around is not None:
+            args += ["--around", str(around)]
+        return {"run_id": rid, **self._run_reader(args)}
 
     def finalize_episode(self, dest_dir: str) -> dict | None:
         # Move the staged episode MCAP into the run directory (container-side, so the

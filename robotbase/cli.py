@@ -34,6 +34,12 @@ Run & inspect:
   status                         report simulation status
   topics                         list active ROS topics
 
+Inspect a recorded run:
+  episode summary [RUN]          topics, message counts, duration (RUN defaults to latest)
+  episode events [RUN]           the derived event timeline (e.g. collision)
+  episode query [RUN] --topic T [--around SEC] [--window SEC]
+                                 a bounded, downsampled slice of one topic
+
 Author behaviours:
   scenario add <name>            scaffold a new scenario to work on
   scenario list                  list scenarios
@@ -117,6 +123,14 @@ def _build_parser() -> argparse.ArgumentParser:
     scen = sub.add_parser("scenario", help="author scenarios (add | list)")
     scen.add_argument("action", choices=["add", "list"])
     scen.add_argument("name", nargs="?")
+
+    ep = sub.add_parser("episode", help="inspect a recorded run (summary | events | query)")
+    ep.add_argument("action", choices=["summary", "events", "query"])
+    ep.add_argument("run", nargs="?", default="latest")
+    ep.add_argument("--topic")
+    ep.add_argument("--around", type=float)
+    ep.add_argument("--window", type=float, default=2.0)
+    ep.add_argument("--max", type=int, default=40, dest="max_samples")
 
     return parser
 
@@ -236,6 +250,24 @@ def main() -> None:
                 "Or let a coding agent fix it."
             )
         sys.exit(0 if result.passed else 1)
+
+    elif args.cmd == "episode":
+        if args.action == "summary":
+            out = rt.episode_summary(args.run)
+            print(json.dumps(out, indent=2))
+            _hint(
+                "See what happened:  robotbase episode events    "
+                "Zoom in:  robotbase episode query --topic /scan --around <t>"
+            )
+        elif args.action == "events":
+            print(json.dumps(rt.episode_events(args.run), indent=2))
+            _hint("Zoom in on a moment:  robotbase episode query --topic /scan --around <t>")
+        else:
+            if not args.topic:
+                print("usage: robotbase episode query [RUN] --topic T [--around SEC] [--window SEC]")
+                sys.exit(2)
+            out = rt.episode_query(args.run, args.topic, args.around, args.window, args.max_samples)
+            print(json.dumps(out, indent=2))
 
 
 if __name__ == "__main__":

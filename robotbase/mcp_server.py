@@ -131,6 +131,38 @@ def scenario_get_result(run_id: str) -> dict:
         return json.load(f)
 
 
+@mcp.tool()
+def episode_summary(run_id: str = "latest") -> dict:
+    """Summarize a recorded run's MCAP episode: topics, message counts, duration.
+
+    run_id defaults to the most recent run. Use this first to see what was recorded.
+    """
+    return _runtime.episode_summary(run_id)
+
+
+@mcp.tool()
+def episode_events(run_id: str = "latest") -> dict:
+    """Return the derived event timeline for a run (e.g. collision) with timestamps."""
+    return _runtime.episode_events(run_id)
+
+
+@mcp.tool()
+def episode_query(
+    topic: str,
+    run_id: str = "latest",
+    around: float | None = None,
+    window: float = 2.0,
+    max_samples: int = 40,
+) -> dict:
+    """Return a bounded, downsampled slice of one topic from a recorded episode.
+
+    Give a time of interest via `around` (seconds from episode start, e.g. a collision
+    timestamp from episode_events) and a `window` to inspect around it — the way to see
+    what a topic (e.g. /scan, /cmd_vel, /odom) was doing at a moment, without a raw dump.
+    """
+    return _runtime.episode_query(run_id, topic, around, window, max_samples)
+
+
 def main():
     mcp.run()
 

@@ -141,9 +141,10 @@ substrate every primitive feeds, and the thing an agent needs to interpret its o
 ## Recommended sequence
 
 1. **Distribution** (publish + content) — get it out of the vacuum.
-2. **Episode record — Phase 1 (MCAP recording)** — make runs debuggable and replayable;
-   the substrate for everything else. See `design/mcap-recording.md`.
-3. **Episode record — Phase 2 (query verbs)** — make the data interpretable by agents.
+2. ~~**Episode record — Phase 1 (MCAP recording)**~~ — **done**; every run is recorded to a
+   portable `episode.mcap` + sidecar. See `design/mcap-recording.md`.
+3. ~~**Episode record — Phase 2 (query verbs)**~~ — **done**; `robotbase episode
+   summary | events | query` (+ MCP tools) make the data interpretable by agents.
 4. **Contact sensor** — true collisions; a cheap correctness + credibility win (a primitive).
 5. **`reach-goal` / `turn-around` + the assertion/metric vocabulary** — richer behaviors,
    shipped as primitives + one worked example each.

@@ -170,11 +170,16 @@ rosbag2 — install it explicitly.)
 
 ## Phasing
 
-1. **Substrate** — record `episode.mcap` + sidecar `episode.json` per scenario run;
-   Dockerfile dep; manifest `recording` block; finalize into the run dir. Foxglove can open
-   the file immediately. *(This is the piece to build next.)*
-2. **Interrogation** — `episode summary` / `events` / `query` CLI + MCP tools, container-side
-   reader, bounded output. This is what makes the data *interpretable by agents*.
+1. **Substrate — DONE.** Record `episode.mcap` + sidecar `episode.json` per scenario run;
+   Dockerfile dep; manifest `recording` block; finalize into the run dir. Foxglove opens
+   the file directly.
+2. **Interrogation — DONE.** `episode summary` / `events` / `query` as CLI + MCP tools, via
+   a container-side reader (`robotbase/container/episode_reader.py`) with bounded,
+   downsampled output. `summary` (topics/counts/duration), `events` (derived timeline, e.g.
+   collision timestamp), `query --topic --around --window` (a size-capped slice of one
+   topic around a moment; images return dimensions/encoding, never pixels). This is what
+   makes the data *interpretable by agents* — the templates' `AGENTS.md` now points agents
+   at it after a failure.
 3. **Self-contained + polish** — MCAP attachments/annotations topic, image thumbnailing,
    `robotbase clean` retention, richer event derivation. Add the "Episode & Result
    artifacts" section to `SCENARIO-FORMAT.md`.
