@@ -32,6 +32,7 @@ class Collector(Node):
         self.output = output
         self.min_range = math.inf
         self.scan_count = 0
+        self.odom_count = 0
         self.collision = 0
         self.contact_count = 0
         self._last_contact_t = -math.inf
@@ -53,6 +54,7 @@ class Collector(Node):
 
     def _odom(self, msg: Odometry):
         self.last_odom = msg
+        self.odom_count += 1
 
     def _bumper(self, msg):
         # The contact sensor only publishes while touching, so any message with a
@@ -85,7 +87,7 @@ class Collector(Node):
             "final_yaw": yaw,
             "final_linear_velocity": lin,
             "final_angular_velocity": ang,
-            "topic_message_counts": {"/scan": self.scan_count},
+            "topic_message_counts": {"/scan": self.scan_count, "/odom": self.odom_count},
         }
 
     def write(self) -> None:

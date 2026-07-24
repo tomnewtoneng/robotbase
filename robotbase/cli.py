@@ -52,6 +52,10 @@ Docs: https://github.com/tomnewtoneng/robotbase
 
 def _hint(msg: str) -> None:
     """Print a human next-step hint to stderr (keeps stdout clean for scripts)."""
+    # Flush stdout first so the JSON result is fully written before the hint — otherwise,
+    # when a caller merges the streams (2>&1), the unbuffered stderr hint can interleave
+    # into the block-buffered stdout JSON and corrupt it.
+    sys.stdout.flush()
     print(f"\n→ {msg}", file=sys.stderr)
 
 

@@ -5,26 +5,29 @@ from sensor_msgs.msg import LaserScan
 
 
 class ObstacleController(Node):
-    """Starter controller.
+    """Starter controller — deliberately incomplete.
 
-    The initial implementation drives forward without reacting correctly to
-    obstacles. The coding agent is expected to improve it so the robot stops
-    before hitting the box.
+    It just drives straight forward and ignores every sensor, so it fails all
+    scenarios. Rewrite it to satisfy the scenario you're solving: read that
+    scenario's assertions, then use the robot's sensors (`/scan` for obstacles,
+    `/odom` for pose) to command `/cmd_vel` accordingly. (The node keeps its
+    name for compatibility with the scenarios that launch it.)
     """
 
     def __init__(self):
         super().__init__("obstacle_controller")
         self.pub = self.create_publisher(Twist, "/cmd_vel", 10)
+        # Starter subscribes to /scan but ignores it; add /odom etc. as your task needs.
         self.create_subscription(LaserScan, "/scan", self._on_scan, 10)
         self.create_timer(0.1, self._tick)
 
     def _on_scan(self, msg: LaserScan):
-        # Starter bug: LiDAR data is ignored entirely.
+        # Starter bug: sensor data is ignored entirely.
         pass
 
     def _tick(self):
         cmd = Twist()
-        cmd.linear.x = 0.3  # always forward, never stops
+        cmd.linear.x = 0.3  # always forward, never reacts
         self.pub.publish(cmd)
 
 

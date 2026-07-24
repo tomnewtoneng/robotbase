@@ -1,8 +1,10 @@
 # Robotbase Project Instructions
 
 This is a ROS 2 Jazzy + Gazebo Harmonic **differential-drive robot** project that runs
-headless in Docker. Your job is to implement the obstacle controller so the robot stops
-before hitting obstacles — verified by simulation scenarios, not by inspection.
+headless in Docker. Your job is to implement the robot's controller so that the
+**simulation scenario you're asked to satisfy passes** — verified by running it, not by
+inspection. Different scenarios require different behaviour, so **read the scenario's YAML
+first** to learn what it checks; don't assume the task from the file names.
 
 ## Environment
 
@@ -24,21 +26,29 @@ List scenarios:
 
     robotbase test --list
 
-Available scenarios: `drive-forward`, `stop-before-obstacle`, `reach-goal` (drive to the
-goal pose defined in `simulation/scenarios/reach-goal.yaml`).
+Available scenarios (each `.yaml` in `simulation/scenarios/` defines its own setup and
+**assertions** — read the one you're solving):
 
-## The task
+- `drive-forward` — drive forward a minimum distance.
+- `stop-before-obstacle` — a box is spawned ahead; stop before hitting it (uses `/scan`).
+- `reach-goal` — drive to a target **pose** (off to one side) and stop there; needs
+  `/odom` heading control, not obstacle avoidance.
 
-The starter controller drives forward and **ignores the LiDAR**. Improve it so the robot
-detects the obstacle ahead and stops before colliding, while still driving forward when
-the path is clear.
+## The controller
+
+The starter controller (`src/warehouse_bot/warehouse_bot/obstacle_controller.py`) just
+drives straight forward and ignores its sensors — so it fails every scenario. Rewrite it to
+satisfy whichever scenario you're working on. Read that scenario's assertions to see exactly
+what "pass" means (e.g. `robot_reached_pose` wants a final position near a target;
+`no_contact`/`no_collision` want you not to hit anything).
 
 - Robot type: differential drive
-- Key topics: `/cmd_vel` (velocity command, `geometry_msgs/Twist`), `/scan` (LiDAR,
-  `sensor_msgs/LaserScan`), `/bumper` (contact sensor, `ros_gz_interfaces/Contacts` — fires
-  on a real collision), `/image` (camera, `sensor_msgs/Image`), `/odom` (odometry), `/tf`
-- Main controller file:
-  `src/warehouse_bot/warehouse_bot/obstacle_controller.py`
+- Key topics: `/cmd_vel` (velocity command out, `geometry_msgs/Twist`: `linear.x` forward,
+  `angular.z` turn), `/scan` (LiDAR, `sensor_msgs/LaserScan`), `/image` (forward camera,
+  `sensor_msgs/Image`), `/odom` (pose + velocity, `nav_msgs/Odometry`), `/bumper` (contact
+  sensor, `ros_gz_interfaces/Contacts` — fires on a real collision), `/tf`
+- The robot starts at the origin facing +x. The arena has bounding walls — overshooting
+  into one counts as a collision.
 
 You do **not** need to rebuild after editing the controller (the workspace is symlink-
 installed); just run the scenario again. `robotbase build` is harmless if you prefer.
@@ -52,11 +62,13 @@ understand *why* a run failed instead of guessing:
     robotbase episode events             # derived timeline, e.g. the collision timestamp
     robotbase episode query --topic /scan --around <t> --window 1.5
     robotbase episode query --topic /cmd_vel --around <t>
-    robotbase episode query --topic /image --around <t>   # camera: dimensions/encoding
 
 Typical loop: `episode events` gives you the collision time `t`; then `episode query`
-`/scan` and `/cmd_vel` around `t` shows what the sensors saw and what your controller
-commanded at that moment. Output is bounded and downsampled — safe to read directly.
+`/scan` and `/cmd_vel` around `t` shows what the LiDAR saw and what your controller
+commanded at that moment. For a navigation task, `episode query --topic /odom` shows the
+robot's trajectory over the run. Output is bounded and downsampled — safe to read directly.
+(Tip: `episode summary`/`events`/`query` print JSON on stdout and a next-step hint on
+stderr — capture stdout alone, e.g. `2>/dev/null`, if you're parsing the JSON.)
 
 ## Requirements — do not claim success without evidence
 
@@ -68,5 +80,6 @@ Before claiming a behaviour works:
 4. Continue iterating on the controller until the scenario passes.
 5. Report the final scenario metrics.
 
-Do **not** claim success based only on reading source code. Both `drive-forward` and
-`stop-before-obstacle` must pass. Prefer Robotbase tools over raw ROS/Gazebo commands.
+Do **not** claim success based only on reading source code — the scenario you're solving
+must actually pass (exit 0, all assertions true). Prefer Robotbase tools over raw ROS/Gazebo
+commands.

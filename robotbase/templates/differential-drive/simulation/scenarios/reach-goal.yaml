@@ -2,7 +2,9 @@ version: 1
 name: reach-goal
 description: >
   Drive the robot to the goal marker at (2, 1.5). The goal is off-axis, so the robot
-  must turn toward it and stop near it — driving straight forward will miss.
+  must turn toward it and stop near it — driving straight forward will miss. There is no
+  obstacle between start and goal, but the arena has bounding walls: overshooting into one
+  registers as a contact, so the controller must stop at the goal, not just pass through it.
 timeout_seconds: 30
 setup:
   reset_world: true
