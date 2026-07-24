@@ -17,6 +17,7 @@ class Metrics(BaseModel):
     final_linear_velocity: float = 0.0
     final_angular_velocity: float = 0.0
     joint_positions: dict[str, float] = {}
+    joint_velocities: dict[str, float] = {}
     topic_message_counts: dict[str, int] = {}
 
 class AssertionResult(BaseModel):

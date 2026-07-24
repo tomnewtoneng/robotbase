@@ -18,21 +18,27 @@ class Collector(Node):
         super().__init__("metrics_collector")
         self.output = output
         self.joint_positions: dict[str, float] = {}
+        self.joint_velocities: dict[str, float] = {}
         self.js_count = 0
         self.create_subscription(JointState, "/joint_states", self._joints, 10)
 
     def _joints(self, msg: JointState):
         self.js_count += 1
-        for name, pos in zip(msg.name, msg.position):
+        vels = msg.velocity if len(msg.velocity) == len(msg.name) else [0.0] * len(msg.name)
+        for name, pos, vel in zip(msg.name, msg.position, vels):
             if name == "fixed_base":
                 continue  # not an actuated joint
             self.joint_positions[name] = pos
+            self.joint_velocities[name] = vel
         if self.js_count % 20 == 0:
             self.write()  # periodic flush so a hard kill still leaves fresh data
 
     def metrics(self) -> dict:
+        # joint_velocities are the latest sample: near-zero means the arm has settled and
+        # is holding the pose (rather than being caught mid-motion at capture time).
         return {
             "joint_positions": {k: round(v, 4) for k, v in self.joint_positions.items()},
+            "joint_velocities": {k: round(v, 4) for k, v in self.joint_velocities.items()},
             "topic_message_counts": {"/joint_states": self.js_count},
         }
 

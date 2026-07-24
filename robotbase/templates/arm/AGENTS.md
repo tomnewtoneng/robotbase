@@ -52,9 +52,11 @@ e.g. `2>/dev/null`, when parsing.)
 ## Requirements — do not claim success without evidence
 
 1. Run the scenario with `robotbase test <name>` and read the `joint_positions` metric and
-   the assertion result.
-2. Iterate on the controller until the scenario passes (exit 0, all assertions true).
-3. Report the final metrics.
+   the assertion result (its `detail` lists the per-joint error).
+2. Check `joint_velocities` — near-zero means the arm has settled and is holding the pose;
+   large values mean it was still moving at capture (command it earlier / hold longer).
+3. Iterate on the controller until the scenario passes (exit 0, all assertions true).
+4. Report the final metrics.
 
 Do **not** claim success based only on reading source code — the scenario must actually pass.
 Prefer Robotbase tools over raw ROS/Gazebo commands.
