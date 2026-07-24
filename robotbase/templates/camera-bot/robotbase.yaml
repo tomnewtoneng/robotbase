@@ -26,6 +26,9 @@ sensors:
   camera:
     enabled: true
     topic: /image
+  contact:
+    enabled: true
+    topic: /bumper
   odometry:
     enabled: true
     topic: /odom

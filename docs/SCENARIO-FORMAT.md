@@ -37,6 +37,7 @@ robot:
 
 sensors:
   lidar:    {enabled: true, topic: /scan}
+  contact:  {enabled: true, topic: /bumper}
   odometry: {enabled: true, topic: /odom}
 
 control:
@@ -124,7 +125,8 @@ reported, not fatal.
 ### 2.3 `assertions`
 | type | fields | passes when |
 |---|---|---|
-| `no_collision` | — | no collision occurred during the run |
+| `no_contact` | — | the contact/bumper sensor never fired (ground-truth collision) |
+| `no_collision` | — | no collision occurred during the run (LiDAR-proximity heuristic) |
 | `minimum_obstacle_distance` | `minimum_metres` | closest approach to any obstacle ≥ value |
 | `robot_stopped` | `linear_velocity_tolerance`, `angular_velocity_tolerance` | final velocity within tolerances |
 | `required_topic_messages` | `topic`, `minimum_count` | at least N messages seen on the topic |
@@ -169,8 +171,11 @@ Every run produces a JSON-compatible result, written to
 
 ### 3.1 Metric semantics (normative)
 Metrics are measured across the **whole episode**, not a trailing window:
+- `contact_count` — number of distinct contact episodes reported by the robot's
+  contact/bumper sensor (ground-truth collisions from physics; `0` if it never fired).
 - `collision_count` — `1` if the minimum LiDAR range dropped below the collision threshold
-  (0.12 m) at any point during the run, else `0`.
+  (0.12 m) at any point during the run, else `0` (a proximity heuristic, not ground truth —
+  prefer `contact_count`/`no_contact` where a contact sensor is present).
 - `minimum_obstacle_distance_metres` — the closest the robot came to any obstacle over the
   run (`null` if no LiDAR data).
 - `distance_travelled_metres` — final displacement from the start pose (note: displacement,

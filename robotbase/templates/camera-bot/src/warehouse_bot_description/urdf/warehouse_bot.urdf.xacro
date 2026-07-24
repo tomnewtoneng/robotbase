@@ -145,4 +145,20 @@
     </sensor>
   </gazebo>
 
+  <!-- Contact/bumper sensor: ground-truth collision detection. Physics-based (no
+       rendering), so it runs headless like the rest. It references only the base body
+       collision — the box body is held off the floor by the wheels, so the sensor fires
+       when the robot hits something, not on the ground. The collision name is what
+       sdformat produces after lumping the base_link fixed joint into base_footprint.
+       The Contact *system* that feeds this sensor is declared at world scope (warehouse.sdf). -->
+  <gazebo reference="base_footprint">
+    <sensor name="bumper" type="contact">
+      <always_on>true</always_on>
+      <update_rate>30</update_rate>
+      <contact>
+        <collision>base_footprint_fixed_joint_lump__base_link_collision</collision>
+      </contact>
+    </sensor>
+  </gazebo>
+
 </robot>

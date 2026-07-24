@@ -15,6 +15,13 @@ def generate_launch_description():
     urdf_xacro = os.path.join(desc_share, "urdf", "warehouse_bot.urdf.xacro")
     robot_desc = xacro.process_file(urdf_xacro).toxml()
 
+    # The contact sensor ignores its SDF <topic> and always publishes on the scoped
+    # gz path built from world/model/link/sensor names; bridge that and remap it to
+    # the clean /bumper. (model name must match the spawn -name below.)
+    contact_gz_topic = (
+        "/world/warehouse/model/warehouse_bot/link/base_footprint/sensor/bumper/contact"
+    )
+
     # Headless Gazebo server: -s server-only, -r run unpaused, software rendering.
     gz = ExecuteProcess(
         cmd=["gz", "sim", "-s", "-r", "--headless-rendering", world],
@@ -50,10 +57,12 @@ def generate_launch_description():
             "/odom@nav_msgs/msg/Odometry[gz.msgs.Odometry",
             "/scan@sensor_msgs/msg/LaserScan[gz.msgs.LaserScan",
             "/image@sensor_msgs/msg/Image[gz.msgs.Image",
+            contact_gz_topic + "@ros_gz_interfaces/msg/Contacts[gz.msgs.Contacts",
             "/tf@tf2_msgs/msg/TFMessage[gz.msgs.Pose_V",
             "/joint_states@sensor_msgs/msg/JointState[gz.msgs.Model",
             "/clock@rosgraph_msgs/msg/Clock[gz.msgs.Clock",
         ],
+        remappings=[(contact_gz_topic, "/bumper")],
     )
 
     # Optional visualization: a Foxglove bridge, started only when gui:=foxglove.

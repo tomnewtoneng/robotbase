@@ -42,3 +42,8 @@ def test_compact_image_never_returns_pixels():
     out = compact("sensor_msgs/msg/Image", msg)
     assert out == {"width": 320, "height": 240, "encoding": "rgb8"}
     assert "data" not in out
+
+
+def test_compact_contacts_reports_count():
+    msg = SimpleNamespace(contacts=[SimpleNamespace(), SimpleNamespace()])
+    assert compact("ros_gz_interfaces/msg/Contacts", msg) == {"num_contacts": 2}

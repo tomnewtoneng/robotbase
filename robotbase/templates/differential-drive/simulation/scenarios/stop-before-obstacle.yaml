@@ -16,7 +16,8 @@ actions:
   - {type: run_node, package: warehouse_bot, executable: obstacle_controller}
   - {type: wait, duration_seconds: 10}
 assertions:
-  - {type: no_collision}
+  - {type: no_contact}          # ground-truth collision check (bumper sensor)
+  - {type: no_collision}        # LiDAR-proximity heuristic
   - {type: minimum_obstacle_distance, minimum_metres: 0.25}
   - {type: robot_stopped, linear_velocity_tolerance: 0.05, angular_velocity_tolerance: 0.05}
   - {type: required_topic_messages, topic: /scan, minimum_count: 5}

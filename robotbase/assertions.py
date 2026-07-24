@@ -8,6 +8,12 @@ def evaluate(spec: AssertionSpec, metrics: Metrics) -> AssertionResult:
         ok = metrics.collision_count == 0
         return AssertionResult(type=t, passed=ok, expected=0, actual=metrics.collision_count)
 
+    if t == "no_contact":
+        # Ground-truth collision check from the contact/bumper sensor (physics), as
+        # opposed to no_collision's LiDAR-proximity heuristic.
+        ok = metrics.contact_count == 0
+        return AssertionResult(type=t, passed=ok, expected=0, actual=metrics.contact_count)
+
     if t == "minimum_obstacle_distance":
         actual = metrics.minimum_obstacle_distance_metres
         ok = actual is not None and actual >= (spec.minimum_metres or 0.0)

@@ -23,6 +23,9 @@ sensors:
   lidar:
     enabled: true
     topic: /scan
+  contact:
+    enabled: true
+    topic: /bumper
   odometry:
     enabled: true
     topic: /odom

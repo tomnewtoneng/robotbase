@@ -7,6 +7,7 @@ def new_run_id() -> str:
 
 class Metrics(BaseModel):
     collision_count: int = 0
+    contact_count: int = 0
     minimum_obstacle_distance_metres: float | None = None
     distance_travelled_metres: float = 0.0
     final_linear_velocity: float = 0.0

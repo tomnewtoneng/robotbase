@@ -52,6 +52,8 @@ def compact(type_name: str, msg) -> dict:
         return {"vx": round(msg.linear.x, 3), "wz": round(msg.angular.z, 3)}
     if type_name.endswith("Image"):
         return {"width": msg.width, "height": msg.height, "encoding": msg.encoding}
+    if type_name.endswith("Contacts"):
+        return {"num_contacts": len(msg.contacts)}
     # Generic fallback: a truncated dict so an unknown type is still legible but bounded.
     from rosidl_runtime_py import message_to_ordereddict
 
@@ -101,14 +103,29 @@ def events(path: str) -> dict:
 
     reader = _open(path)
     types = _topic_types(reader)
+    # Prefer the contact/bumper sensor (ground truth); fall back to the LiDAR-proximity
+    # heuristic when the episode has no /bumper (older robots/recordings).
+    use_contact = "/bumper" in types
     scan_cls = get_message(types["/scan"]) if "/scan" in types else None
+    bumper_cls = get_message(types["/bumper"]) if use_contact else None
     t0 = None
     found: list[dict] = []
     collided = False
     while reader.has_next():
         topic, data, t = reader.read_next()
         t0 = t if t0 is None else t0
-        if topic == "/scan" and scan_cls and not collided:
+        if collided:
+            continue
+        if use_contact and topic == "/bumper":
+            msg = deserialize_message(data, bumper_cls)
+            if msg.contacts:
+                found.append({
+                    "type": "collision",
+                    "timestamp": round((t - t0) / 1e9, 3),
+                    "detail": "contact sensor triggered (ground truth)",
+                })
+                collided = True
+        elif not use_contact and topic == "/scan" and scan_cls:
             msg = deserialize_message(data, scan_cls)
             valid = [r for r in msg.ranges if msg.range_min <= r <= msg.range_max]
             if valid and min(valid) < COLLISION_RANGE_M:

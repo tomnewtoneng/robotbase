@@ -47,9 +47,10 @@ controller + scenarios + a manifest `robot.template`/`robot.name`.
 Today: LiDAR (`/scan`) + odometry (`/odom`). Each new sensor = a URDF sensor + Gazebo
 plugin + ROS–gz bridge + a manifest `sensors` entry, and often new metrics/assertions.
 
-- **Contact / bumper sensor (high priority):** gives *true* collision detection and retires
-  the current min-LiDAR-range heuristic — a correctness win, and it enables an honest
-  `collision` assertion independent of range.
+- **Contact / bumper sensor:** **shipped** in both templates — a physics contact sensor on
+  the base body, bridged to `/bumper`, giving *ground-truth* collisions (`contact_count`
+  metric + `no_contact` assertion) independent of the LiDAR-proximity heuristic. Episode
+  `events` now use it as the authoritative collision signal.
 - **Camera (RGB):** publishes `/image` — **shipped** in the `camera-bot` template (320×240
   rgb8 @ 10 Hz, verified rendering headless under llvmpipe). Still open: **vision-based
   scenarios/assertions** (the agent processing images, not just ranges) and image-aware
@@ -107,7 +108,8 @@ Full design in `design/optional-visualization.md`.
 
 ## Hardening backlog
 
-- Retire the LiDAR collision heuristic in favor of the contact sensor (see above).
+- The contact sensor now provides ground truth (`no_contact`); consider deprecating the
+  LiDAR `no_collision` heuristic once scenarios have migrated.
 - Enforce `scenario.timeout_seconds`.
 - Path-length vs. displacement metric.
 - Verify non-Windows hosts (Linux, macOS/Docker Desktop); add CI.
@@ -145,7 +147,8 @@ substrate every primitive feeds, and the thing an agent needs to interpret its o
    portable `episode.mcap` + sidecar. See `design/mcap-recording.md`.
 3. ~~**Episode record — Phase 2 (query verbs)**~~ — **done**; `robotbase episode
    summary | events | query` (+ MCP tools) make the data interpretable by agents.
-4. **Contact sensor** — true collisions; a cheap correctness + credibility win (a primitive).
+4. ~~**Contact sensor**~~ — **done**; ground-truth collisions via `/bumper` (`contact_count`
+   + `no_contact`), on both templates.
 5. **`reach-goal` / `turn-around` + the assertion/metric vocabulary** — richer behaviors,
    shipped as primitives + one worked example each.
 6. **Multi-template generator + a second robot (arm)** — prove the format generalizes.

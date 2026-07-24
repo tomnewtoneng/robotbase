@@ -12,6 +12,12 @@ def test_no_collision_pass_and_fail():
     assert evaluate(AssertionSpec(type="no_collision"), m()).passed is True
     assert evaluate(AssertionSpec(type="no_collision"), m(collision_count=1)).passed is False
 
+def test_no_contact_pass_and_fail():
+    assert evaluate(AssertionSpec(type="no_contact"), m(contact_count=0)).passed is True
+    r = evaluate(AssertionSpec(type="no_contact"), m(contact_count=1))
+    assert r.passed is False
+    assert r.actual == 1
+
 def test_min_distance():
     spec = AssertionSpec(type="minimum_obstacle_distance", minimum_metres=0.25)
     assert evaluate(spec, m(minimum_obstacle_distance_metres=0.4)).passed is True

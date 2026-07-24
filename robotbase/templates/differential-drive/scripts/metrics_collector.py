@@ -10,13 +10,20 @@ import json
 import math
 import signal
 import sys
+import time
 
 import rclpy
 from nav_msgs.msg import Odometry
 from rclpy.node import Node
 from sensor_msgs.msg import LaserScan
 
+try:
+    from ros_gz_interfaces.msg import Contacts
+except ImportError:  # contact sensor optional; degrade gracefully
+    Contacts = None
+
 COLLISION_RANGE_M = 0.12
+CONTACT_GAP_S = 0.5  # contact messages closer than this belong to the same episode
 
 
 class Collector(Node):
@@ -26,9 +33,13 @@ class Collector(Node):
         self.min_range = math.inf
         self.scan_count = 0
         self.collision = 0
+        self.contact_count = 0
+        self._last_contact_t = -math.inf
         self.last_odom = None
         self.create_subscription(LaserScan, "/scan", self._scan, 10)
         self.create_subscription(Odometry, "/odom", self._odom, 10)
+        if Contacts is not None:
+            self.create_subscription(Contacts, "/bumper", self._bumper, 10)
 
     def _scan(self, msg: LaserScan):
         self.scan_count += 1
@@ -43,6 +54,17 @@ class Collector(Node):
     def _odom(self, msg: Odometry):
         self.last_odom = msg
 
+    def _bumper(self, msg):
+        # The contact sensor only publishes while touching, so any message with a
+        # non-empty contacts array is a live collision. Count distinct episodes by
+        # treating a gap since the last contact as a new one.
+        if not msg.contacts:
+            return
+        now = time.monotonic()
+        if now - self._last_contact_t > CONTACT_GAP_S:
+            self.contact_count += 1
+        self._last_contact_t = now
+
     def metrics(self) -> dict:
         if self.last_odom is not None:
             pos = self.last_odom.pose.pose.position
@@ -52,6 +74,7 @@ class Collector(Node):
             px = py = lin = ang = 0.0
         return {
             "collision_count": self.collision,
+            "contact_count": self.contact_count,
             "minimum_obstacle_distance_metres": None if math.isinf(self.min_range) else self.min_range,
             "distance_travelled_metres": math.hypot(px, py),
             "final_linear_velocity": lin,

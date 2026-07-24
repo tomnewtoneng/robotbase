@@ -34,7 +34,8 @@ the path is clear.
 
 - Robot type: differential drive
 - Key topics: `/cmd_vel` (velocity command, `geometry_msgs/Twist`), `/scan` (LiDAR,
-  `sensor_msgs/LaserScan`), `/odom` (odometry), `/tf`
+  `sensor_msgs/LaserScan`), `/bumper` (contact sensor, `ros_gz_interfaces/Contacts` — fires
+  on a real collision), `/odom` (odometry), `/tf`
 - Main controller file:
   `src/warehouse_bot/warehouse_bot/obstacle_controller.py`
 
