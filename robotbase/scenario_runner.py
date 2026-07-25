@@ -11,7 +11,7 @@ import time
 from datetime import datetime, timezone
 
 from robotbase.assertions import evaluate
-from robotbase.recording import episode_sidecar
+from robotbase.recording import embed_attachment, episode_sidecar
 from robotbase.results import ScenarioResult, new_run_id
 from robotbase.schema import Scenario
 
@@ -48,6 +48,12 @@ def run_scenario(scenario: Scenario, runtime, run_dir: str) -> ScenarioResult:
     # Finalize the recorded MCAP episode and write the self-describing sidecar next to
     # the result, so the run dir is a portable, interpretable record of the episode.
     episode = runtime.finalize_episode(run_path) if hasattr(runtime, "finalize_episode") else None
+    sidecar = episode_sidecar(scenario, result, episode)
+    sidecar_json = json.dumps(sidecar, indent=2)
     with open(os.path.join(run_path, "episode.json"), "w") as f:
-        json.dump(episode_sidecar(scenario, result, episode), f, indent=2)
+        f.write(sidecar_json)
+    # Also embed the sidecar inside the .mcap so the single file is self-describing.
+    if episode and episode.get("mcap"):
+        embed_attachment(os.path.join(run_path, episode["mcap"]), "episode.json",
+                         sidecar_json.encode())
     return result

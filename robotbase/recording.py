@@ -6,6 +6,8 @@ I/O so it is unit-testable with plain data; the Runtime and scenario runner call
 """
 from __future__ import annotations
 
+import os
+import time
 from typing import Any
 
 
@@ -37,6 +39,47 @@ def record_command(dest: str, selection: list[str]) -> str:
         f'rm -rf {dest} && mkdir -p "$(dirname {dest})" && '
         f"ros2 bag record --storage mcap --use-sim-time -o {dest} {sel}"
     )
+
+
+def embed_attachment(mcap_path: str, name: str, data: bytes,
+                     media_type: str = "application/json") -> bool:
+    """Rewrite an MCAP file with an attachment added, so the single file is self-describing
+    (carries its scenario + result, not just the topic trace). Runs host-side — the recorded
+    file is host-owned — and faithfully copies every schema/channel/message. Returns True on
+    success, False (leaving the original untouched) if mcap is unavailable or anything fails.
+    """
+    try:
+        from mcap.reader import make_reader
+        from mcap.writer import Writer
+    except ImportError:
+        return False
+    tmp = mcap_path + ".tmp"
+    try:
+        with open(mcap_path, "rb") as inp, open(tmp, "wb") as out:
+            reader = make_reader(inp)
+            writer = Writer(out)
+            writer.start()
+            schemas: dict[int, int] = {}
+            channels: dict[int, int] = {}
+            for schema, channel, message in reader.iter_messages():
+                if schema is not None and schema.id not in schemas:
+                    schemas[schema.id] = writer.register_schema(
+                        schema.name, schema.encoding, schema.data)
+                if channel.id not in channels:
+                    channels[channel.id] = writer.register_channel(
+                        channel.topic, channel.message_encoding,
+                        schemas.get(channel.schema_id, 0), channel.metadata)
+                writer.add_message(channels[channel.id], message.log_time, message.data,
+                                   message.publish_time, message.sequence)
+            now = time.time_ns()
+            writer.add_attachment(now, now, name, media_type, data)
+            writer.finish()
+        os.replace(tmp, mcap_path)
+        return True
+    except Exception:
+        if os.path.exists(tmp):
+            os.remove(tmp)
+        return False
 
 
 def episode_events(result: Any) -> list[dict]:

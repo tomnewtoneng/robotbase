@@ -213,8 +213,9 @@ episode (unless `recording.enabled` is false):
   recorded `topics`), and a coarse `events` list (e.g. `collision`). It makes the run
   directory interpretable on its own, independent of the tool that produced it.
 
-The episode layout is versioned with this document; self-contained MCAP attachments and
-image thumbnails are planned additive extensions (they do not change v1). An implementation
+`episode.json` is also embedded into `episode.mcap` as an attachment (media type
+`application/json`), so the single file is self-describing when shipped on its own. The
+layout is versioned with this document. An implementation
 SHOULD offer bounded queries over the episode (Robotbase provides `robotbase episode
 summary | events | query`, and the matching MCP tools) so an agent can read *why* a run
 failed — a downsampled slice of a topic around a timestamp — without a raw dump. `episode

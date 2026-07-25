@@ -9,6 +9,7 @@ dependencies = [
     "pydantic>=2.6",
     "pyyaml>=6.0",
     "mcp>=1.2",
+    "mcap>=1.0",
 ]
 
 [project.optional-dependencies]

@@ -189,9 +189,14 @@ rosbag2 — install it explicitly.)
      (default keep 20). Enabled by finalize_episode now `chown`-ing the recorded MCAP back
      to the run dir's (host) owner, so host tools can manage it — this also retired the
      long-standing root-owned-mcap annoyance.
-   - **Still open:** MCAP attachments/annotations topic (embed scenario+result *inside* the
-     .mcap so it's fully self-contained), image thumbnailing for `/image` queries. Add the
-     "Episode & Result artifacts" section to `SCENARIO-FORMAT.md`.
+   - **MCAP attachment — DONE.** After a run, `episode.json` (scenario + result) is embedded
+     into `episode.mcap` as an attachment (host-side, via the `mcap` lib on the now
+     host-owned file), so the single file is self-describing. The copy is faithful — the
+     re-encoded mcap still opens in rosbag2/Foxglove.
+   - **Image thumbnails — DONE.** `episode query --topic /image` returns `mean_rgb` + an 8×8
+     grayscale thumbnail per frame (bounded; never the raw pixels).
+   - **Still open (optional):** a live `/robotbase/annotations` topic so assertion/event
+     markers show on the Foxglove timeline during playback.
 
 ## Open risks
 
