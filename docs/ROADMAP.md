@@ -126,10 +126,17 @@ Full design in `design/optional-visualization.md`.
 
 ## Sim-agnostic (strategic, Layer 0)
 
-The runtime seam is already transport-agnostic. Realizing sim-agnosticism means a **sim
-adapter interface** and a second backend (MuJoCo is the lightest first candidate; Isaac the
-most strategic). This is what turns "layer on top of Gazebo" into "layer on top of *any*
-sim" — the standard-owning position.
+**Proven.** The **`SimAdapter` contract** (`robotbase/sim/base.py`) formalizes what the
+scenario runner needs of a backend, and a **second backend — MuJoCo** — implements it
+(`robotbase/sim/mujoco_arm.py`): a 2-DOF arm, in-process, no ROS/Docker. The *same*
+`run_scenario(scenario, adapter, run_dir)`, the same scenario/assertion/result format, and
+the same agent-closes-the-loop pattern (broken controller fails, correct one passes) drive
+both Gazebo and MuJoCo — confirming the format is sim-agnostic, not Gazebo-specific. This is
+the standard-owning position: "the layer over *any* sim."
+
+Still open: promote MuJoCo to a first-class backend a user can pick (a `--backend` on
+`robotbase create`/`test`, a MuJoCo project template, MuJoCo-native recording), broaden it
+beyond the arm, and add the strategic heavyweight (NVIDIA Isaac).
 
 ## Ecosystem layers (later — see VISION.md)
 
@@ -162,5 +169,7 @@ substrate every primitive feeds, and the thing an agent needs to interpret its o
 6. ~~**Multi-template generator + a second robot (arm)**~~ — **done**; the generator plus
    three templates (`differential-drive`, `camera-bot`, `arm`) prove the format generalizes
    across robot classes.
-7. **A second sim adapter** — begin owning "any sim," not just Gazebo.
+7. ~~**A second sim adapter**~~ — **proven**; a `SimAdapter` contract + a MuJoCo backend run
+   the same scenario/runner/format as Gazebo. Next: make it a first-class user-selectable
+   backend (see "Sim-agnostic" above).
 8. **Ecosystem layers** — when adoption justifies them.
