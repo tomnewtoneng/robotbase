@@ -40,7 +40,7 @@ From the repo root (inside WSL2 Ubuntu-24.04, Docker running):
 ```bash
 source .venv/bin/activate
 cd warehouse-bot
-docker compose up -d
+robotbase up   # start the container + build the workspace (== docker compose up -d + build)
 # Point Claude Code at this directory (uses .mcp.json) OR use the CLI directly:
 ROBOTBASE_PROJECT_DIR=. robotbase test stop-before-obstacle   # fails with the starter
 # ...implement obstacle avoidance in src/warehouse_bot/warehouse_bot/obstacle_controller.py...
