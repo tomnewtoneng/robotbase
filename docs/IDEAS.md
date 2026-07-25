@@ -66,9 +66,13 @@ A scenario today is a pass/fail test. The leap is making it a benchmark.
 
 ## E. Frontier bets (the Physical AI narrative)
 
-- 🔲 **Scenarios as RL / gym environments** — MuJoCo is in-process now; exposing scenarios as
-  gym-style training envs is a small step with enormous reach — connects Robotbase to the
-  whole policy-learning world. "Train *and* eval in one format."
+- ✅ **Scenarios as RL / gym environments** — `robotbase.sim.gym_env.RobotbaseArmEnv` is a
+  Gymnasium env over the in-process MuJoCo arm whose **task is a scenario goal** (reach a
+  joint config within tolerance — the same target/tolerance a `joint_positions_reached`
+  assertion checks). Conforms to the gym API; a policy trains against it and is evaluated
+  against the identical scenario through the runner. "Train *and* eval in one format."
+  Optional `sim-rl` extra. *Next:* mobile-robot env (/scan+/odom obs, /cmd_vel action);
+  a bundled training example.
 - 🔲 **VLA / foundation-model eval** — benchmark vision-language-action models on scenarios.
   Layer-3 Physical-AI-native; almost no standard infra exists.
 - 🔲 **Sim-to-real bridge** — record real-robot episodes in the same MCAP format, run the same

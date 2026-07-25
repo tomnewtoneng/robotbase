@@ -14,7 +14,8 @@ dependencies = [
 
 [project.optional-dependencies]
 dev = ["pytest>=8.0"]
-sim-mujoco = ["mujoco>=3.0"]  # the MuJoCo backend (robotbase.sim.mujoco_arm)
+sim-mujoco = ["mujoco>=3.0"]                     # the MuJoCo backend (robotbase.sim.mujoco_arm)
+sim-rl = ["mujoco>=3.0", "gymnasium>=1.0"]       # the RL/gym env (robotbase.sim.gym_env)
 
 [project.scripts]
 robotbase = "robotbase.cli:main"
