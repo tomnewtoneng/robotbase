@@ -21,3 +21,9 @@ assertions:
   - {type: minimum_obstacle_distance, minimum_metres: 0.25}
   - {type: robot_stopped, linear_velocity_tolerance: 0.05, angular_velocity_tolerance: 0.05}
   - {type: required_topic_messages, topic: /scan, minimum_count: 5}
+# Domain randomization: `robotbase test stop-before-obstacle --trials N` jitters the obstacle
+# placement and start heading each trial and reports robustness — so a controller tuned to
+# one exact box position doesn't look solved.
+randomize:
+  robot_pose: {x: 0.1, yaw: 0.05}
+  obstacles: {x: 0.3, y: 0.3}

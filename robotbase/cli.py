@@ -123,9 +123,13 @@ def _build_parser() -> argparse.ArgumentParser:
     launch_p = sub.add_parser("launch", help="start the simulation")
     launch_p.add_argument("--gui", nargs="?", const="foxglove", default="none")
 
-    test = sub.add_parser("test", help="run a scenario (or --list)")
+    test = sub.add_parser("test", help="run a scenario (or --list / --all)")
     test.add_argument("scenario", nargs="?")
     test.add_argument("--list", action="store_true")
+    test.add_argument("--all", action="store_true", help="run every scenario as a suite")
+    test.add_argument("--trials", type=int, default=1,
+                      help="run N randomized trials (domain randomization) and report robustness")
+    test.add_argument("--seed", type=int, default=0, help="RNG seed for --trials")
     test.add_argument("--gui", nargs="?", const="foxglove", default="none")
 
     scen = sub.add_parser("scenario", help="author scenarios (add | list)")
@@ -259,18 +263,51 @@ def main() -> None:
         _hint(f"Edit it (see docs/SCENARIO-FORMAT.md), then:  robotbase test {args.name} --gui")
 
     elif args.cmd == "test":
+        run_dir = os.path.join(project, ".robotbase", "runs")
+
+        if args.all:  # suite: every scenario (each with --trials randomized trials)
+            from robotbase.evals import compare_suites, run_suite
+
+            specs = [Scenario.from_yaml(scenarios[n]) for n in sorted(scenarios)]
+            report = run_suite(specs, rt, run_dir, args.trials, args.seed)
+            # Behavioral regression tracking: diff against the previous suite run.
+            hist = os.path.join(project, ".robotbase", "last-suite.json")
+            changes = None
+            if os.path.exists(hist):
+                with open(hist) as f:
+                    changes = compare_suites(json.load(f), report)
+            os.makedirs(os.path.dirname(hist), exist_ok=True)
+            with open(hist, "w") as f:
+                json.dump(report, f, indent=2)
+            if changes:
+                report["changes"] = changes
+            print(json.dumps(report, indent=2))
+            _hint(f"{report['fully_passed']}/{report['scenarios']} scenarios fully passed "
+                  f"(mean robustness {report['mean_robustness']})."
+                  + (f"  ⚠ {len(changes['regressions'])} regression(s)."
+                     if changes and changes["regressions"] else ""))
+            sys.exit(0 if report["fully_passed"] == report["scenarios"] else 1)
+
         if args.list or not args.scenario:
             print("\n".join(sorted(scenarios)) or "(no scenarios yet)")
-            _hint("Run one:  robotbase test <name> --gui    Add one:  robotbase scenario add <name>")
+            _hint("Run one:  robotbase test <name>    All:  robotbase test --all    "
+                  "Add one:  robotbase scenario add <name>")
             return
         if args.scenario not in scenarios:
             print(f"unknown scenario {args.scenario!r}; available: {sorted(scenarios)}")
             sys.exit(2)
-        result = run_scenario(
-            Scenario.from_yaml(scenarios[args.scenario]),
-            rt,
-            os.path.join(project, ".robotbase", "runs"),
-        )
+        scenario = Scenario.from_yaml(scenarios[args.scenario])
+
+        if args.trials > 1:  # domain randomization: robustness over N randomized trials
+            from robotbase.evals import run_trials
+
+            report = run_trials(scenario, rt, run_dir, args.trials, args.seed)
+            print(json.dumps(report, indent=2))
+            _hint(f"{args.scenario}: robustness {report['robustness']} "
+                  f"({report['passed']}/{report['trials']} trials passed).")
+            sys.exit(0 if report["passed"] == report["trials"] else 1)
+
+        result = run_scenario(scenario, rt, run_dir)
         print(json.dumps(result.model_dump(), indent=2))
         if result.passed:
             _hint(f"{args.scenario} passed ✓")

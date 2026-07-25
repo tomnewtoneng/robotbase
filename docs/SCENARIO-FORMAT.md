@@ -141,6 +141,24 @@ reported, not fatal.
 Unknown assertion types MUST fail (a scenario cannot silently pass on an unrecognized
 check).
 
+### 2.4 `randomize` (optional — domain randomization)
+Turns a scenario from a single test into an **eval**. Declares ± jitter ranges applied to
+the setup on each randomized trial, so a controller tuned to one exact configuration doesn't
+look solved:
+
+```yaml
+randomize:
+  robot_pose: {x: 0.1, y: 0.0, yaw: 0.05}   # ± metres / radians on the start pose
+  obstacles:  {x: 0.3, y: 0.3}              # ± metres applied to each obstacle's x/y
+```
+
+`robotbase test <name> --trials N [--seed S]` runs N trials — trial 0 is the nominal
+(unperturbed) setup, the rest sample within these ranges — and reports a **robustness**
+fraction (`passed / trials`). `robotbase test --all` runs every scenario as a **suite** and
+aggregates (`fully_passed`, `mean_robustness`), and diffs against the previous suite run to
+flag behavioral **regressions**. Trials/suites drive any backend through the same runner, so
+they are sim-agnostic.
+
 ---
 
 ## 3. Scenario result (JSON)

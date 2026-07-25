@@ -14,15 +14,16 @@ Status key: 🔲 not started · 🚧 in progress · ✅ done.
 
 A scenario today is a pass/fail test. The leap is making it a benchmark.
 
-- 🔲 **Scenario suites + aggregate report** — `robotbase test --all` → "7/10 passed," with a
-  per-scenario breakdown. "CI for robot behaviors," one step from what exists.
-- 🔲 **Behavioral regression tracking** — store results over time; flag when a scenario that
-  passed now fails. The recurring-value hook.
-- 🔲 **Domain randomization** — run each scenario across N randomized configs (obstacle
-  position, friction, start pose) and report a **robustness %**, not a single pass. The
-  biggest lever: turns a gameable demo into a real eval and makes the accumulated data
-  un-cloneable.
-- 🔲 **Flakiness / determinism check** — run ×N, report variance.
+- ✅ **Scenario suites + aggregate report** — `robotbase test --all` → per-scenario
+  robustness + `fully_passed` / `mean_robustness`. "CI for robot behaviors."
+- ✅ **Behavioral regression tracking** — each `--all` run is diffed against the previous
+  (stored in `.robotbase/last-suite.json`), flagging scenarios whose robustness dropped.
+- ✅ **Domain randomization** — `robotbase test <name> --trials N [--seed S]` jitters the
+  setup (obstacle/start pose, per the scenario's `randomize` block) and reports a
+  **robustness** fraction. The biggest lever: a controller tuned to one config no longer
+  looks solved. (`stop-before-obstacle` ships with a `randomize` block.)
+- 🔲 **Flakiness / determinism check** — run ×N *without* perturbation, report variance.
+- 🔲 **Friction / physics randomization** — vary friction/mass, not just poses.
 
 ## B. Deepen the agent experience (the DX crown jewel)
 

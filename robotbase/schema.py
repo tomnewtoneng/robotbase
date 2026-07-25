@@ -55,6 +55,15 @@ class AssertionSpec(BaseModel):
     joint_targets: dict[str, float] | None = None
     joint_tolerance: float | None = None
 
+class PoseJitter(BaseModel):
+    x: float = 0.0     # ± range (metres) added uniformly
+    y: float = 0.0
+    yaw: float = 0.0   # ± range (radians)
+
+class RandomizeSpec(BaseModel):
+    robot_pose: PoseJitter = PoseJitter()
+    obstacles: PoseJitter = PoseJitter()   # applied to each obstacle's x/y
+
 class Scenario(BaseModel):
     version: int
     name: str
@@ -63,6 +72,7 @@ class Scenario(BaseModel):
     setup: SetupSpec = SetupSpec()
     actions: list[ActionSpec] = []
     assertions: list[AssertionSpec] = []
+    randomize: RandomizeSpec = RandomizeSpec()
 
     @classmethod
     def from_yaml(cls, path: str) -> "Scenario":
