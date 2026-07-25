@@ -75,7 +75,11 @@ A scenario today is a pass/fail test. The leap is making it a benchmark.
 
 ## F. Distribution (the unlock — nothing matters without users)
 
-- 🔲 PyPI package + public `robotbase-runtime` Docker image (needs owner accounts/tokens).
+- ✅ **Repo publish-ready** — README refreshed (accurate feature tour, sim-agnostic, 3
+  templates), `CONTRIBUTING.md`, and `docs/PUBLISHING.md` (the PyPI + runtime-image runbook).
+  Verified the wheel/sdist build and bundle all templates + sim adapters.
+- 🔲 **PyPI upload + public Docker image** — the actual publish (needs owner accounts/tokens;
+  steps in `docs/PUBLISHING.md`).
 - 🔲 The demo video / GIF (the "agent teaches itself" moment; `PROOF.md` is the written form).
 - 🔲 Build-in-public content on the "Build With Toddy" brand (a structural edge).
 - 🔲 Integration guides (Claude Code / Cursor / any agent).
