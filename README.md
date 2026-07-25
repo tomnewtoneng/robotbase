@@ -2,12 +2,15 @@
 
 ![Robotbase — a coding agent can write robot code; it can't tell if the robot actually works. Robotbase gives it a robot to run and evidence to read.](docs/images/overview.png)
 
-**The batteries-included developer-experience layer for agent-driven robotics.**
+**Terraform for robots — fully declarative robotics that ports from sim to real.**
 
-Setting up ROS 2 + Gazebo is a rite of passage. Robotbase makes that headache vanish and
-gives coding agents structured tools — over MCP and a CLI — to *create, build, launch,
-inspect, test, and debug* a robotics project. It's "Supabase for ROS 2" in feeling: great
-primitives, zero setup pain, works locally in one command.
+Describe your robot, its sensors, its world, and the behaviours you want to verify in YAML;
+Robotbase compiles that into a running (headless) simulation, runs it, and gives you
+machine-readable evals + recorded data — reproducibly. Declarative config → a materialised
+robotics stack, the way Terraform turns HCL into infrastructure. It removes the ROS 2 +
+Gazebo setup tax, and because it's all declarative, a coding agent can build and verify the
+whole thing — robots, worlds, scenarios, controllers — by natural language, over MCP and a
+CLI.
 
 Local-first and open-core. No cloud, no accounts in the core.
 
@@ -77,12 +80,14 @@ Sensors and behaviours are composable primitives (LiDAR, contact/bumper, camera,
 The scenario/manifest/result formats are a documented, versioned spec —
 [docs/SCENARIO-FORMAT.md](docs/SCENARIO-FORMAT.md).
 
-## Sim-agnostic by design
+## Sim-agnostic by design — backends are Terraform's "providers"
 
 Robotbase is the **layer over the simulator, not a simulator**. The durable value is the
-*contract* — the scenario runner, format, assertions, and results are backend-independent.
-The Gazebo + ROS 2 runtime is one backend; a **MuJoCo** backend (in-process, no ROS/Docker)
-runs the *same* scenario runner and format unchanged. See `robotbase/sim/`.
+*contract* — the scenario runner, format, assertions, and results are backend-independent, so
+one declarative spec targets any backend the way one Terraform config targets any cloud. The
+Gazebo + ROS 2 runtime is one backend; a **MuJoCo** backend (in-process, no ROS/Docker) runs
+the *same* scenario runner and format unchanged — and a **real robot** is the backend we're
+building toward. See `robotbase/sim/`.
 
 And because a scenario goal is just a target + tolerance, the same task also exposes as a
 **Gymnasium RL environment** (`robotbase.sim.gym_env`) — *train and eval in one format*: a

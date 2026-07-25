@@ -2,23 +2,34 @@
 
 ## What Robotbase is
 
-Robotbase is the **batteries-included developer-experience layer for agent-driven
-robotics**. It removes the ROS 2 + Gazebo setup headache and gives coding agents
-structured, evidence-producing tools — over MCP and a CLI — to build, launch, inspect,
-operate, and test a robotics project.
+Robotbase is **Terraform for robots**: fully declarative robotics. You describe your robot,
+its sensors, its world, and the behaviours you want to verify in YAML; Robotbase compiles
+that into a running simulation, runs it, and produces machine-readable evals and recorded
+data — reproducibly, and designed to port to physical robots.
 
-The guiding analogy is **"Supabase for ROS 2" in feeling, not infrastructure**: setup pain
-vanishes, the primitives are good, it works instantly. Local-first and open-core. There is
-no cloud dependency, no accounts, in the core.
+The Terraform analogy is exact, not decorative:
+- **Declarative config → materialised infrastructure.** A `robot.yaml` / `world.yaml` /
+  scenario compiles down to the URDF, the launch wiring, the sim, and the eval — you never
+  hand-write the XML, the way you never click through a cloud console.
+- **Reproducible.** The specs are the source of truth; the same YAML yields the same robot,
+  world, and run every time.
+- **Portable across "providers."** Terraform targets AWS or GCP behind one config; Robotbase
+  targets Gazebo or MuJoCo — and, ultimately, a *real robot* — behind one declarative spec
+  and a swappable backend.
 
-Critically, Robotbase is the **layer on top of the simulator, not a simulator**. The
-durable value is the *contract* — the project structure, the scenario format, the tool
-interface — with the sim underneath as a swappable backend (Gazebo today; others later).
+Because it is all declarative YAML, a coding agent can author the whole stack — robots,
+sensors, worlds, scenarios, controllers — by natural language. Great DX (the ROS 2 + Gazebo
+setup headache vanishes) and great agent-operability fall out of the *same* declarative
+design. Local-first and open-core: no cloud dependency, no accounts, in the core.
+
+Critically, Robotbase is the **layer on top of the simulator, not a simulator**. The durable
+value is the *contract* — the declarative specs, the result format, the tool interface — with
+the sim underneath as a swappable backend (Gazebo and MuJoCo today; real hardware the goal).
 
 ## The bet
 
-> A declarative local ROS environment plus structured agent tools makes coding agents
-> materially better at robotics development.
+> Make robotics fully declarative — robots, worlds, and evals as compilable config that
+> ports from sim to real — and coding agents can build, verify, and ship robots end to end.
 
 This is proven at MVP scale: a fresh agent, given no solution, taught itself obstacle
 avoidance through the Robotbase tools (see `../PROOF.md`).

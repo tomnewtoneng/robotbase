@@ -4,9 +4,12 @@ Where Robotbase could go beyond the current core (CLI + MCP, three robot templat
 scenario/assertion/metric vocabulary, MCAP episode recording/query/attachments, `describe`,
 and a proven sim-agnostic adapter seam). Organized by theme; ranked at the bottom.
 
-North star (from `VISION.md`): the crown jewels are **the MCP loop** and **the evals
-layer**, and the moat is **accumulated behavioral eval data a competitor can't clone**.
-Bias toward ideas that compound into that.
+**North star — "Terraform for robots"** (`VISION.md`): fully declarative robotics — **YAML
+compiles into robots, sensors, worlds, runs (scenarios), and tests (evals)** — reproducibly,
+and **portable from sim to real**. Everything the user/agent authors is config; the compiler
+and backends materialise it. The crown jewels along the way are the agent loop and the evals
+layer; the moat is accumulated behavioral eval data a competitor can't clone. Bias toward
+whatever pushes more of the stack into clean, compilable config that ports across backends.
 
 Status key: 🔲 not started · 🚧 in progress · ✅ done.
 
@@ -80,8 +83,11 @@ A scenario today is a pass/fail test. The leap is making it a benchmark.
   a bundled training example.
 - 🔲 **VLA / foundation-model eval** — benchmark vision-language-action models on scenarios.
   Layer-3 Physical-AI-native; almost no standard infra exists.
-- 🔲 **Sim-to-real bridge** — record real-robot episodes in the same MCAP format, run the same
-  scenarios on hardware. The endgame.
+- 🔲 **Real-robot backend (sim-to-real) — now a core goal, not just a frontier bet.** "Port
+  from sim to real" is half the vision: a real robot is just another *backend* (Terraform
+  provider) behind the same declarative specs — run the same scenario against hardware, record
+  the run in the same MCAP format, evaluate with the same assertions. The endgame the whole
+  declarative stack is built toward.
 - 🔲 **A robotics-specialized coding agent** (VISION Layer 4) living on the MCP tools.
 
 ## F. Distribution (the unlock — nothing matters without users)
@@ -104,12 +110,13 @@ A scenario today is a pass/fail test. The leap is making it a benchmark.
 - 🔲 Build-in-public content on the "Build With Toddy" brand (a structural edge).
 - 🔲 Integration guides (Claude Code / Cursor / any agent).
 
-## G. Agent-native authoring — the "Supabase for robots" core (CURRENT FOCUS)
+## G. Declarative authoring — the "Terraform for robots" core (CURRENT FOCUS)
 
-The leap from "the agent edits the controller" to "the agent authors *everything* by natural
-language." Today scenarios + manifests are agent-friendly YAML, but **worlds are raw SDF and
-robots are raw URDF/xacro** — verbose, physics-sensitive XML that an agent can't reliably
-write from scratch. Close that gap:
+The heart of the vision: **everything is compilable YAML.** Scenarios (runs/tests) and
+manifests already are, but **worlds are raw SDF and robots are raw URDF/xacro** — verbose,
+physics-sensitive XML that an agent can't reliably write. Close that gap so a `robot.yaml` /
+`world.yaml` / scenario is the *complete, reproducible* source of truth for a robotics
+project, and a coding agent authors all of it by natural language:
 
 - 🚧 **Declarative robot spec (YAML → URDF)** — the key architectural move. A clean
   `robot.yaml` that Robotbase compiles to URDF/xacro + launch bridges + manifest fields.
@@ -128,7 +135,7 @@ write from scratch. Close that gap:
   obstacles in a warehouse" to the robot spec + world spec + scenario + controller, all via
   the declarative formats. Robotbase becomes truly agent-native and drop-in-anywhere.
 
-## H. Robotbase Studio — the GUI (the "Supabase dashboard" moment)
+## H. Robotbase Studio — the GUI (the control plane over the declarative stack)
 
 - 🔲 **One pane: chat with your agent + see files being edited + watch the 3D sim
   running/improving + read results.** The end-state that makes it feel like a product, not a

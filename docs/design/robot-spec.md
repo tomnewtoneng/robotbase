@@ -15,9 +15,9 @@ on that XML.
 problem.** The move is a high-level, Robotbase-owned **robot spec (`robot.yaml`)** that the
 agent authors as *intent*, which Robotbase **compiles down to a correct URDF/xacro + the
 launch bridges + the manifest sensor/runtime fields.** The agent never touches XML; we own
-the gnarly compilation. That is "Supabase for robots": declare config, correct infra
-materializes — and it turns the sim gotchas from the *user's* problem into *our compiler's*
-problem (the defensible part).
+the gnarly compilation. This is the Terraform model applied to robots: declarative config →
+a materialised robot, reproducibly — and it turns the sim gotchas from the *user's* problem
+into *our compiler's* problem (the defensible part).
 
 We own the format (versioned, like `SCENARIO-FORMAT.md`); URDF is a build artifact.
 

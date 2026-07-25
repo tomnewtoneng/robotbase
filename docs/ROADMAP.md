@@ -129,8 +129,9 @@ Full design in `design/optional-visualization.md`.
 - Enforce `scenario.timeout_seconds`.
 - ~~Path-length vs. displacement metric.~~ **done** (`path_length_metres`).
 - Verify non-Windows hosts (Linux, macOS/Docker Desktop); add CI.
-- De-duplicate `robotbase/template` vs. the `warehouse-bot` reference (generate one from the
-  other, or make the reference a generated example).
+- ~~De-duplicate the bundled templates vs. a standalone reference project.~~ **done** — the
+  vestigial `warehouse-bot/` reference project was removed; `robotbase create` is the single
+  source of a working project.
 
 ## Sim-agnostic (strategic, Layer 0)
 

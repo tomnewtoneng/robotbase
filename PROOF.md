@@ -6,7 +6,7 @@ This is the demonstration Robotbase exists to make:
 > materially better at robotics development.
 
 On 2026-07-22, a fresh coding agent — with **no knowledge of the solution** — was given
-only the `warehouse-bot` project, the `robotbase` tools, and this task:
+only a generated `differential-drive` project, the `robotbase` tools, and this task:
 
 > The starter obstacle controller drives the robot forward but ignores the LiDAR, so it
 > collides with the obstacle. Implement obstacle avoidance so `stop-before-obstacle`
@@ -39,13 +39,14 @@ From the repo root (inside WSL2 Ubuntu-24.04, Docker running):
 
 ```bash
 source .venv/bin/activate
-cd warehouse-bot
-robotbase up   # start the container + build the workspace (== docker compose up -d + build)
+robotbase create my-bot --template differential-drive   # generates the project + broken starter
+cd my-bot
+robotbase up   # start the container + build the workspace
 # Point Claude Code at this directory (uses .mcp.json) OR use the CLI directly:
-ROBOTBASE_PROJECT_DIR=. robotbase test stop-before-obstacle   # fails with the starter
-# ...implement obstacle avoidance in src/warehouse_bot/warehouse_bot/obstacle_controller.py...
-ROBOTBASE_PROJECT_DIR=. robotbase test stop-before-obstacle   # passes
+robotbase test stop-before-obstacle   # fails with the starter controller
+# ...implement obstacle avoidance in src/my_bot/my_bot/controller.py...
+robotbase test stop-before-obstacle   # passes
 ```
 
-The repository ships with the **intentionally-broken** starter controller so the demo is
-reproducible from a clean clone.
+Every generated project ships the **intentionally-broken** starter controller, so the demo is
+reproducible from a clean `robotbase create`.
