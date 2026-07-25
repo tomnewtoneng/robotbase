@@ -29,9 +29,12 @@ A scenario today is a pass/fail test. The leap is making it a benchmark.
 
 "Great human DX = great agent-operability."
 
-- 🔲 **Auto-diagnosis of failures** — generate a structured natural-language *why* from the
-  episode ("commanded constant vx=0.3, never reacted to /scan as range fell 0.5→0.08m"). An
-  LLM-over-episode summarizer. The best demo; on-thesis.
+- ✅ **Auto-diagnosis of failures** — `robotbase diagnose [run]` (+ MCP `diagnose_run`)
+  explains *why* the last run failed in plain language: each failed assertion → the episode
+  event (collision, closest-approach with position) → the control behaviour ("still
+  commanding vx=0.3 at impact — didn't slow or turn away"). Deterministic/rule-based (no
+  LLM/API); an agent can elaborate. Templates' AGENTS.md lead failure-inspection with it.
+  *Future:* optional LLM enrichment for free-form narration.
 - 🔲 **`robotbase doctor`** — diagnose Docker-down / WSL / port-8765 / engine issues with
   fixes. We hit every one of these as gotchas — pure adoption-friction removal.
 - 🔲 **Natural-language scenario authoring** — `robotbase scenario new "circle the obstacle"`

@@ -63,9 +63,12 @@ installed); just run the scenario again. `robotbase build` is harmless if you pr
 
 ## Inspecting a failed run
 
-Every scenario run is recorded to an MCAP episode you can interrogate — use it to
-understand *why* a run failed instead of guessing:
+Start with **`robotbase diagnose`** — it explains *why* the last run failed in plain
+language (which assertions failed, the collision / closest-approach from the episode, and
+whether the controller was still driving into the obstacle). For deeper inspection, every
+run is recorded to an MCAP episode you can interrogate:
 
+    robotbase diagnose                   # plain-language "why" for the latest failed run
     robotbase episode summary            # topics, message counts, duration (latest run)
     robotbase episode events             # derived timeline, e.g. the collision timestamp
     robotbase episode query --topic /scan --around <t> --window 1.5

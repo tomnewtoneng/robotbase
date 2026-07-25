@@ -41,6 +41,7 @@ Inspect a recorded run:
   episode events [RUN]           the derived event timeline (e.g. collision)
   episode query [RUN] --topic T [--around SEC] [--window SEC]
                                  a bounded, downsampled slice of one topic
+  diagnose [RUN]                 explain why a run failed (assertions + episode evidence)
   clean [--keep N]               delete old recorded runs (keep the newest N, default 20)
 
 Author behaviours:
@@ -139,6 +140,9 @@ def _build_parser() -> argparse.ArgumentParser:
     clean = sub.add_parser("clean", help="delete old recorded runs")
     clean.add_argument("--keep", type=int, default=20, help="how many recent runs to keep")
 
+    diag = sub.add_parser("diagnose", help="explain why a run failed")
+    diag.add_argument("run", nargs="?", default="latest")
+
     ep = sub.add_parser("episode", help="inspect a recorded run (summary | events | query)")
     ep.add_argument("action", choices=["summary", "events", "query"])
     ep.add_argument("run", nargs="?", default="latest")
@@ -229,6 +233,34 @@ def main() -> None:
         kept = min(len(runs), args.keep)
         print(json.dumps({"kept": kept, "removed": removed}, indent=2))
         _hint(f"Removed {removed} old run(s); kept the {kept} most recent.")
+
+    elif args.cmd == "diagnose":
+        from robotbase.diagnose import collision_time, diagnose
+
+        runs_dir = os.path.join(project, ".robotbase", "runs")
+        if args.run in ("latest", "", None):
+            dirs = [d for d in glob.glob(os.path.join(runs_dir, "*")) if os.path.isdir(d)]
+            if not dirs:
+                print("no runs found"); sys.exit(2)
+            run_path = max(dirs, key=os.path.getmtime)
+        else:
+            run_path = os.path.join(runs_dir, args.run)
+        result_file = os.path.join(run_path, "result.json")
+        if not os.path.exists(result_file):
+            print(f"no result for run {os.path.basename(run_path)!r}"); sys.exit(2)
+        with open(result_file) as f:
+            result = json.load(f)
+        run_id = os.path.basename(run_path)
+        events, control = [], None
+        try:  # episode inspection is best-effort enrichment; diagnosis works without it
+            events = rt.episode_events(run_id).get("events", [])
+            ct = collision_time(events)
+            if ct is not None:
+                q = rt.episode_query(run_id, "/cmd_vel", around=ct, window=0.5, max_samples=1)
+                control = q["samples"][-1] if q.get("samples") else None
+        except Exception:
+            pass
+        print(json.dumps(diagnose(result, events, control), indent=2))
 
     elif args.cmd == "status":
         print(json.dumps(rt.simulation_status(), indent=2))

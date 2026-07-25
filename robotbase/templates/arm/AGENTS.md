@@ -42,8 +42,11 @@ scenario again.
 
 ## Inspecting a run
 
-Every scenario run is recorded to an MCAP episode you can interrogate:
+Start with **`robotbase diagnose`** — it explains why the last run failed in plain language
+(the failed assertion and the per-joint error). Every run is also recorded to an MCAP
+episode you can interrogate:
 
+    robotbase diagnose                               # plain-language "why" for the latest run
     robotbase episode summary                        # topics, counts, duration
     robotbase episode query --topic /joint_states    # joint angles over the run
 

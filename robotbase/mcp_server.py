@@ -124,6 +124,35 @@ def scenario_get_result(run_id: str) -> dict:
 
 
 @mcp.tool()
+def diagnose_run(run_id: str = "latest") -> dict:
+    """Explain why a run failed, in plain language: correlate the failed assertions with the
+    episode events (collision, closest approach) and the control behavior at the failure.
+    Use this right after a failing scenario_run to decide what to change in the controller."""
+    from robotbase.diagnose import collision_time, diagnose
+
+    if run_id in ("latest", ""):
+        dirs = [d for d in glob.glob(os.path.join(RUN_DIR, "*")) if os.path.isdir(d)]
+        if not dirs:
+            return {"error": "no runs found"}
+        run_id = os.path.basename(max(dirs, key=os.path.getmtime))
+    result_path = os.path.join(RUN_DIR, run_id, "result.json")
+    if not os.path.exists(result_path):
+        return {"error": f"no result for run {run_id!r}"}
+    with open(result_path) as f:
+        result = json.load(f)
+    events, control = [], None
+    try:
+        events = _runtime.episode_events(run_id).get("events", [])
+        ct = collision_time(events)
+        if ct is not None:
+            q = _runtime.episode_query(run_id, "/cmd_vel", around=ct, window=0.5, max_samples=1)
+            control = q["samples"][-1] if q.get("samples") else None
+    except Exception:
+        pass
+    return diagnose(result, events, control)
+
+
+@mcp.tool()
 def episode_summary(run_id: str = "latest") -> dict:
     """Summarize a recorded run's MCAP episode: topics, message counts, duration.
 
