@@ -47,8 +47,9 @@ what "pass" means (e.g. `robot_reached_pose` wants a final position near a targe
 - Robot type: differential drive
 - Key topics: `/cmd_vel` (velocity command out, `geometry_msgs/Twist`: `linear.x` forward,
   `angular.z` turn), `/scan` (LiDAR, `sensor_msgs/LaserScan`), `/image` (forward camera,
-  `sensor_msgs/Image`), `/odom` (pose + velocity, `nav_msgs/Odometry`), `/bumper` (contact
-  sensor, `ros_gz_interfaces/Contacts` — fires on a real collision), `/tf`
+  `sensor_msgs/Image`), `/depth` (depth image, `sensor_msgs/Image` 32FC1) + `/depth/points`
+  (point cloud, `sensor_msgs/PointCloud2`), `/imu`, `/odom` (pose + velocity,
+  `nav_msgs/Odometry`), `/bumper` (contact sensor, `ros_gz_interfaces/Contacts`), `/tf`
 - **`/odom` is wheel odometry (dead-reckoned):** it drifts when the wheels slip, so a robot
   stalled against something keeps reporting an advancing position even though it isn't
   moving. If `final_x`/`distance_travelled` look impossibly large, the robot is stuck —

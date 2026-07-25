@@ -63,9 +63,9 @@ A scenario today is a pass/fail test. The leap is making it a benchmark.
   kinematic velocity control, 3D `/cmd_vel` + `/odom` + IMU, a `reach-position` scenario;
   drove the `final_z` metric + 3D `robot_reached_pose`). Still: quadruped, mobile
   manipulator, Ackermann car.
-- 🚧 More sensors: **IMU shipped** (both mobile templates — `/imu` orientation/ang-vel/accel
-  at 50 Hz, physics-based; world `Imu` system + `imu_link` sensor, bridged). Still: depth
-  camera, force/torque.
+- 🚧 More sensors: **IMU shipped** (both mobile templates — `/imu`, physics-based) and
+  **depth camera shipped** (camera-bot — `/depth` 320×240 32FC1 depth image + `/depth/points`
+  point cloud, renders headless under llvmpipe alongside the RGB camera). Still: force/torque.
 - 🔲 **Grasping / pick-and-place** — the arm's natural next task.
 - 🔲 Multi-robot scenarios (coordination).
 

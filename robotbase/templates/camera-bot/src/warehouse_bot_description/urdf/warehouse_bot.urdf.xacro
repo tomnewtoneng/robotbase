@@ -162,6 +162,23 @@
     </sensor>
   </gazebo>
 
+  <!-- Depth camera: a per-pixel depth image on /depth (32FC1) plus a point cloud on
+       /depth/points. Rendering-based like the RGB camera; runs headless under llvmpipe. -->
+  <gazebo reference="camera_link">
+    <sensor name="depth" type="depth_camera">
+      <topic>depth</topic>
+      <gz_frame_id>camera_link</gz_frame_id>
+      <update_rate>10</update_rate>
+      <always_on>true</always_on>
+      <visualize>false</visualize>
+      <camera>
+        <horizontal_fov>1.047</horizontal_fov>
+        <image><width>320</width><height>240</height></image>
+        <clip><near>0.1</near><far>10.0</far></clip>
+      </camera>
+    </sensor>
+  </gazebo>
+
   <!-- Contact/bumper sensor: ground-truth collision detection. Physics-based (no
        rendering), so it runs headless like the rest. It references only the base body
        collision — the box body is held off the floor by the wheels, so the sensor fires

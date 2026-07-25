@@ -26,6 +26,10 @@ sensors:
   camera:
     enabled: true
     topic: /image
+  depth_camera:
+    enabled: true
+    topic: /depth
+    points_topic: /depth/points
   contact:
     enabled: true
     topic: /bumper
