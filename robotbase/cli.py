@@ -24,6 +24,7 @@ Usage: robotbase <command> [options]
 
 Start a project:
   create <name> [--path DIR]     generate a new project from the template
+  doctor                         check the environment (Docker, image, ports, deps)
   up                             start the container and build the workspace
   stop                           stop the simulation (keep the container)
   down                           stop and remove the container
@@ -114,6 +115,7 @@ def _build_parser() -> argparse.ArgumentParser:
     create.add_argument("--path", default=".", help="parent directory for the new project")
 
     sub.add_parser("templates", help="list available robot templates")
+    sub.add_parser("doctor", help="check the environment for common problems")
     sub.add_parser("describe", help="report robot/world/scenario facts")
     sub.add_parser("up", help="start the container and build the workspace")
     sub.add_parser("stop", help="stop the simulation (keep the container)")
@@ -191,6 +193,14 @@ def main() -> None:
         print(f"Created Robotbase project: {dest}  (template: {args.template})")
         _hint(f"Next:  cd {dest} && robotbase up   (then: robotbase test --gui)")
         return
+
+    if args.cmd == "doctor":
+        from robotbase.doctor import diagnose_environment
+
+        project = os.environ.get("ROBOTBASE_PROJECT_DIR", ".")
+        report = diagnose_environment(project)
+        print(json.dumps(report, indent=2))
+        sys.exit(0 if report["status"] != "fail" else 1)
 
     if args.cmd == "describe":
         from robotbase.describe import describe

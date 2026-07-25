@@ -55,6 +55,16 @@ def project_describe() -> dict:
 
 
 @mcp.tool()
+def environment_doctor() -> dict:
+    """Check the environment for common problems (Docker reachable, the runtime image built,
+    port 8765 conflicts, whether this project's container is up) and suggest fixes. Run this
+    first if build/launch/test operations are failing for infrastructure reasons."""
+    from robotbase.doctor import diagnose_environment
+
+    return diagnose_environment(PROJECT_DIR)
+
+
+@mcp.tool()
 def workspace_build(clean: bool = False) -> dict:
     """Build the ROS workspace; returns pass/fail, duration, and parsed errors."""
     return _runtime.build(clean=clean)

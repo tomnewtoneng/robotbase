@@ -35,8 +35,10 @@ A scenario today is a pass/fail test. The leap is making it a benchmark.
   commanding vx=0.3 at impact — didn't slow or turn away"). Deterministic/rule-based (no
   LLM/API); an agent can elaborate. Templates' AGENTS.md lead failure-inspection with it.
   *Future:* optional LLM enrichment for free-form narration.
-- 🔲 **`robotbase doctor`** — diagnose Docker-down / WSL / port-8765 / engine issues with
-  fixes. We hit every one of these as gotchas — pure adoption-friction removal.
+- ✅ **`robotbase doctor`** — checks Docker reachable, compose present, the runtime image
+  built, port 8765 free (concurrent-project conflict), whether you're in a project + its
+  container is up, and Python deps — each with ok/warn/fail + a fix. CLI + MCP
+  (`environment_doctor`). Every gotcha we hit, turned into a check.
 - 🔲 **Natural-language scenario authoring** — `robotbase scenario new "circle the obstacle"`
   → drafts the YAML. Zero-barrier authoring.
 - 🔲 **Richer inspection** — object-detection summaries over `/image`, replay/step-through.
