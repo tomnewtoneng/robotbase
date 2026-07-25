@@ -33,6 +33,8 @@ Run & inspect:
   build                          build the ROS workspace
   launch [--gui]                 start the simulation (--gui to watch in Foxglove)
   test [NAME] [--gui] [--list]   run a scenario, or --list them
+  test --all [--trials N]        run every scenario as a suite (robustness + regressions)
+  bench [--list] [--agent NAME]  score the controller on the RobotBench task set
   status                         report simulation status
   topics                         list active ROS topics
 
@@ -143,6 +145,12 @@ def _build_parser() -> argparse.ArgumentParser:
     diag = sub.add_parser("diagnose", help="explain why a run failed")
     diag.add_argument("run", nargs="?", default="latest")
 
+    bench = sub.add_parser("bench", help="score the controller against RobotBench")
+    bench.add_argument("--list", action="store_true", help="list the RobotBench task set")
+    bench.add_argument("--agent", help="tag the scorecard with the agent/model used")
+    bench.add_argument("--trials", type=int, default=3, help="randomized trials per task")
+    bench.add_argument("--seed", type=int, default=0)
+
     ep = sub.add_parser("episode", help="inspect a recorded run (summary | events | query)")
     ep.add_argument("action", choices=["summary", "events", "query"])
     ep.add_argument("run", nargs="?", default="latest")
@@ -190,6 +198,12 @@ def main() -> None:
         project = os.environ.get("ROBOTBASE_PROJECT_DIR", ".")
         print(json.dumps(describe(project), indent=2))
         _hint("Ground truth for this project — robot geometry, world layout, and scenarios.")
+        return
+
+    if args.cmd == "bench" and args.list:
+        from robotbase.bench import BENCHMARK_VERSION, TASKS
+
+        print(json.dumps({"benchmark": f"RobotBench v{BENCHMARK_VERSION}", "tasks": TASKS}, indent=2))
         return
 
     project = os.environ.get("ROBOTBASE_PROJECT_DIR", ".")
@@ -350,6 +364,18 @@ def main() -> None:
                 "Or let a coding agent fix it."
             )
         sys.exit(0 if result.passed else 1)
+
+    elif args.cmd == "bench":
+        from robotbase.bench import scorecard
+        from robotbase.evals import run_suite
+
+        specs = [Scenario.from_yaml(scenarios[n]) for n in sorted(scenarios)]
+        suite = run_suite(specs, rt, os.path.join(project, ".robotbase", "runs"),
+                          args.trials, args.seed)
+        card = scorecard(suite, {"agent": args.agent} if args.agent else None)
+        print(json.dumps(card, indent=2))
+        _hint(f"RobotBench score {card['score']}/100 — {card['solved']}/{card['tasks']} tasks solved.")
+        sys.exit(0 if card["solved"] == card["tasks"] else 1)
 
     elif args.cmd == "episode":
         if args.action == "summary":

@@ -45,10 +45,12 @@ A scenario today is a pass/fail test. The leap is making it a benchmark.
 
 - 🔲 **The hub** — a registry for scenario packs, robot templates, worlds. *npm + Hugging
   Face for robotics.* VISION Layer 1.
-- 🔲 **RobotBench — benchmark *AI agents* at robot-controller writing** 🌶️ — formalize the
-  dogfooding we've been doing into a fixed scenario set that coding agents attempt, scored on
-  pass-rate/iterations. "SWE-bench for robotics agents." Timely, viral, ownable, and it
-  *generates the eval data we want anyway.* We already have the harness and the proof.
+- ✅ **RobotBench — benchmark *AI agents* at robot-controller writing** 🌶️ — a versioned task
+  set (`robotbase bench --list`), a comparable **scorecard** (`robotbase bench [--agent
+  NAME]` → 0–100 score = mean robustness, `solved`/`tasks`, agent-tagged), and the
+  agent-benchmark protocol (formalizes the dogfooding). See `docs/ROBOTBENCH.md`. *Next:*
+  automated agent dispatch per task; a public leaderboard; cross-robot-class scoring in one
+  command.
 - 🔲 **Shareable episode viewer** — a web page per episode ("watch my agent solve this").
 - 🔲 **Format governance** — publish the scenario/manifest/result format as a spec + JSON
   Schema (SCENARIO-FORMAT.md is the start).
