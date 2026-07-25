@@ -47,11 +47,15 @@ def evaluate(spec: AssertionSpec, metrics: Metrics) -> AssertionResult:
 
     if t == "robot_reached_pose":
         import math
-        dist = math.hypot(metrics.final_x - (spec.target_x or 0.0),
-                          metrics.final_y - (spec.target_y or 0.0))
+        dx = metrics.final_x - (spec.target_x or 0.0)
+        dy = metrics.final_y - (spec.target_y or 0.0)
+        # target_z is optional — include it (3D distance) only for robots that fly.
+        dz = (metrics.final_z - spec.target_z) if spec.target_z is not None else 0.0
+        dist = math.hypot(math.hypot(dx, dy), dz)
         tol = spec.position_tolerance_metres or 0.0
+        goal = (spec.target_x, spec.target_y) + ((spec.target_z,) if spec.target_z is not None else ())
         return AssertionResult(type=t, passed=dist <= tol, expected=tol, actual=round(dist, 3),
-                               detail=f"distance to goal ({spec.target_x}, {spec.target_y})")
+                               detail=f"distance to goal {goal}")
 
     if t == "joint_positions_reached":
         # Every named joint must be within tolerance of its target angle (radians).

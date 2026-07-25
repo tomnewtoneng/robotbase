@@ -13,6 +13,7 @@ class Metrics(BaseModel):
     path_length_metres: float = 0.0
     final_x: float = 0.0
     final_y: float = 0.0
+    final_z: float = 0.0
     final_yaw: float = 0.0
     final_linear_velocity: float = 0.0
     final_angular_velocity: float = 0.0

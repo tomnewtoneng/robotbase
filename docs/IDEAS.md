@@ -59,7 +59,10 @@ A scenario today is a pass/fail test. The leap is making it a benchmark.
 
 ## D. Widen capability (the "can")
 
-- 🔲 More robots: quadruped, **drone/quadrotor**, mobile manipulator, Ackermann car.
+- 🚧 More robots: **drone/quadrotor shipped** (`drone` template — a new *aerial* class;
+  kinematic velocity control, 3D `/cmd_vel` + `/odom` + IMU, a `reach-position` scenario;
+  drove the `final_z` metric + 3D `robot_reached_pose`). Still: quadruped, mobile
+  manipulator, Ackermann car.
 - 🚧 More sensors: **IMU shipped** (both mobile templates — `/imu` orientation/ang-vel/accel
   at 50 Hz, physics-based; world `Imu` system + `imu_link` sensor, bridged). Still: depth
   camera, force/torque.

@@ -1,0 +1,73 @@
+<?xml version="1.0"?>
+<!-- A quadrotor drone. Flight is kinematic velocity control (gz VelocityControl): publish a
+     3D /cmd_vel (linear x/y/z + angular z) and the body tracks it — command z>0 to climb,
+     z=0 to hover. Pose (incl. altitude) is published on /odom by OdometryPublisher, and an
+     IMU on /imu. This is the "drone" Robotbase template — a new (aerial) robot class. -->
+<robot name="warehouse_bot" xmlns:xacro="http://ros.org/wiki/xacro">
+
+  <xacro:property name="arm" value="0.18"/>       <!-- rotor arm length -->
+  <xacro:property name="body" value="0.16"/>
+
+  <link name="base_link">
+    <inertial>
+      <mass value="1.0"/>
+      <inertia ixx="0.02" ixy="0" ixz="0" iyy="0.02" iyz="0" izz="0.04"/>
+    </inertial>
+    <collision><geometry><box size="${body} ${body} 0.06"/></geometry></collision>
+    <visual>
+      <geometry><box size="${body} ${body} 0.06"/></geometry>
+      <material name="body"><color rgba="0.2 0.2 0.25 1"/></material>
+    </visual>
+  </link>
+
+  <!-- Four rotor pods (visual only — flight is kinematic). -->
+  <xacro:macro name="rotor" params="name x y rgba">
+    <link name="${name}">
+      <inertial><mass value="0.02"/><inertia ixx="1e-5" ixy="0" ixz="0" iyy="1e-5" iyz="0" izz="1e-5"/></inertial>
+      <visual>
+        <geometry><cylinder radius="0.05" length="0.01"/></geometry>
+        <material name="${name}_m"><color rgba="${rgba}"/></material>
+      </visual>
+    </link>
+    <joint name="${name}_joint" type="fixed">
+      <parent link="base_link"/><child link="${name}"/>
+      <origin xyz="${x} ${y} 0.04"/>
+    </joint>
+  </xacro:macro>
+  <xacro:rotor name="rotor_fl" x="${arm}"  y="${arm}"  rgba="0.9 0.2 0.2 1"/>
+  <xacro:rotor name="rotor_fr" x="${arm}"  y="${-arm}" rgba="0.2 0.2 0.2 1"/>
+  <xacro:rotor name="rotor_bl" x="${-arm}" y="${arm}"  rgba="0.2 0.2 0.2 1"/>
+  <xacro:rotor name="rotor_br" x="${-arm}" y="${-arm}" rgba="0.2 0.2 0.2 1"/>
+
+  <link name="imu_link"/>
+  <joint name="imu_joint" type="fixed">
+    <parent link="base_link"/><child link="imu_link"/>
+    <origin xyz="0 0 0"/>
+  </joint>
+
+  <gazebo>
+    <!-- Kinematic velocity control: /cmd_vel (Twist) → body velocity in the world frame. -->
+    <plugin filename="gz-sim-velocity-control-system" name="gz::sim::systems::VelocityControl">
+      <topic>cmd_vel</topic>
+    </plugin>
+    <!-- 3D odometry (x, y, z, yaw) on /odom. -->
+    <plugin filename="gz-sim-odometry-publisher-system" name="gz::sim::systems::OdometryPublisher">
+      <odom_frame>odom</odom_frame>
+      <robot_base_frame>base_link</robot_base_frame>
+      <dimensions>3</dimensions>
+      <odom_topic>odom</odom_topic>
+      <tf_topic>tf</tf_topic>
+      <odom_publish_frequency>30</odom_publish_frequency>
+    </plugin>
+  </gazebo>
+
+  <gazebo reference="imu_link">
+    <sensor name="imu" type="imu">
+      <topic>imu</topic>
+      <gz_frame_id>imu_link</gz_frame_id>
+      <update_rate>50</update_rate>
+      <always_on>true</always_on>
+    </sensor>
+  </gazebo>
+
+</robot>

@@ -51,6 +51,12 @@ def test_robot_moved_minimum_distance():
     assert evaluate(spec, m(distance_travelled_metres=2.0)).passed is True
     assert evaluate(spec, m(distance_travelled_metres=0.5)).passed is False
 
+def test_robot_reached_pose_3d():
+    spec = AssertionSpec(type="robot_reached_pose", target_x=2.0, target_y=0.0, target_z=2.0,
+                         position_tolerance_metres=0.4)
+    assert evaluate(spec, m(final_x=2.0, final_y=0.0, final_z=1.99)).passed is True   # hovering
+    assert evaluate(spec, m(final_x=0.0, final_y=0.0, final_z=0.1)).passed is False   # on the ground
+
 def test_minimum_path_length():
     spec = AssertionSpec(type="minimum_path_length", minimum_metres=3.5)
     assert evaluate(spec, m(path_length_metres=4.2)).passed is True

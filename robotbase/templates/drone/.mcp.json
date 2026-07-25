@@ -1,0 +1,11 @@
+{
+  "mcpServers": {
+    "robotbase": {
+      "command": "python3",
+      "args": ["-m", "robotbase.mcp_server"],
+      "env": {
+        "ROBOTBASE_PROJECT_DIR": "."
+      }
+    }
+  }
+}

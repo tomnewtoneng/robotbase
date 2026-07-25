@@ -51,6 +51,7 @@ class AssertionSpec(BaseModel):
     minimum_count: int | None = None
     target_x: float | None = None
     target_y: float | None = None
+    target_z: float | None = None
     position_tolerance_metres: float | None = None
     joint_targets: dict[str, float] | None = None
     joint_tolerance: float | None = None
