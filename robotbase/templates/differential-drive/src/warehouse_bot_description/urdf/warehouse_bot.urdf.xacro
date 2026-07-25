@@ -83,7 +83,14 @@
     <origin xyz="${body_x/2 - 0.03} 0 ${body_z/2 + 0.03}"/>
   </joint>
 
-  <!-- Gazebo Harmonic: differential drive + friction + LiDAR -->
+  <link name="imu_link"/>
+  <joint name="imu_joint" type="fixed">
+    <parent link="base_link"/>
+    <child link="imu_link"/>
+    <origin xyz="0 0 ${body_z/2}"/>
+  </joint>
+
+  <!-- Gazebo Harmonic: differential drive + friction + LiDAR + IMU -->
   <gazebo>
     <plugin filename="gz-sim-diff-drive-system" name="gz::sim::systems::DiffDrive">
       <left_joint>left_wheel_joint</left_joint>
@@ -120,6 +127,17 @@
         </horizontal></scan>
         <range><min>0.08</min><max>10.0</max><resolution>0.01</resolution></range>
       </lidar>
+    </sensor>
+  </gazebo>
+
+  <!-- IMU: orientation, angular velocity, linear acceleration. Physics-based (no
+       rendering); driven by the Imu system declared at world scope. -->
+  <gazebo reference="imu_link">
+    <sensor name="imu" type="imu">
+      <topic>imu</topic>
+      <gz_frame_id>imu_link</gz_frame_id>
+      <update_rate>50</update_rate>
+      <always_on>true</always_on>
     </sensor>
   </gazebo>
 

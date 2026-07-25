@@ -11,6 +11,8 @@
     </plugin>
     <plugin filename="gz-sim-scene-broadcaster-system" name="gz::sim::systems::SceneBroadcaster"/>
     <plugin filename="gz-sim-user-commands-system" name="gz::sim::systems::UserCommands"/>
+    <!-- Drives IMU sensors (orientation, angular velocity, linear acceleration). -->
+    <plugin filename="gz-sim-imu-system" name="gz::sim::systems::Imu"/>
     <!-- Populates contact sensors (e.g. the robot's bumper). The Contact system lives at
          world scope; the sensor itself is declared on the robot's base link. -->
     <plugin filename="gz-sim-contact-system" name="gz::sim::systems::Contact"/>

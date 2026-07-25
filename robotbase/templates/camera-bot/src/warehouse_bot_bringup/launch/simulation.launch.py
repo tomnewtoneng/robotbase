@@ -57,6 +57,7 @@ def generate_launch_description():
             "/odom@nav_msgs/msg/Odometry[gz.msgs.Odometry",
             "/scan@sensor_msgs/msg/LaserScan[gz.msgs.LaserScan",
             "/image@sensor_msgs/msg/Image[gz.msgs.Image",
+            "/imu@sensor_msgs/msg/Imu[gz.msgs.IMU",
             contact_gz_topic + "@ros_gz_interfaces/msg/Contacts[gz.msgs.Contacts",
             "/tf@tf2_msgs/msg/TFMessage[gz.msgs.Pose_V",
             "/joint_states@sensor_msgs/msg/JointState[gz.msgs.Model",

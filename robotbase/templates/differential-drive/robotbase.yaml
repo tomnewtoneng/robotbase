@@ -26,6 +26,9 @@ sensors:
   contact:
     enabled: true
     topic: /bumper
+  imu:
+    enabled: true
+    topic: /imu
   odometry:
     enabled: true
     topic: /odom

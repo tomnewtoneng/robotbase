@@ -60,7 +60,9 @@ A scenario today is a pass/fail test. The leap is making it a benchmark.
 ## D. Widen capability (the "can")
 
 - 🔲 More robots: quadruped, **drone/quadrotor**, mobile manipulator, Ackermann car.
-- 🔲 More sensors: depth camera, IMU, force/torque.
+- 🚧 More sensors: **IMU shipped** (both mobile templates — `/imu` orientation/ang-vel/accel
+  at 50 Hz, physics-based; world `Imu` system + `imu_link` sensor, bridged). Still: depth
+  camera, force/torque.
 - 🔲 **Grasping / pick-and-place** — the arm's natural next task.
 - 🔲 Multi-robot scenarios (coordination).
 
