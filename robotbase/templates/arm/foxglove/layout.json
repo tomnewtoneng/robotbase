@@ -1,0 +1,46 @@
+{
+  "configById": {
+    "3D!main": {
+      "layers": {
+        "grid": { "layerId": "foxglove.Grid", "visible": true }
+      },
+      "cameraState": {
+        "distance": 2.5,
+        "perspective": true,
+        "phi": 60,
+        "target": [0, 0, 0.4],
+        "targetOffset": [0, 0, 0],
+        "targetOrientation": [0, 0, 0, 1],
+        "thetaOffset": 45,
+        "fovy": 45,
+        "near": 0.1,
+        "far": 1000
+      },
+      "followMode": "follow-none",
+      "followTf": "base_link",
+      "scene": {},
+      "transforms": {},
+      "topics": {
+        "/tf": { "visible": true },
+        "/robot_description": { "visible": true }
+      }
+    },
+    "Plot!joints": {
+      "paths": [
+        { "value": "/joint_states.position[0]", "enabled": true, "timestampMethod": "receiveTime" },
+        { "value": "/joint_states.position[1]", "enabled": true, "timestampMethod": "receiveTime" }
+      ],
+      "showLegend": true,
+      "xAxisVal": "timestamp"
+    }
+  },
+  "globalVariables": {},
+  "userNodes": {},
+  "playbackConfig": { "speed": 1 },
+  "layout": {
+    "first": "3D!main",
+    "second": "Plot!joints",
+    "direction": "row",
+    "splitPercentage": 62
+  }
+}

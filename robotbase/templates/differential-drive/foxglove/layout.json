@@ -1,0 +1,34 @@
+{
+  "configById": {
+    "3D!main": {
+      "layers": {
+        "grid": { "layerId": "foxglove.Grid", "visible": true }
+      },
+      "cameraState": {
+        "distance": 10,
+        "perspective": true,
+        "phi": 55,
+        "target": [0, 0, 0],
+        "targetOffset": [0, 0, 0],
+        "targetOrientation": [0, 0, 0, 1],
+        "thetaOffset": 45,
+        "fovy": 45,
+        "near": 0.5,
+        "far": 5000
+      },
+      "followMode": "follow-pose",
+      "followTf": "odom",
+      "scene": {},
+      "transforms": {},
+      "topics": {
+        "/tf": { "visible": true },
+        "/scan": { "visible": true },
+        "/robot_description": { "visible": true }
+      }
+    }
+  },
+  "globalVariables": {},
+  "userNodes": {},
+  "playbackConfig": { "speed": 1 },
+  "layout": "3D!main"
+}

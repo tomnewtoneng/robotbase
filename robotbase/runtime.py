@@ -132,7 +132,10 @@ class Runtime:
                 self._start_recorder()
                 result = {"running": True, "topics": sorted(topics)}
                 if self.gui == "foxglove":
-                    result["visualization"] = "Foxglove: connect to ws://localhost:8765"
+                    result["visualization"] = (
+                        "Foxglove: connect to ws://localhost:8765, then import "
+                        "foxglove/layout.json (Layouts -> Import)"
+                    )
                 return result
             time.sleep(2)
         return {"running": False, "topics": sorted(t["name"] for t in self.list_topics())}

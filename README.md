@@ -105,6 +105,7 @@ published Docker image; the scenario library is intentionally small and growing.
 - [IDEAS.md](docs/IDEAS.md) — the ranked expansion backlog.
 - [ROBOTBENCH.md](docs/ROBOTBENCH.md) — the benchmark for robot behaviours and AI agents.
 - [SCENARIO-FORMAT.md](docs/SCENARIO-FORMAT.md) — the versioned manifest/scenario/result spec.
+- [VISUALIZATION.md](docs/VISUALIZATION.md) — watch runs live and replay/share episodes in Foxglove.
 - [PUBLISHING.md](docs/PUBLISHING.md) — release runbook (PyPI + the runtime image).
 - [CONTRIBUTING.md](CONTRIBUTING.md) — dev setup and the principles.
 - [design/mcap-recording.md](docs/design/mcap-recording.md) · [design/optional-visualization.md](docs/design/optional-visualization.md)

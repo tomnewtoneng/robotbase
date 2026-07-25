@@ -45,6 +45,7 @@ Inspect a recorded run:
   episode query [RUN] --topic T [--around SEC] [--window SEC]
                                  a bounded, downsampled slice of one topic
   diagnose [RUN]                 explain why a run failed (assertions + episode evidence)
+  replay [RUN]                   open a recorded run's episode for visual replay in Foxglove
   clean [--keep N]               delete old recorded runs (keep the newest N, default 20)
 
 Author behaviours:
@@ -147,6 +148,9 @@ def _build_parser() -> argparse.ArgumentParser:
     diag = sub.add_parser("diagnose", help="explain why a run failed")
     diag.add_argument("run", nargs="?", default="latest")
 
+    rep = sub.add_parser("replay", help="show how to replay a recorded run in Foxglove")
+    rep.add_argument("run", nargs="?", default="latest")
+
     bench = sub.add_parser("bench", help="score the controller against RobotBench")
     bench.add_argument("--list", action="store_true", help="list the RobotBench task set")
     bench.add_argument("--agent", help="tag the scorecard with the agent/model used")
@@ -243,7 +247,8 @@ def main() -> None:
         result = rt.launch()
         print(json.dumps(result, indent=2))
         if result.get("visualization"):
-            _hint("Watch: connect Foxglove to ws://localhost:8765")
+            _hint("Watch: open Foxglove, connect to ws://localhost:8765, and import "
+                  "foxglove/layout.json. See docs/VISUALIZATION.md.")
         _hint("Run scenarios:  robotbase test <name>    Stop:  robotbase stop")
 
     elif args.cmd == "clean":
@@ -285,6 +290,36 @@ def main() -> None:
         except Exception:
             pass
         print(json.dumps(diagnose(result, events, control), indent=2))
+
+    elif args.cmd == "replay":
+        runs_dir = os.path.join(project, ".robotbase", "runs")
+        if args.run in ("latest", "", None):
+            dirs = [d for d in glob.glob(os.path.join(runs_dir, "*")) if os.path.isdir(d)]
+            if not dirs:
+                print("no runs found"); sys.exit(2)
+            run_path = max(dirs, key=os.path.getmtime)
+        else:
+            run_path = os.path.join(runs_dir, args.run)
+        mcap = os.path.join(run_path, "episode.mcap")
+        if not os.path.exists(mcap):
+            print(f"no episode.mcap for run {os.path.basename(run_path)!r}"); sys.exit(2)
+        layout = os.path.join(project, "foxglove", "layout.json")
+        print(json.dumps({
+            "run": os.path.basename(run_path),
+            "mcap": os.path.abspath(mcap),
+            "layout": os.path.abspath(layout) if os.path.exists(layout) else None,
+            "how_to_view": [
+                "Open Foxglove (the desktop app, or https://studio.foxglove.dev in a browser).",
+                "'Open local file' -> the .mcap above. On Windows/WSL it's under "
+                "\\\\wsl.localhost\\<distro>\\... .",
+                "Layouts -> Import -> the layout above (or just set the 3D panel's Display "
+                "frame to 'odom').",
+                "Press play to replay the run and scrub the timeline. The .mcap is "
+                "self-contained (carries the scenario + result as an attachment).",
+            ],
+        }, indent=2))
+        _hint("Replay it in Foxglove — see docs/VISUALIZATION.md. Share the .mcap and anyone "
+              "with Foxglove can watch the exact run.")
 
     elif args.cmd == "status":
         print(json.dumps(rt.simulation_status(), indent=2))
