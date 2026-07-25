@@ -159,7 +159,10 @@ controller fails, a correct controller passes.
 
 ## Phasing
 
-Each phase is independently shippable and tested.
+Each phase is independently shippable and tested. **Import is deliberately early** (before the
+extra archetypes): meeting the existing standards where they are — running Robotbase's
+runner/evals/MCP over a robot's *own* URDF/SDF — de-risks the whole format bet and proves the
+moat (the eval layer) independent of whether anyone adopts the YAML authoring path.
 
 1. **Primitive IR + merge/validation.** Rewrite `differential-drive` as an emitter; add the
    `parts:` surface + `base:`-sugar loader; link-shape sugar; sensors-on-any-link (`on:`). All
@@ -167,9 +170,23 @@ Each phase is independently shippable and tested.
 2. **World compiler.** `worldspec/` (sugar + `include` + the systems seam); wire the build
    path; regenerate the `differential-drive` template from `robot.yaml` + `world.yaml` and
    pass the validation gate.
-3. **`camera` + `depth` sensor emitters** -> regenerate camera-bot.
-4. **`arm` + `quadrotor` modules** -> regenerate arm + drone. Mobile-manipulator falls out of
+3. **Import — bring-your-own URDF/SDF (elevated).** `create --from-urdf` (the "wrap" path:
+   copy the URDF verbatim, write a thin `robot.yaml` with `use: custom` + a best-effort sensor
+   bridge list); world SDF import already falls out of `include:`. This is what makes Robotbase
+   useful to a team that keeps its own robot description, and it lets the runner/evals earn
+   their keep without betting on format adoption.
+4. **`camera` + `depth` sensor emitters** -> regenerate camera-bot.
+5. **`arm` + `quadrotor` modules** -> regenerate arm + drone. Mobile-manipulator falls out of
    composition for free.
+
+## Dogfooding (built into the sequence)
+
+Each phase is used to build the next, and every friction point an agent (me or a dispatched
+subagent) hits authoring against the new formats is recorded and addressed before moving on —
+`docs/DOGFOODING.md` is the running log. The specific test that matters: give a *fresh* agent
+only the format docs and ask it to author a robot/world it has never seen, cold. If it
+faceplants, the format (or its errors/defaults/validation) is wrong, not the agent — fix that
+before adding more surface.
 
 ## Testing
 
