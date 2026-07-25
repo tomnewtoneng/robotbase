@@ -91,22 +91,68 @@ A scenario today is a pass/fail test. The leap is making it a benchmark.
   Verified the wheel/sdist build and bundle all templates + sim adapters.
 - 🔲 **PyPI upload + public Docker image** — the actual publish (needs owner accounts/tokens;
   steps in `docs/PUBLISHING.md`).
+- 🔲 **`.devcontainer` / GitHub Codespaces** — "Open in Codespaces" → it just works in the
+  browser (Docker-in-Docker; the headless sim runs, only the GUI wouldn't). Lowest-friction
+  "try it now" without hosting infra.
+- 🔲 **CI + a green "tests passing" badge** — GitHub Actions running `pytest`; trust signal.
+- 🔲 **Animated robot GIFs** — capture spectator-camera frames *during* a run → looping GIF
+  (headless, pure-Python encoder). A moving robot beats a still, for the README.
+- 🔲 **Captured agent-solving artifact** — run a real subagent solving a scenario, capture its
+  tool-calls + the before/after episode, render it as a shareable "AI teaches itself" page.
+  Dogfooding-as-marketing.
 - 🔲 The demo video / GIF (the "agent teaches itself" moment; `PROOF.md` is the written form).
 - 🔲 Build-in-public content on the "Build With Toddy" brand (a structural edge).
 - 🔲 Integration guides (Claude Code / Cursor / any agent).
 
+## G. Agent-native authoring — the "Supabase for robots" core (CURRENT FOCUS)
+
+The leap from "the agent edits the controller" to "the agent authors *everything* by natural
+language." Today scenarios + manifests are agent-friendly YAML, but **worlds are raw SDF and
+robots are raw URDF/xacro** — verbose, physics-sensitive XML that an agent can't reliably
+write from scratch. Close that gap:
+
+- 🔲 **Declarative robot spec (YAML → URDF)** — the key architectural move. A clean
+  `robot.yaml` (base type, dimensions, wheels/joints, sensors) that Robotbase compiles to
+  URDF/xacro. Makes robots as authorable as scenarios already are. **Design:
+  `docs/design/robot-spec.md`** (archetype × sensor modules; the compiler owns the sim
+  gotchas; validated by regenerating the shipped templates).
+- 🔲 **Declarative world spec (YAML → SDF)** — `world.yaml` (obstacles, walls, goals, lights)
+  compiled to the world SDF. Agent builds scenes from words.
+- 🔲 **Bring-your-own-robot / world (import)** — `create --from-urdf my_robot.urdf` and
+  world import, so you test *your* robot, not just the templates. #1 usefulness unlock.
+- 🔲 **`robotbase init`** — drop Robotbase into an *existing* project (like `supabase init`),
+  not only greenfield `create`.
+- 🔲 **NL authoring end-to-end** — the agent goes from "test a diff-drive that avoids
+  obstacles in a warehouse" to the robot spec + world spec + scenario + controller, all via
+  the declarative formats. Robotbase becomes truly agent-native and drop-in-anywhere.
+
+## H. Robotbase Studio — the GUI (the "Supabase dashboard" moment)
+
+- 🔲 **One pane: chat with your agent + see files being edited + watch the 3D sim
+  running/improving + read results.** The end-state that makes it feel like a product, not a
+  CLI, and opens it to roboticists who aren't coding-agent power users. Big, different-skillset
+  build (a web app). Pieces exist to lean on: Foxglove is embeddable for the live 3D; the
+  Claude Agent SDK can host the agent-with-MCP-tools; the runtime already orchestrates.
+  Sequence *after* (or alongside a minimal version of) G — the Studio's magic depends on NL
+  authoring being smooth. A minimal `robotbase studio` (embed Foxglove live + episode/results,
+  then add agent chat) is the incremental path.
+
 ---
 
-## Ranking (the order we're working through)
+## Ranking
 
-The picks that compound hardest — #1 and #3 both build the un-clonable eval dataset; #2
-makes the loop delightful; #4 gets eyes on it:
+**A–F done or in progress** (evals, auto-diagnosis, RobotBench, describe/doctor, MCAP
+episodes, sim-agnostic + RL env, distribution groundwork + visualization). **Current focus
+(2026-07-25, Tom): G — agent-native authoring**, i.e. everything by natural language:
+declarative robot/world specs (YAML → URDF/SDF) so the agent authors robots and worlds the
+way it already authors scenarios and controllers; plus import (bring-your-own-URDF) and
+`robotbase init` for drop-in. Then **H — Robotbase Studio** (the unified GUI), sequenced
+after a minimal authoring foundation because the Studio's value depends on NL authoring
+being smooth. Remaining breadth (D robots/sensors, E frontier) slots in opportunistically.
 
-1. **Domain randomization + scenario suites/regression** (A) — converts tests into evals, the
-   whole moat, reachable now.
-2. **Auto-diagnosis of failures** (B) — the killer agent-DX feature and best demo.
-3. **RobotBench — the AI-agent robotics benchmark** (C) — we're uniquely positioned; doubles
-   as the eval-data flywheel.
-4. **Distribution** (F) — get it out of the vacuum; content is the structural edge.
-
-Then breadth: widen capability (D) and the frontier bets (E).
+Order to build G:
+1. **Declarative robot spec (YAML → URDF)** — start with the mobile base; the foundational
+   piece that makes robots agent-authorable.
+2. **Declarative world spec (YAML → SDF)** — scenes from words.
+3. **Import (`--from-urdf`) + `robotbase init`** — bring-your-own + drop-in.
+4. **A minimal Studio** (Foxglove live embed + results), then agent chat.
