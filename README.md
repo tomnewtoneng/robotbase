@@ -66,6 +66,8 @@ Everything runs headless in Docker (software-rendered Gazebo — no GPU required
   **MCAP** episode (Foxglove/Rerun-openable); query bounded, downsampled slices of any topic.
 - **`robotbase bench`** — score the controller on **[RobotBench](docs/ROBOTBENCH.md)**, a
   versioned benchmark for robot behaviours *and the agents that write them*.
+- **`robotbase doctor`** — check the environment (Docker, the runtime image, port conflicts,
+  the project's container) and get pointed at the fix.
 - **MCP server + CLI** — the same loop-closing operations for a coding agent or a human.
 
 Sensors and behaviours are composable primitives (LiDAR, contact/bumper, camera, odometry;
@@ -80,13 +82,18 @@ Robotbase is the **layer over the simulator, not a simulator**. The durable valu
 The Gazebo + ROS 2 runtime is one backend; a **MuJoCo** backend (in-process, no ROS/Docker)
 runs the *same* scenario runner and format unchanged. See `robotbase/sim/`.
 
+And because a scenario goal is just a target + tolerance, the same task also exposes as a
+**Gymnasium RL environment** (`robotbase.sim.gym_env`) — *train and eval in one format*: a
+policy trains against the env and is scored against the identical scenario through the runner.
+
 ## Status
 
 **Alpha, and proven end-to-end.** The full local loop works (create → build → launch → run
 scenarios → agent fixes the controller). It ships **three robot templates across two robot
 classes**, a growing scenario/assertion/metric vocabulary, MCAP episode recording +
-query + attachments, auto-diagnosis, a domain-randomized eval/suite layer, RobotBench, and a
-proven sim-agnostic adapter (Gazebo + MuJoCo). 60+ unit tests, code-reviewed core, MIT.
+query + attachments, auto-diagnosis, `robotbase doctor`, a domain-randomized eval/suite
+layer, RobotBench, a proven sim-agnostic adapter (Gazebo + MuJoCo), and a Gymnasium RL env.
+~70 unit tests, code-reviewed core, MIT.
 
 Known limitations: developed on Windows/WSL2 (other hosts untested); not yet on PyPI or a
 published Docker image; the scenario library is intentionally small and growing.
@@ -98,6 +105,8 @@ published Docker image; the scenario library is intentionally small and growing.
 - [IDEAS.md](docs/IDEAS.md) — the ranked expansion backlog.
 - [ROBOTBENCH.md](docs/ROBOTBENCH.md) — the benchmark for robot behaviours and AI agents.
 - [SCENARIO-FORMAT.md](docs/SCENARIO-FORMAT.md) — the versioned manifest/scenario/result spec.
+- [PUBLISHING.md](docs/PUBLISHING.md) — release runbook (PyPI + the runtime image).
+- [CONTRIBUTING.md](CONTRIBUTING.md) — dev setup and the principles.
 - [design/mcap-recording.md](docs/design/mcap-recording.md) · [design/optional-visualization.md](docs/design/optional-visualization.md)
 - [PROOF.md](PROOF.md) — the canonical proof: an agent teaching itself obstacle avoidance.
 

@@ -10,8 +10,16 @@ scenarios). Priorities are a recommendation, not a contract.
 scenarios → agent fixes the controller). A multi-template library with three robot templates
 across two robot classes (`differential-drive`, `camera-bot`, and a fixed-base `arm`)
 reachable via `robotbase create --template`, a growing scenario/assertion/metric vocabulary,
-42 unit tests, code-reviewed core, MIT-licensed, on GitHub. The scenario/manifest formats are
+~70 unit tests, code-reviewed core, MIT-licensed, on GitHub. The scenario/manifest formats are
 a versioned open spec (`SCENARIO-FORMAT.md`).
+
+**Recently shipped (see `IDEAS.md` for the ranked backlog):** the **eval layer** — domain
+randomization + suites + regression (`test --all --trials`), **auto-diagnosis**
+(`robotbase diagnose`), **RobotBench** (`robotbase bench`, see `ROBOTBENCH.md`); the
+**agent-DX** tools `robotbase describe` and `robotbase doctor`; the full **MCAP episode**
+record/query/attachments; a proven **sim-agnostic** adapter (Gazebo + MuJoCo); and a
+**Gymnasium RL env** (train and eval in one format). This doc's remaining focus is
+**widening** — more robots, sensors, and behaviours.
 
 ## Now — distribution (Track A, mostly human-driven)
 
