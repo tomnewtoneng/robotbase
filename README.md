@@ -1,5 +1,7 @@
 # Robotbase
 
+![Robotbase — a coding agent can write robot code; it can't tell if the robot actually works. Robotbase gives it a robot to run and evidence to read.](docs/images/overview.png)
+
 **The batteries-included developer-experience layer for agent-driven robotics.**
 
 Setting up ROS 2 + Gazebo is a rite of passage. Robotbase makes that headache vanish and
