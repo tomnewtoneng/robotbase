@@ -111,11 +111,13 @@ language." Today scenarios + manifests are agent-friendly YAML, but **worlds are
 robots are raw URDF/xacro** — verbose, physics-sensitive XML that an agent can't reliably
 write from scratch. Close that gap:
 
-- 🔲 **Declarative robot spec (YAML → URDF)** — the key architectural move. A clean
-  `robot.yaml` (base type, dimensions, wheels/joints, sensors) that Robotbase compiles to
-  URDF/xacro. Makes robots as authorable as scenarios already are. **Design:
-  `docs/design/robot-spec.md`** (archetype × sensor modules; the compiler owns the sim
-  gotchas; validated by regenerating the shipped templates).
+- 🚧 **Declarative robot spec (YAML → URDF)** — the key architectural move. A clean
+  `robot.yaml` that Robotbase compiles to URDF/xacro + launch bridges + manifest fields.
+  **Phase 1 shipped** (`robotbase/robotspec/`): the `differential-drive` archetype +
+  `lidar`/`imu`/`contact` sensor modules, validated by compiling a `robot.yaml` into a
+  project that builds and runs its scenario correctly. Design: `docs/design/robot-spec.md`.
+  Next: camera/depth sensors → camera-bot; `fixed-arm`/`quadrotor` archetypes → arm/drone;
+  then import (`--from-urdf`) + `robotbase init`.
 - 🔲 **Declarative world spec (YAML → SDF)** — `world.yaml` (obstacles, walls, goals, lights)
   compiled to the world SDF. Agent builds scenes from words.
 - 🔲 **Bring-your-own-robot / world (import)** — `create --from-urdf my_robot.urdf` and

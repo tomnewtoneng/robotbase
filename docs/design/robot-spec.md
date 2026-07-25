@@ -144,9 +144,13 @@ tests cover the pure compile (spec → URDF string / bridge list / manifest fiel
 
 ## Phasing
 
-1. **Robot spec + compiler for `differential-drive`** — the archetype + the `lidar`, `imu`,
-   `contact` sensor modules; regenerate the diff-drive template from a `robot.yaml` and pass
-   the validation gate.
+1. **Robot spec + compiler for `differential-drive` — DONE.** `robotbase/robotspec/`
+   (`schema.py`, `compile.py`, `project.py`): the archetype + `lidar`/`imu`/`contact` sensor
+   modules → URDF + bridges (with the contact remap) + world systems + manifest fields.
+   Validation gate passed: a `differential-drive` `robot.yaml` compiled a URDF + launch that
+   **build** and run `stop-before-obstacle` correctly (broken starter → `contact_count` 1,
+   `/scan` flowing) — i.e. the compiled LiDAR + contact sensor + drivetrain all work. 6 unit
+   tests.
 2. **`camera` + `depth` sensor modules** — regenerate camera-bot.
 3. **`fixed-arm` + `quadrotor` archetypes** — regenerate arm + drone. Now all four templates
    are *compiled from specs*, and a template is just a bundled `robot.yaml` (+ world +
