@@ -69,7 +69,32 @@ def create_project(name: str, dest_parent: str, template_dir: str) -> str:
     shutil.copytree(template_dir, dest, ignore=_ignore)
     _rewrite_contents(dest, snake, kebab)
     _rename_paths(dest, TEMPLATE_SNAKE, snake)
+    _compile_specs(dest, snake)
     return dest
+
+
+def _compile_specs(dest: str, snake: str) -> None:
+    """If the project carries robot.yaml/world.yaml, compile them into the description package."""
+    robot_yaml = os.path.join(dest, "robot.yaml")
+    if not os.path.exists(robot_yaml):
+        return
+    from robotbase.robotspec.compile import compile_robot
+    from robotbase.robotspec.schema import RobotSpec
+
+    compiled = compile_robot(RobotSpec.from_yaml(robot_yaml))
+    urdf_dir = os.path.join(dest, "src", f"{snake}_description", "urdf")
+    if os.path.isdir(urdf_dir):
+        with open(os.path.join(urdf_dir, f"{snake}.urdf.xacro"), "w", encoding="utf-8") as fh:
+            fh.write(compiled.urdf)
+
+    world_yaml = os.path.join(dest, "world.yaml")
+    world_dir = os.path.join(dest, "src", f"{snake}_description", "worlds")
+    if os.path.exists(world_yaml) and os.path.isdir(world_dir):
+        from robotbase.worldspec.compile import compile_world
+        from robotbase.worldspec.schema import WorldSpec
+        sdf, _ = compile_world(WorldSpec.from_yaml(world_yaml), robot_systems=compiled.world_systems)
+        with open(os.path.join(world_dir, "warehouse.sdf"), "w", encoding="utf-8") as fh:
+            fh.write(sdf)
 
 
 def _rewrite_contents(root: str, snake: str, kebab: str) -> None:

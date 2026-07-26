@@ -1,0 +1,11 @@
+version: 1
+name: warehouse
+ground: true
+light: sun
+walls:
+  - {from: [-4, 4],  to: [4, 4],   height: 1}   # north
+  - {from: [-4, -4], to: [4, -4],  height: 1}   # south
+  - {from: [4, -4],  to: [4, 4],   height: 1}   # east
+  - {from: [-4, -4], to: [-4, 4],  height: 1}   # west
+goals:
+  - {name: marker, at: [2, 1.5], radius: 0.2}

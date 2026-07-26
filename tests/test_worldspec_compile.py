@@ -36,6 +36,14 @@ def test_robot_systems_deduped():
     assert sdf.count('filename="gz-sim-physics-system"') == 1
 
 
+def test_world_emits_physics_and_sensors_render_engine():
+    sdf, _ = compile_world(WorldSpec(name="w"), robot_systems=["gz-sim-sensors-system"])
+    assert "<physics" in sdf and "<max_step_size>0.001</max_step_size>" in sdf
+    assert "<real_time_factor>1.0</real_time_factor>" in sdf
+    # the sensors system must name a render engine for headless rendering
+    assert "<render_engine>ogre2</render_engine>" in sdf
+
+
 def test_special_characters_produce_wellformed_sdf():
     spec = WorldSpec.model_validate({
         "name": "A & B",
