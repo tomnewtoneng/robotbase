@@ -26,6 +26,8 @@ class LinkIR:
 class JointIR:
     name: str
     xml: str                                  # full <joint>…</joint>
+    parent: str = ""
+    child: str = ""
 
 
 @dataclass
