@@ -10,6 +10,19 @@ class RobotSpecError(ValueError):
     ...
 
 
+_BOOL_KEY = {True: "on", False: "off"}   # YAML 1.1 coerces on/off/yes/no keys to bools
+
+
+def _normalise_bool_keys(node):
+    """Undo YAML 1.1's coercion of on/off/yes/no *keys* to bools (e.g. sensor `on:`)."""
+    if isinstance(node, dict):
+        return {(_BOOL_KEY[k] if isinstance(k, bool) else k): _normalise_bool_keys(v)
+                for k, v in node.items()}
+    if isinstance(node, list):
+        return [_normalise_bool_keys(v) for v in node]
+    return node
+
+
 class Body(BaseModel):
     shape: str = "box"                       # box | cylinder
     size: list[float] = [0.35, 0.30, 0.15]   # metres; x,y,z for box
@@ -62,6 +75,7 @@ class RobotSpec(BaseModel):
     def from_yaml(cls, path: str) -> "RobotSpec":
         with open(path) as f:
             data = yaml.safe_load(f) or {}
+        data = _normalise_bool_keys(data)
         try:
             return cls.model_validate(data)
         except ValidationError as e:

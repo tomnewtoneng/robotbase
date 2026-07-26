@@ -16,16 +16,19 @@ class Ctx:
     world: str
     robot_name: str
     body_size: list[float]
+    base_link: str = "base_link"
 
 
-def _mount(params, default):
+def _mount(params, on_link, ctx, base_default):
     m = params.get("mount")
-    return m if m is not None else default
+    if m is not None:
+        return m
+    return base_default if on_link == ctx.base_link else [0, 0, 0]
 
 
 def _lidar(params, on_link, ctx) -> Fragment:
     bx, by, bz = ctx.body_size
-    x, y, z = _mount(params, [bx/2 - 0.03, 0, bz/2 + 0.03])
+    x, y, z = _mount(params, on_link, ctx, [bx/2 - 0.03, 0, bz/2 + 0.03])
     topic = params.get("topic") or "/scan"
     f = Fragment(world_systems=["gz-sim-sensors-system"], ready_topics=[topic])
     f.links.append(LinkIR("lidar_link", '\n  <link name="lidar_link"/>'))
@@ -44,7 +47,7 @@ def _lidar(params, on_link, ctx) -> Fragment:
 
 def _imu(params, on_link, ctx) -> Fragment:
     bx, by, bz = ctx.body_size
-    x, y, z = _mount(params, [0, 0, bz/2])
+    x, y, z = _mount(params, on_link, ctx, [0, 0, bz/2])
     topic = params.get("topic") or "/imu"
     f = Fragment(world_systems=["gz-sim-imu-system"])
     f.links.append(LinkIR("imu_link", '\n  <link name="imu_link"/>'))

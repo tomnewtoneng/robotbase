@@ -36,3 +36,28 @@ tried, what broke, what we did.
     (≤0.05, robot_stopped), `required_topic_messages` satisfied.
 - **Conclusion:** Task 8a's spec-compiled URDF + world SDF are validated end-to-end in Docker —
   no compiler defects found. Throwaway `~/gate-bot` project deleted after the run.
+
+## 2026-07-26 — Checkpoint A (cold-author: a fresh agent authored specs from the docs only)
+
+A fresh agent, given ONLY `docs/design/declarative-compiler.md` (no source), authored a
+mast-mounted-lidar `robot.yaml` + a `world.yaml`. The world compiled first try, zero friction.
+The robot surfaced five findings; the two code bugs are fixed here, the two doc gaps by the
+maintainer.
+
+- **Finding 1 (CRITICAL, fixed):** `sensors: [{type: lidar, on: mast}]` — the doc's own headline
+  syntax — silently mounted the lidar on `base_link` with **no error**. Root cause: `on` is a
+  YAML 1.1 boolean, so PyYAML parses the key as `True`, the `on` field is never populated, and
+  the sensor falls back to the base link. The doc's "missing mount target → explicit error"
+  guarantee never fired because, from the schema's view, the field was simply absent.
+  **Fix:** `RobotSpec.from_yaml` now normalises boolean dict keys back to strings
+  (`True`→`"on"`, `False`→`"off"`) after `safe_load`, so unquoted `on:` works as documented.
+- **Finding 3 (fixed):** a sensor mounted via `on: <non-base link>` with no `mount:` still got
+  the base-shape-specific default offset (lidar `[0.145, 0, 0.105]`), nonsensical on a thin mast.
+  **Fix:** the default offset now applies only when the sensor is on the primary base link;
+  off-base sensors default to `[0, 0, 0]` (the link's own origin). `Ctx` gained `base_link`.
+- **Findings 2 & 4 (docs, maintainer):** the sensor `mount:` field (a `[x, y, z]` list, metres,
+  relative to the link) is under-documented in the robot-spec surface, and the link-shape sugar's
+  origin convention (geometry centred on the link/joint origin) is unstated. Clarified in
+  `docs/design/declarative-compiler.md`.
+- **Positive:** `parts:` composition, raw parts, sensor mounting, module defaults, and the entire
+  `world.yaml` surface worked exactly as documented once the `on:` quoting issue was found.

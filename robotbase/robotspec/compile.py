@@ -83,7 +83,7 @@ def compile_robot(spec: RobotSpec, world_name: str = "warehouse") -> CompiledRob
         root = all_links[0].name
 
     base_link = primary_base or root
-    ctx = Ctx(world=world_name, robot_name=spec.name, body_size=body_size)
+    ctx = Ctx(world=world_name, robot_name=spec.name, body_size=body_size, base_link=base_link)
     for s in spec.sensors:
         if s.type not in SENSORS:
             raise UnknownSensor(f"unknown sensor {s.type!r}; known: {sorted(SENSORS)}")

@@ -88,10 +88,27 @@ parts:
     joints:
       - {name: mast_joint, parent: base_link, child: mast, type: fixed, xyz: [0, 0, 0.1]}
 sensors:
-  - {type: lidar, on: mast}          # any link
-  - {type: camera, on: tool0}
+  - {type: lidar, on: mast}          # `on`: which link to attach to (any link)
+  - {type: camera, on: tool0, mount: [0, 0, 0.05]}   # `mount`: [x,y,z] offset in metres, on that link
 plugins: []                          # raw gz plugin passthrough — final escape hatch
 ```
+
+**Sensor fields.** `on` is the link the sensor attaches to (default: the primary module's base
+link). `mount` is an optional `[x, y, z]` offset **in metres, relative to `on`'s frame**; omit it
+and the sensor gets a sensible per-type default — a *base-tuned* offset when it's on the base
+link (e.g. lidar forward-and-up on the box body), or `[0, 0, 0]` (the link's own origin) on any
+other link, so a `mast`-mounted lidar sits on the mast, not floating beside it. Override `mount`
+whenever you want a specific pose.
+
+> **YAML gotcha, handled for you:** `on` is a YAML 1.1 boolean keyword, so a naive loader turns
+> the key `on:` into `True`. Robotbase's loader normalises that back, so `on: mast` (unquoted,
+> as shown) works — you don't need to quote it.
+
+**Link-shape sugar origin.** A raw part's `{shape, size}` link centres its geometry on the
+link's own origin (which sits at the joint's `xyz` in the parent frame). So a 0.5 m mast joined
+at `xyz: [0, 0, 0.1]` extends 0.25 m below and above that point; to stand a mast *on top of* the
+base, join it at half its length (`xyz: [0, 0, 0.25]` for a 0.5 m mast on a base whose top is at
+z≈0).
 
 ### Backward compatibility
 

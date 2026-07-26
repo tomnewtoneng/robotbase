@@ -36,3 +36,20 @@ def test_unknown_archetype_and_sensor_still_raise():
 def test_empty_spec_raises_clear_error():
     with pytest.raises(ValueError, match="no parts"):
         compile_robot(RobotSpec())
+
+
+def test_yaml_on_key_mounts_sensor_to_named_link(tmp_path):
+    p = tmp_path / "robot.yaml"
+    p.write_text(
+        "version: 1\n"
+        "name: mast_bot\n"
+        "parts:\n"
+        "  - use: differential-drive\n"
+        "  - links: [{name: mast, shape: cylinder, size: [0.03, 0.5], mass: 0.2}]\n"
+        "    joints: [{name: mast_joint, parent: base_link, child: mast, type: fixed, xyz: [0, 0, 0.25]}]\n"
+        "sensors:\n"
+        "  - {type: lidar, on: mast}\n"     # unquoted `on:` — the YAML-boolean landmine
+    )
+    c = compile_robot(RobotSpec.from_yaml(str(p)))
+    # the lidar joint must parent to mast, NOT silently fall back to base_link
+    assert '<parent link="mast"/><child link="lidar_link"/>' in c.urdf
