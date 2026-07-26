@@ -1,3 +1,5 @@
+import xml.dom.minidom
+
 from robotbase.worldspec.schema import WorldSpec
 from robotbase.worldspec.compile import compile_world
 
@@ -32,3 +34,14 @@ def test_world_sdf_emits_scene_and_goal_manifest():
 def test_robot_systems_deduped():
     sdf, _ = compile_world(_spec(), robot_systems=["gz-sim-physics-system"])
     assert sdf.count('filename="gz-sim-physics-system"') == 1
+
+
+def test_special_characters_produce_wellformed_sdf():
+    spec = WorldSpec.model_validate({
+        "name": "A & B",
+        "goals": [{"name": "dock & load", "at": [1, 1], "radius": 0.2}],
+        "include": ["foo & bar.sdf"],
+    })
+    sdf, manifest = compile_world(spec)
+    xml.dom.minidom.parseString(sdf)          # must not raise
+    assert manifest["goals"]["dock & load"]["radius"] == 0.2   # raw key preserved
