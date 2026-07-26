@@ -20,3 +20,17 @@ def test_create_compiles_specs_into_the_project():
         xml.dom.minidom.parseString(world_text)
         assert "gz-sim-sensors-system" in world_text and "gz-sim-contact-system" in world_text
         assert "<max_step_size>0.001</max_step_size>" in world_text
+
+
+def test_create_from_urdf_wraps_the_imported_urdf():
+    import os, tempfile
+    from robotbase.generator import create_project, template_dir
+    with tempfile.TemporaryDirectory() as tmp:
+        src_urdf = os.path.join(tmp, "mine.urdf")
+        marker = '<?xml version="1.0"?>\n<robot name="mine"><link name="base_link"/><!--IMPORTED--></robot>\n'
+        open(src_urdf, "w").write(marker)
+        dest = create_project("imp-bot", tmp, template_dir("differential-drive"), from_urdf=src_urdf)
+        placed = os.path.join(dest, "src", "imp_bot_description", "urdf", "imp_bot.urdf.xacro")
+        assert open(placed, encoding="utf-8").read() == marker      # imported URDF is used verbatim
+        robot_yaml = open(os.path.join(dest, "robot.yaml"), encoding="utf-8").read()
+        assert "use: custom" in robot_yaml

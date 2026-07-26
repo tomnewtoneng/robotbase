@@ -55,6 +55,30 @@ def compile_robot(spec: RobotSpec, world_name: str = "warehouse") -> CompiledRob
     if not parts and spec.base:
         parts = [Part(use=spec.base, body=spec.body, drive=spec.drive)]
 
+    custom = next((p for p in parts if p.use == "custom"), None)
+    if custom is not None:
+        with open(custom.urdf) as fh:
+            urdf = fh.read()
+        bridges, world_systems, ready_topics, sensors_manifest = [], [], [], {}
+        ctx = Ctx(world=world_name, robot_name=spec.name, body_size=list(spec.body.size))
+        for s in spec.sensors:
+            if s.type not in SENSORS:
+                raise UnknownSensor(f"unknown sensor {s.type!r}; known: {sorted(SENSORS)}")
+            frag = SENSORS[s.type](s.model_dump(), s.on or "base_link", ctx)
+            bridges += frag.bridges                                  # wiring only — XML assumed in the URDF
+            for sys_ in frag.world_systems:
+                if sys_ not in world_systems:
+                    world_systems.append(sys_)
+            for t in frag.ready_topics:
+                if t not in ready_topics:
+                    ready_topics.append(t)
+            sensors_manifest.update(frag.manifest_sensors)
+        manifest = {"robot": {"template": "custom", "name": spec.name},
+                    "sensors": sensors_manifest, "control": {"velocity_topic": "/cmd_vel"},
+                    "ready_topics": ready_topics, "fixed_base": False}
+        return CompiledRobot(name=spec.name, urdf=urdf, bridges=bridges,
+                             world_systems=world_systems, manifest=manifest, spawn_z=0.1)
+
     fragments: list[Fragment] = []
     primary_base = None
     body_size = list(spec.body.size)

@@ -50,7 +50,7 @@ def template_dir(name: str = DEFAULT_TEMPLATE) -> str:
     return str(path)
 
 
-def create_project(name: str, dest_parent: str, template_dir: str) -> str:
+def create_project(name: str, dest_parent: str, template_dir: str, from_urdf: str | None = None) -> str:
     """Create a new project under dest_parent; return its path."""
     snake = to_snake_identifier(name)
     kebab = _kebab(name)
@@ -69,30 +69,52 @@ def create_project(name: str, dest_parent: str, template_dir: str) -> str:
     shutil.copytree(template_dir, dest, ignore=_ignore)
     _rewrite_contents(dest, snake, kebab)
     _rename_paths(dest, TEMPLATE_SNAKE, snake)
+
+    if from_urdf is not None:
+        urdf_dir = os.path.join(dest, "src", f"{snake}_description", "urdf")
+        os.makedirs(urdf_dir, exist_ok=True)
+        shutil.copyfile(from_urdf, os.path.join(urdf_dir, f"{snake}.urdf.xacro"))
+        with open(os.path.join(dest, "robot.yaml"), "w", encoding="utf-8") as fh:
+            fh.write(f"version: 1\nname: {snake}\n"
+                     f"parts:\n  - use: custom\n    urdf: src/{snake}_description/urdf/{snake}.urdf.xacro\n"
+                     f"sensors: []\n")
+
     _compile_specs(dest, snake)
     return dest
 
 
 def _compile_specs(dest: str, snake: str) -> None:
-    """If the project carries robot.yaml/world.yaml, compile them into the description package."""
+    """If the project carries robot.yaml/world.yaml, compile them into the description package.
+
+    A `use: custom` robot.yaml wraps an already-placed, verbatim imported URDF — its
+    `urdf:` path is project-relative, and the imported file is authoritative, so URDF
+    compilation is skipped entirely for that case (no relative-path open, no clobbering
+    the import). The world is still compiled if `world.yaml` is present.
+    """
     robot_yaml = os.path.join(dest, "robot.yaml")
     if not os.path.exists(robot_yaml):
         return
-    from robotbase.robotspec.compile import compile_robot
-    from robotbase.robotspec.schema import RobotSpec
+    robot_yaml_text = open(robot_yaml, encoding="utf-8").read()
+    is_custom = "use: custom" in robot_yaml_text
 
-    compiled = compile_robot(RobotSpec.from_yaml(robot_yaml))
-    urdf_dir = os.path.join(dest, "src", f"{snake}_description", "urdf")
-    if os.path.isdir(urdf_dir):
-        with open(os.path.join(urdf_dir, f"{snake}.urdf.xacro"), "w", encoding="utf-8") as fh:
-            fh.write(compiled.urdf)
+    world_systems: list[str] = []
+    if not is_custom:
+        from robotbase.robotspec.compile import compile_robot
+        from robotbase.robotspec.schema import RobotSpec
+
+        compiled = compile_robot(RobotSpec.from_yaml(robot_yaml))
+        world_systems = compiled.world_systems
+        urdf_dir = os.path.join(dest, "src", f"{snake}_description", "urdf")
+        if os.path.isdir(urdf_dir):
+            with open(os.path.join(urdf_dir, f"{snake}.urdf.xacro"), "w", encoding="utf-8") as fh:
+                fh.write(compiled.urdf)
 
     world_yaml = os.path.join(dest, "world.yaml")
     world_dir = os.path.join(dest, "src", f"{snake}_description", "worlds")
     if os.path.exists(world_yaml) and os.path.isdir(world_dir):
         from robotbase.worldspec.compile import compile_world
         from robotbase.worldspec.schema import WorldSpec
-        sdf, _ = compile_world(WorldSpec.from_yaml(world_yaml), robot_systems=compiled.world_systems)
+        sdf, _ = compile_world(WorldSpec.from_yaml(world_yaml), robot_systems=world_systems)
         with open(os.path.join(world_dir, "warehouse.sdf"), "w", encoding="utf-8") as fh:
             fh.write(sdf)
 
