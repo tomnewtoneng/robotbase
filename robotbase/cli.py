@@ -36,6 +36,7 @@ Run & inspect:
   test [NAME] [--gui] [--list]   run a scenario, or --list them
   test --all [--trials N]        run every scenario as a suite (robustness + regressions)
   bench [--list] [--agent NAME]  score the controller on the RobotBench task set
+  robotbench run|report          run the RobotBench validation harness / render results
   status                         report simulation status
   topics                         list active ROS topics
 
@@ -159,6 +160,19 @@ def _build_parser() -> argparse.ArgumentParser:
     bench.add_argument("--trials", type=int, default=3, help="randomized trials per task")
     bench.add_argument("--seed", type=int, default=0)
 
+    rbench = sub.add_parser("robotbench", help="run the RobotBench validation harness (run | report)")
+    rbench.add_argument("action", choices=["run", "report"])
+    rbench.add_argument("--task", default="all", help="task id (e.g. diff/reach-goal) or 'all'")
+    rbench.add_argument("--arm", choices=["with", "without", "both"], default="both")
+    rbench.add_argument("--model", default="claude-sonnet-5")
+    rbench.add_argument("--trials", type=int, default=3, help="randomized trials per (task, arm)")
+    rbench.add_argument("--seed", type=int, default=0)
+    rbench.add_argument("--out", default="robotbase/robotbench/results",
+                         help="directory to write/read trial record JSON files")
+    rbench.add_argument("--records", default=None,
+                         help="directory of trial record JSON files for `report` "
+                              "(default: --out)")
+
     ep = sub.add_parser("episode", help="inspect a recorded run (summary | events | query)")
     ep.add_argument("action", choices=["summary", "events", "query"])
     ep.add_argument("run", nargs="?", default="latest")
@@ -221,6 +235,52 @@ def main() -> None:
         from robotbase.bench import BENCHMARK_VERSION, TASKS
 
         print(json.dumps({"benchmark": f"RobotBench v{BENCHMARK_VERSION}", "tasks": TASKS}, indent=2))
+        return
+
+    if args.cmd == "robotbench":
+        from robotbase.robotbench.records import TrialRecord
+        from robotbase.robotbench.report import render_markdown
+
+        if args.action == "report":
+            records_dir = args.records or args.out
+            records = []
+            for path in sorted(glob.glob(os.path.join(records_dir, "*.json"))):
+                with open(path) as f:
+                    records.append(TrialRecord(**json.load(f)))
+            markdown = render_markdown(records)
+            os.makedirs("docs", exist_ok=True)
+            with open(os.path.join("docs", "ROBOTBENCH-RESULTS.md"), "w") as f:
+                f.write(markdown)
+            print(markdown)
+            return
+
+        # action == "run"
+        from robotbase.robotbench import runner
+        from robotbase.robotbench.cli_deps import expand_arms, expand_tasks, real_generate, real_judge, real_start_sim
+
+        try:
+            from robotbase.robotbench.real_agent import RealAgent
+
+            agent = RealAgent(model=args.model)
+        except ImportError:
+            print("robotbench run needs the real agent (Phase 2): install the `bench-agent` extra "
+                  "and set ANTHROPIC_API_KEY. See docs/design/robotbench-validation.md.")
+            sys.exit(2)
+
+        tasks = expand_tasks(args.task)
+        arms = expand_arms(args.arm)
+        workdir = args.out
+        os.makedirs(workdir, exist_ok=True)
+        records = runner.run(
+            tasks, arms, args.model, args.trials, agent,
+            generate=real_generate(workdir), start_sim=real_start_sim,
+            judge_fn=real_judge(args.trials), seed0=args.seed,
+        )
+        for rec in records:
+            fname = f"{rec.task_id.replace('/', '-')}-{rec.arm}-{rec.trial}.json"
+            with open(os.path.join(args.out, fname), "w") as f:
+                json.dump(rec.model_dump(), f, indent=2)
+        print(render_markdown(records))
         return
 
     project = os.environ.get("ROBOTBASE_PROJECT_DIR", ".")
