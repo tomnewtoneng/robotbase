@@ -151,4 +151,52 @@ def arm(params: dict, mount: dict | None) -> Fragment:
     return f
 
 
-MODULES = {"differential-drive": differential_drive, "arm": arm}
+def quadrotor(params: dict, mount: dict | None) -> Fragment:
+    body = params.get("body", {})
+    bx, by, bz = body.get("size", [0.16, 0.16, 0.06])
+    m = body.get("mass", 1.0)
+    ARM = 0.18
+    f = Fragment(exposes=["base_link"], control={"velocity_topic": "/cmd_vel"},
+                 ready_topics=["/odom"], fixed_base=False)
+
+    f.links.append(LinkIR("base_link",
+        f'\n  <link name="base_link"><inertial><mass value="{m}"/>'
+        '<inertia ixx="0.02" ixy="0" ixz="0" iyy="0.02" iyz="0" izz="0.04"/></inertial>'
+        f'<collision><geometry><box size="{bx} {by} {bz}"/></geometry></collision>'
+        f'<visual><geometry><box size="{bx} {by} {bz}"/></geometry>'
+        '<material name="body"><color rgba="0.2 0.2 0.25 1"/></material></visual></link>'))
+
+    def rotor(name, x, y, rgba):
+        f.links.append(LinkIR(name,
+            f'\n  <link name="{name}"><inertial><mass value="0.02"/>'
+            '<inertia ixx="1e-5" ixy="0" ixz="0" iyy="1e-5" iyz="0" izz="1e-5"/></inertial>'
+            f'<visual><geometry><cylinder radius="0.05" length="0.01"/></geometry>'
+            f'<material name="{name}_m"><color rgba="{rgba}"/></material></visual></link>'))
+        f.joints.append(JointIR(f"{name}_joint",
+            f'\n  <joint name="{name}_joint" type="fixed"><parent link="base_link"/>'
+            f'<child link="{name}"/><origin xyz="{x} {y} 0.04"/></joint>',
+            parent="base_link", child=name))
+    rotor("rotor_fl", ARM, ARM, "0.9 0.2 0.2 1")
+    rotor("rotor_fr", ARM, -ARM, "0.2 0.2 0.2 1")
+    rotor("rotor_bl", -ARM, ARM, "0.2 0.2 0.2 1")
+    rotor("rotor_br", -ARM, -ARM, "0.2 0.2 0.2 1")
+
+    f.gazebo.append(
+        '\n  <gazebo>'
+        '\n    <plugin filename="gz-sim-velocity-control-system" name="gz::sim::systems::VelocityControl">'
+        '\n      <topic>cmd_vel</topic></plugin>'
+        '\n    <plugin filename="gz-sim-odometry-publisher-system" name="gz::sim::systems::OdometryPublisher">'
+        '\n      <odom_frame>odom</odom_frame><robot_base_frame>base_link</robot_base_frame>'
+        '\n      <dimensions>3</dimensions><odom_topic>odom</odom_topic><tf_topic>tf</tf_topic>'
+        '\n      <odom_publish_frequency>30</odom_publish_frequency></plugin></gazebo>')
+
+    f.bridges += [
+        Bridge("/cmd_vel@geometry_msgs/msg/Twist]gz.msgs.Twist"),
+        Bridge("/odom@nav_msgs/msg/Odometry[gz.msgs.Odometry"),
+        Bridge("/tf@tf2_msgs/msg/TFMessage[gz.msgs.Pose_V"),
+        Bridge("/clock@rosgraph_msgs/msg/Clock[gz.msgs.Clock"),
+    ]
+    return f
+
+
+MODULES = {"differential-drive": differential_drive, "arm": arm, "quadrotor": quadrotor}

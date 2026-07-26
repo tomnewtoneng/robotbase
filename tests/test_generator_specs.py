@@ -63,6 +63,18 @@ def test_arm_compiles_from_specs():
         assert "JointPositionController" in urdf and "arm_base_link" in urdf
 
 
+def test_drone_compiles_from_specs():
+    import tempfile
+    with tempfile.TemporaryDirectory() as tmp:
+        dest = create_project("drone-bot", tmp, template_dir("drone"))
+        urdf = open(os.path.join(dest, "src", "drone_bot_description", "urdf", "drone_bot.urdf.xacro"),
+                    encoding="utf-8").read()
+        assert "VelocityControl" in urdf and "rotor_fl" in urdf and 'type="imu"' in urdf
+        world = open(os.path.join(dest, "src", "drone_bot_description", "worlds", "warehouse.sdf"),
+                     encoding="utf-8").read()
+        assert "gz-sim-imu-system" in world      # the declared imu pulls in its world system
+
+
 def test_camera_bot_compiles_camera_and_depth():
     import tempfile
     with tempfile.TemporaryDirectory() as tmp:
