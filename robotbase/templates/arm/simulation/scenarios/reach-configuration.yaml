@@ -17,3 +17,13 @@ assertions:
   - type: joint_positions_reached
     joint_targets: {shoulder_joint: 1.0, elbow_joint: -1.4}
     joint_tolerance: 0.15
+# Domain randomization: every RobotBench task needs a randomize block so `robotbase test
+# reach-configuration --trials N` reports robustness like the other three tasks. This arm is
+# fixed-base (robotbase.yaml sets runtime.fixed_base: true), so there is no mobile robot pose
+# to jitter and no obstacles in this scenario — both backends (the Gazebo runtime and the
+# in-process MuJoCo adapter) treat set_robot_pose as a no-op for a fixed base. The jitter
+# below is declared for schema/harness conformance; a real per-trial variation for this task
+# (e.g. jittering the joint target) would need RandomizeSpec (robotbase/schema.py) extended
+# with a joint_targets dimension, which is out of scope here.
+randomize:
+  robot_pose: {x: 0.05, y: 0.05, yaw: 0.05}

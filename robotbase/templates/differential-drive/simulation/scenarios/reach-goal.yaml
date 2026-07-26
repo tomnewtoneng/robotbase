@@ -16,3 +16,9 @@ actions:
 assertions:
   - {type: robot_reached_pose, target_x: 2.0, target_y: 1.5, position_tolerance_metres: 0.35}
   - {type: no_contact}
+# Domain randomization: `robotbase test reach-goal --trials N` jitters the start pose each
+# trial and reports robustness — so a controller hard-coded to one exact start-to-goal
+# heading doesn't look solved. No obstacles here, so only the robot pose is randomized; the
+# room extends to +/-4 m and the goal sits at (2.0, 1.5), well clear of these ranges.
+randomize:
+  robot_pose: {x: 0.2, y: 0.2, yaw: 0.1}

@@ -22,3 +22,12 @@ assertions:
   - {type: robot_reached_pose, target_x: 3.0, target_y: 0.0, position_tolerance_metres: 0.4}
   - {type: no_contact}
   - {type: minimum_path_length, minimum_metres: 3.5}
+# Domain randomization: `robotbase test turn-around --trials N` jitters the wall placement
+# and start heading each trial and reports robustness — so a controller that only clears one
+# exact wall position doesn't look solved. The wall's y half-extent is 0.8 m, so even at the
+# extremes of this jitter (wall centre y in [-0.3, 0.3]) both detours still leave ~2.9 m of
+# clearance to the +/-4 m room walls, and the x jitter keeps it well between the start (x=0)
+# and the goal (x=3.0).
+randomize:
+  robot_pose: {x: 0.1, yaw: 0.05}
+  obstacles: {x: 0.3, y: 0.3}
