@@ -1,8 +1,12 @@
 # Declarative compiler — modular robots & worlds (design)
 
-Status: **approved** (2026-07-25). Supersedes the archetype-only sketch in `robot-spec.md`
-by generalising it: archetypes stop being opaque blobs and become composable *modules* over a
-shared primitive layer, and the same foundation gets a sibling **world compiler**.
+Status: **shipped** (2026-07-26) — this doc is the current format reference for `robot.yaml` and
+`world.yaml`. Phases 1–5 are complete: all four templates (differential-drive, camera-bot, arm,
+drone) compile from specs, imports work via `--from-urdf`, mobile manipulators compose, and the
+compiled differential-drive template is validated end-to-end in Docker (see `../DOGFOODING.md`).
+Supersedes the archetype-only sketch in `robot-spec.md` by generalising it: archetypes stop being
+opaque blobs and become composable *modules* over a shared primitive layer, and the same
+foundation gets a sibling **world compiler**.
 
 ## Why
 
@@ -88,10 +92,41 @@ parts:
     joints:
       - {name: mast_joint, parent: base_link, child: mast, type: fixed, xyz: [0, 0, 0.1]}
 sensors:
-  - {type: lidar, on: mast}          # any link
-  - {type: camera, on: tool0}
+  - {type: lidar, on: mast}          # `on`: which link to attach to (any link)
+  - {type: camera, on: tool0, mount: [0, 0, 0.05]}   # `mount`: [x,y,z] offset in metres, on that link
 plugins: []                          # raw gz plugin passthrough — final escape hatch
 ```
+
+**Sensor fields.** `on` is the link the sensor attaches to (default: the primary module's base
+link). `mount` is an optional `[x, y, z]` offset **in metres, relative to `on`'s frame**; omit it
+and the sensor gets a sensible per-type default — a *base-tuned* offset when it's on the base
+link (e.g. lidar forward-and-up on the box body), or `[0, 0, 0]` (the link's own origin) on any
+other link, so a `mast`-mounted lidar sits on the mast, not floating beside it. Override `mount`
+whenever you want a specific pose.
+
+**Sensor `type:` values** (the authoritative list — the YAML token, not the underlying gz sensor
+name):
+
+| `type` | publishes | gz world system pulled in | notes |
+|--------|-----------|---------------------------|-------|
+| `lidar` | `/scan` | Sensors | 2D planar scan |
+| `camera` | `/image` (RGB) | Sensors | `resolution: [w, h]`, default 320×240 |
+| `depth` | `/depth` (depth image) + `/depth/points` (cloud) | Sensors | not `depth_camera` — that's the internal gz type |
+| `imu` | `/imu` | Imu | physics-based |
+| `contact` | `/bumper` | Contact | always on the base body; ignores `on` |
+
+Any other `type` is an error (`unknown sensor …`). `resolution` and `topic` are optional
+overrides; `mount`/`on` are as above.
+
+> **YAML gotcha, handled for you:** `on` is a YAML 1.1 boolean keyword, so a naive loader turns
+> the key `on:` into `True`. Robotbase's loader normalises that back, so `on: mast` (unquoted,
+> as shown) works — you don't need to quote it.
+
+**Link-shape sugar origin.** A raw part's `{shape, size}` link centres its geometry on the
+link's own origin (which sits at the joint's `xyz` in the parent frame). So a 0.5 m mast joined
+at `xyz: [0, 0, 0.1]` extends 0.25 m below and above that point; to stand a mast *on top of* the
+base, join it at half its length (`xyz: [0, 0, 0.25]` for a 0.5 m mast on a base whose top is at
+z≈0).
 
 ### Backward compatibility
 

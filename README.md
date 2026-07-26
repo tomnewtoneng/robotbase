@@ -58,8 +58,16 @@ robotbase test stop-before-obstacle   # ...PASSES
 Everything runs headless in Docker (software-rendered Gazebo — no GPU required).
 
 - **`robotbase create --template <name>`** — generate a project from a robot template:
-  `differential-drive` (LiDAR), `camera-bot` (+ forward camera), or `arm` (a 2-DOF
-  manipulator). Emits the manifest, `AGENTS.md`, and Claude Code MCP config.
+  `differential-drive` (LiDAR), `camera-bot` (+ forward + depth camera), `arm` (a 2-DOF
+  manipulator), or `drone` (a quadrotor). Emits the manifest, `AGENTS.md`, and Claude Code MCP
+  config. Each template is now **compiled from declarative specs** — a `robot.yaml` and
+  `world.yaml`.
+- **Declarative robots & worlds (`robot.yaml` / `world.yaml`)** — describe a robot as a `parts`
+  list of composable modules (`differential-drive`, `arm`, `quadrotor`) or raw links/joints, with
+  sensors (`lidar`/`camera`/`depth`/`imu`/`contact`) mounting to any link; describe the world's
+  ground, lights, obstacles, walls, and goals. Robotbase compiles both to URDF + SDF — you never
+  hand-write the XML. Bring your own robot with **`robotbase create --from-urdf my_robot.urdf`**.
+  Format: [docs/design/declarative-compiler.md](docs/design/declarative-compiler.md).
 - **`robotbase describe`** — structured ground truth: the robot's dimensions and joints,
   the world's layout and arena bounds, and every scenario's assertions.
 - **`robotbase test [--all] [--trials N]`** — run a scenario, or the whole suite; with
@@ -115,6 +123,7 @@ published Docker image; the scenario library is intentionally small and growing.
 - [VISUALIZATION.md](docs/VISUALIZATION.md) — watch runs live and replay/share episodes in Foxglove.
 - [PUBLISHING.md](docs/PUBLISHING.md) — release runbook (PyPI + the runtime image).
 - [CONTRIBUTING.md](CONTRIBUTING.md) — dev setup and the principles.
+- [design/declarative-compiler.md](docs/design/declarative-compiler.md) — the `robot.yaml` / `world.yaml` format reference (modular robots, sensors, worlds, import).
 - [design/mcap-recording.md](docs/design/mcap-recording.md) · [design/optional-visualization.md](docs/design/optional-visualization.md)
 - [PROOF.md](PROOF.md) — the canonical proof: an agent teaching itself obstacle avoidance.
 

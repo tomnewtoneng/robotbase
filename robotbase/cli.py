@@ -114,6 +114,8 @@ def _build_parser() -> argparse.ArgumentParser:
         help="robot template to use (see: robotbase templates)",
     )
     create.add_argument("--path", default=".", help="parent directory for the new project")
+    create.add_argument("--from-urdf", dest="from_urdf", default=None,
+                        help="import an existing URDF verbatim instead of the template robot")
 
     sub.add_parser("templates", help="list available robot templates")
     sub.add_parser("doctor", help="check the environment for common problems")
@@ -193,7 +195,8 @@ def main() -> None:
         except ValueError as e:
             print(e)
             sys.exit(2)
-        dest = create_project(args.name, args.path, tdir)
+        from_urdf = os.path.abspath(args.from_urdf) if args.from_urdf else None
+        dest = create_project(args.name, args.path, tdir, from_urdf=from_urdf)
         print(f"Created Robotbase project: {dest}  (template: {args.template})")
         _hint(f"Next:  cd {dest} && robotbase up   (then: robotbase test --gui)")
         return

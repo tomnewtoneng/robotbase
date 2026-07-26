@@ -1,0 +1,6 @@
+version: 1
+name: warehouse_bot
+base: quadrotor
+body: {size: [0.16, 0.16, 0.06], mass: 1.0}
+sensors:
+  - {type: imu}

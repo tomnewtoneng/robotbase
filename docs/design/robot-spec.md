@@ -1,7 +1,13 @@
 # Robot Spec — declarative robots (design)
 
-Status: **proposed** (not yet implemented). The first step of *agent-native authoring*
-(`IDEAS.md` §G): let an agent build robots by natural language instead of hand-writing URDF.
+> **Superseded — see [`declarative-compiler.md`](declarative-compiler.md).** This was the
+> original archetype-only sketch; it shipped and was then generalised into modules-over-primitives
+> (a `parts` list, sensors on any link, a sibling world compiler, and URDF/SDF import). Kept for
+> history; the compiler now lives in `robotbase/robotspec/` + `robotbase/worldspec/` and its
+> current format reference is `declarative-compiler.md`.
+
+Status: **shipped & superseded**. The first step of *agent-native authoring* (`IDEAS.md` §G): let
+an agent build robots by natural language instead of hand-writing URDF.
 
 ## Why
 

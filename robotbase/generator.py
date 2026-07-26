@@ -50,7 +50,7 @@ def template_dir(name: str = DEFAULT_TEMPLATE) -> str:
     return str(path)
 
 
-def create_project(name: str, dest_parent: str, template_dir: str) -> str:
+def create_project(name: str, dest_parent: str, template_dir: str, from_urdf: str | None = None) -> str:
     """Create a new project under dest_parent; return its path."""
     snake = to_snake_identifier(name)
     kebab = _kebab(name)
@@ -69,7 +69,76 @@ def create_project(name: str, dest_parent: str, template_dir: str) -> str:
     shutil.copytree(template_dir, dest, ignore=_ignore)
     _rewrite_contents(dest, snake, kebab)
     _rename_paths(dest, TEMPLATE_SNAKE, snake)
+
+    if from_urdf is not None:
+        urdf_dir = os.path.join(dest, "src", f"{snake}_description", "urdf")
+        os.makedirs(urdf_dir, exist_ok=True)
+        placed = os.path.join(urdf_dir, f"{snake}.urdf.xacro")
+        shutil.copyfile(from_urdf, placed)
+        sensors = _infer_sensors_from_urdf(open(placed, encoding="utf-8").read())
+        sensors_yaml = ("sensors: []\n" if not sensors
+                        else "sensors:\n" + "".join(f"  - {{type: {t}}}\n" for t in sensors))
+        with open(os.path.join(dest, "robot.yaml"), "w", encoding="utf-8") as fh:
+            fh.write(f"version: 1\nname: {snake}\n"
+                     f"parts:\n  - use: custom\n    urdf: src/{snake}_description/urdf/{snake}.urdf.xacro\n"
+                     + sensors_yaml)
+
+    _compile_specs(dest, snake)
     return dest
+
+
+_GZ_SENSOR_MAP = {"gpu_lidar": "lidar", "lidar": "lidar", "imu": "imu",
+                  "contact": "contact", "camera": "camera", "depth_camera": "depth"}
+
+
+def _infer_sensors_from_urdf(urdf_text: str) -> list[str]:
+    """Best-effort: map an imported URDF's ``<sensor type="...">`` tags to robotbase sensor
+    types, so the world compiler loads the gz systems those sensors need to actually publish."""
+    seen: list[str] = []
+    for gz_type in re.findall(r'<sensor\b[^>]*\btype="([^"]+)"', urdf_text):
+        rb = _GZ_SENSOR_MAP.get(gz_type)
+        if rb and rb not in seen:
+            seen.append(rb)
+    return seen
+
+
+def _compile_specs(dest: str, snake: str) -> None:
+    """Compile the project's robot.yaml/world.yaml into the description package.
+
+    For a `use: custom` import the placed URDF is authoritative and is NOT recompiled, but the
+    imported robot's sensors — inferred into robot.yaml at create time — still drive the world's
+    gz systems, so the world SDF loads Sensors/Imu/Contact exactly as the imported sensors need
+    (without this, an imported robot's LiDAR/IMU/contact would never publish).
+    """
+    robot_yaml = os.path.join(dest, "robot.yaml")
+    if not os.path.exists(robot_yaml):
+        return
+    from robotbase.robotspec.compile import compile_robot
+    from robotbase.robotspec.schema import RobotSpec
+
+    spec = RobotSpec.from_yaml(robot_yaml)
+    is_custom = any(p.use == "custom" for p in spec.parts)
+    if is_custom:
+        # resolve the project-relative import path so compile_robot can read the placed URDF
+        for p in spec.parts:
+            if p.use == "custom" and p.urdf and not os.path.isabs(p.urdf):
+                p.urdf = os.path.join(dest, p.urdf)
+    compiled = compile_robot(spec)
+
+    if not is_custom:
+        urdf_dir = os.path.join(dest, "src", f"{snake}_description", "urdf")
+        if os.path.isdir(urdf_dir):
+            with open(os.path.join(urdf_dir, f"{snake}.urdf.xacro"), "w", encoding="utf-8") as fh:
+                fh.write(compiled.urdf)
+
+    world_yaml = os.path.join(dest, "world.yaml")
+    world_dir = os.path.join(dest, "src", f"{snake}_description", "worlds")
+    if os.path.exists(world_yaml) and os.path.isdir(world_dir):
+        from robotbase.worldspec.compile import compile_world
+        from robotbase.worldspec.schema import WorldSpec
+        sdf, _ = compile_world(WorldSpec.from_yaml(world_yaml), robot_systems=compiled.world_systems)
+        with open(os.path.join(world_dir, "warehouse.sdf"), "w", encoding="utf-8") as fh:
+            fh.write(sdf)
 
 
 def _rewrite_contents(root: str, snake: str, kebab: str) -> None:
