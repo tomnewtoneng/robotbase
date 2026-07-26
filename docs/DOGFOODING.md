@@ -61,3 +61,57 @@ maintainer.
   `docs/design/declarative-compiler.md`.
 - **Positive:** `parts:` composition, raw parts, sensor mounting, module defaults, and the entire
   `world.yaml` surface worked exactly as documented once the `on:` quoting issue was found.
+
+## 2026-07-26 — Checkpoint B (import + run a real external URDF via `--from-urdf`)
+
+- **Goal:** prove `robotbase create --from-urdf` produces a runnable project, using the
+  differential-drive template's own hand-written `warehouse_bot.urdf.xacro` (copied to
+  `~/ext-robot.urdf`) as a stand-in for a real external URDF — real, complete, gz-ready, and
+  NOT compiler-generated.
+- **Import mechanics — correct.** `robotbase create import-bot --from-urdf ~/ext-robot.urdf`
+  produced `robot.yaml` with `use: custom`, and placed the URDF at
+  `src/import_bot_description/urdf/import_bot.urdf.xacro`, byte-identical to the source
+  (confirmed via `diff`). `robotbase up` built cleanly (3.9s) and launched with no build or
+  launch errors.
+- **Name-mismatch check — not a problem.** The imported URDF's internal
+  `<robot name="warehouse_bot">` is left un-renamed to `import_bot` by the importer. This
+  caused no observed runtime issue: `ros_gz_sim create -name import_bot` sets the Gazebo model
+  name from the launch's `-name` argument (which the generator correctly derives from the
+  *project* name), independent of the URDF's internal `<robot name>`. All bridged topics
+  (`/cmd_vel`, `/odom`, `/scan`, `/tf`, `/joint_states`) are either literal/explicit topic
+  names or built from the project name consistently by the generator, so the mismatch is
+  cosmetic, not functional.
+- **BLOCKING finding: imported sensors are invisible to the world compiler.** Broken-starter
+  `robotbase test stop-before-obstacle` failed as expected, but for the wrong reason:
+  `topic_message_counts: {"/scan": 0, ...}` and `minimum_obstacle_distance_metres: null` — the
+  LiDAR never produced a single message in a 33.9s run. Swapping in the known-good
+  forward-cone-LiDAR controller (verbatim from Task 8b, which passes cleanly against the
+  *compiled* differential-drive template) and rebuilding still **failed**: the robot correctly
+  waited forever for `/scan` data that never arrived (`distance_travelled_metres: ~0`,
+  `required_topic_messages` still 0/5 expected). This is not a controller bug — the world
+  itself cannot deliver sensor data to an imported custom URDF.
+  - **Root cause:** `robotbase/generator.py`'s `_compile_specs()` skips URDF/sensor-fragment
+    compilation entirely for `use: custom` robots (correct — it must not clobber the verbatim
+    import) but as a side effect leaves `world_systems = []`, which is passed straight into
+    `compile_world(..., robot_systems=world_systems)`. The world SDF compiler only emits the
+    `gz-sim-sensors-system` (+`<render_engine>ogre2</render_engine>`), `gz-sim-imu-system`, and
+    `gz-sim-contact-system` plugins when a robot's declared `sensors:` list calls for them
+    (see `robotbase/robotspec/sensors.py`). A `--from-urdf` import always writes
+    `sensors: []` to `robot.yaml` (sensors embedded in an opaque custom URDF are never parsed
+    out), so none of those world systems are ever requested — even though `~/ext-robot.urdf`
+    itself declares a `gpu_lidar`, an `imu`, and a `contact` sensor via its own `<gazebo>`
+    blocks that need exactly those systems to function. Confirmed by diffing the compiled
+    `warehouse.sdf` (only Physics/UserCommands/SceneBroadcaster plugins) against the original
+    hand-written `warehouse.sdf` (also has Sensors+ogre2, Imu, Contact plugins).
+  - **Recommended fix:** for `use: custom` parts, don't derive `world_systems` from an
+    (always-empty) declared sensor list. Either (a) always include the baseline sensor-support
+    systems (Sensors+ogre2, Imu, Contact) in the compiled world SDF whenever any part is
+    `use: custom` — safe default, unused plugins are harmless — or (b) post-process the
+    imported URDF (after xacro expansion) for embedded `<gazebo><sensor type="...">` blocks and
+    derive `world_systems` from what's actually declared, for a precise fix. At minimum,
+    `--from-urdf` should warn that embedded sensors are not auto-wired into the world.
+- **Verdict:** broken starter controller = **FAIL** (as expected, though for the wrong root
+  cause — no sensor data rather than no obstacle avoidance). Correct controller = **FAIL**
+  (blocked by the missing world systems, not a controller defect). **BLOCKED** — did not
+  hand-patch the generated project to force a pass, since the point was to learn what import
+  needs; `~/import-bot` and `~/ext-robot.urdf` left in place for inspection.
