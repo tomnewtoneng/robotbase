@@ -73,9 +73,14 @@ def compile_robot(spec: RobotSpec, world_name: str = "warehouse") -> CompiledRob
             frag = _raw_part(part)
         fragments.append(frag)
 
+    if not fragments:
+        raise ValueError("robot has no parts: set `base:` or `parts:` in the spec")
     root = "base_footprint"
-    if not any(l.name == root for f in fragments for l in f.links):
-        root = fragments[0].links[0].name
+    all_links = [l for f in fragments for l in f.links]
+    if not any(l.name == root for l in all_links):
+        if not all_links:
+            raise ValueError("robot has no links: every part is empty")
+        root = all_links[0].name
 
     base_link = primary_base or root
     ctx = Ctx(world=world_name, robot_name=spec.name, body_size=body_size)

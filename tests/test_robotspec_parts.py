@@ -31,3 +31,8 @@ def test_unknown_archetype_and_sensor_still_raise():
     with pytest.raises(UnknownSensor):
         compile_robot(RobotSpec.model_validate(
             {"base": "differential-drive", "sensors": [{"type": "radar"}]}))
+
+
+def test_empty_spec_raises_clear_error():
+    with pytest.raises(ValueError, match="no parts"):
+        compile_robot(RobotSpec())
