@@ -256,7 +256,8 @@ def main() -> None:
 
         # action == "run"
         from robotbase.robotbench import runner
-        from robotbase.robotbench.cli_deps import expand_arms, expand_tasks, real_generate, real_judge, real_start_sim
+        from robotbase.robotbench.cli_deps import (expand_arms, expand_tasks, real_generate, real_judge,
+                                                     real_start_sim, real_teardown)
 
         try:
             from robotbase.robotbench.real_agent import RealAgent
@@ -275,6 +276,7 @@ def main() -> None:
             tasks, arms, args.model, args.trials, agent,
             generate=real_generate(workdir), start_sim=real_start_sim,
             judge_fn=real_judge(args.trials), seed0=args.seed,
+            teardown_fn=real_teardown,
         )
         for rec in records:
             fname = f"{rec.task_id.replace('/', '-')}-{rec.arm}-{rec.trial}.json"

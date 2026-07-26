@@ -34,3 +34,16 @@ def test_run_iterates_tasks_arms_trials():
     assert len(recs) == 6                                     # 1 task x 2 arms x 3 trials
     assert {r.arm for r in recs} == {"with", "without"}
     assert sorted(r.seed for r in recs if r.arm == "with") == [0, 1, 2]
+
+
+def test_run_trial_tears_down_even_after_judge(tmp_path):
+    from robotbase.robotbench.runner import run_trial
+    from robotbase.robotbench.agent import AgentResult
+    torn = []
+    agent = type("A", (), {"run": lambda self, p, a, t, c: AgentResult(True,1,1,1.0,None,"declared_done","t")})()
+    TASK = {"id": "diff/reach-goal", "scenario": "reach-goal"}
+    run_trial(TASK, "with", "m", 0, 0, agent,
+              generate=lambda task, trial: "/tmp/p", start_sim=lambda p: None,
+              judge_fn=lambda p, s, seed: {"robustness": 1.0, "solved": True},
+              teardown_fn=lambda p: torn.append(p))
+    assert torn == ["/tmp/p"]     # teardown ran with the project dir

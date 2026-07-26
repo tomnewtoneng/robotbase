@@ -35,6 +35,10 @@ def real_start_sim(project_dir: str) -> None:
     subprocess.run(["robotbase", "up"], cwd=project_dir, check=True)
 
 
+def real_teardown(project_dir: str) -> None:
+    subprocess.run(["robotbase", "down"], cwd=project_dir)   # no check — down may warn if already down
+
+
 def real_judge(trials: int):
     """Factory: returns a judge_fn(project_dir, scenario, seed) using the external judge."""
     def judge_fn(project_dir: str, scenario: str, seed: int) -> dict:
