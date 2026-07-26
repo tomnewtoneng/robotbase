@@ -148,3 +148,24 @@ maintainer.
   -d` recreated it cleanly. Not a compiler defect, just a leftover container from the earlier
   BLOCKED run.
 - Cleanup: `~/import-bot` and `~/ext-robot.urdf` removed after verification.
+
+## 2026-07-26 — Checkpoint C (cold-author a multi-sensor robot, docs only)
+
+A fresh agent, docs only, authored a differential-drive robot with a lidar on a mast, an RGB
+camera on the base front, and a depth camera on a separate boom — three sensors on three links.
+**Compiled first try, zero errors; all three sensors landed on the intended links.** The
+Checkpoint-A `on:` fix held (unquoted `on: mast` worked), and attaching a sensor to a
+self-defined raw-part link was as easy as to `base_link`. Findings (all doc-only, minor):
+
+- **Finding 1 (fixed):** the sensor `type` value `depth` was not in any authoritative list — only
+  a prose aside in the Phasing section — so it read as a coin-flip against the gz-idiomatic
+  `depth_camera`. **Fix:** added an authoritative **Sensor `type:` values** table to
+  `docs/design/declarative-compiler.md` (type → topics → gz system, and the explicit note that
+  `depth` is the token, not `depth_camera`).
+- **Finding 2 (fixed):** the "sensible per-type default mount" was only exemplified for lidar.
+  The new table + the existing default-mount note now cover every type.
+- **Finding 3 (not a defect):** this run compiled clean, so the validation-error UX
+  (missing-mount / orphan / name-clash) went unexercised here — already covered by unit tests.
+- **Positives:** compiler defaults (auto-inertia, wheel joints, diff-drive plugin, gz sensor
+  blocks) all rendered with no nudging; the "not finicky" claim held for a 3-sensor, 2-raw-part
+  composition.

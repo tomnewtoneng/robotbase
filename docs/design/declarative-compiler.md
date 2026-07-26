@@ -100,6 +100,20 @@ link (e.g. lidar forward-and-up on the box body), or `[0, 0, 0]` (the link's own
 other link, so a `mast`-mounted lidar sits on the mast, not floating beside it. Override `mount`
 whenever you want a specific pose.
 
+**Sensor `type:` values** (the authoritative list — the YAML token, not the underlying gz sensor
+name):
+
+| `type` | publishes | gz world system pulled in | notes |
+|--------|-----------|---------------------------|-------|
+| `lidar` | `/scan` | Sensors | 2D planar scan |
+| `camera` | `/image` (RGB) | Sensors | `resolution: [w, h]`, default 320×240 |
+| `depth` | `/depth` (depth image) + `/depth/points` (cloud) | Sensors | not `depth_camera` — that's the internal gz type |
+| `imu` | `/imu` | Imu | physics-based |
+| `contact` | `/bumper` | Contact | always on the base body; ignores `on` |
+
+Any other `type` is an error (`unknown sensor …`). `resolution` and `topic` are optional
+overrides; `mount`/`on` are as above.
+
 > **YAML gotcha, handled for you:** `on` is a YAML 1.1 boolean keyword, so a naive loader turns
 > the key `on:` into `True`. Robotbase's loader normalises that back, so `on: mast` (unquoted,
 > as shown) works — you don't need to quote it.
