@@ -115,3 +115,36 @@ maintainer.
   (blocked by the missing world systems, not a controller defect). **BLOCKED** — did not
   hand-patch the generated project to force a pass, since the point was to learn what import
   needs; `~/import-bot` and `~/ext-robot.urdf` left in place for inspection.
+
+## 2026-07-26 — Checkpoint B — re-verified after fix
+
+- **Fix under test (commit `b1d6fd6`):** the `--from-urdf` importer now infers sensor types
+  from the imported URDF's `<sensor type=...>` tags into `robot.yaml`, and the world compiler
+  derives its gz systems from them — closing the gap found in the original Checkpoint B above.
+- **Re-ran the same repro:** `robotbase create import-bot --from-urdf ~/ext-robot.urdf` against
+  the same `~/ext-robot.urdf` (differential-drive template's `warehouse_bot.urdf.xacro`).
+  `robot.yaml` now lists `sensors: [{type: lidar}, {type: imu}, {type: contact}]` (previously
+  `sensors: []`), and the compiled `warehouse.sdf` contains the `gz-sim-sensors-system` plugin
+  (`grep -c "gz-sim-sensors-system"` → 1, previously 0). `robotbase up` built and launched
+  cleanly.
+- **`/scan` now flows.** Broken-starter `robotbase test stop-before-obstacle`: **FAILED**, but
+  now for the **right** reason — `topic_message_counts: {"/scan": 127, "/odom": 372}` (a real,
+  non-zero LiDAR feed, vs. the previous silent `/scan: 0`), with a genuine collision:
+  `collision_count: 1`, `contact_count: 1`, `minimum_obstacle_distance_metres: 0.080` (< 0.25
+  required), robot never stopped (`final_linear_velocity: 0.30` m/s vs. ≤0.05 required).
+- **Correct controller (verbatim forward-cone-LiDAR controller from Task 8b/Checkpoint B)**
+  swapped into `src/import_bot/import_bot/controller.py`, workspace rebuilt (`robotbase build`,
+  3.5s, passed), scenario rerun — **PASSED**: `collision_count: 0`, `contact_count: 0`,
+  `minimum_obstacle_distance_metres: 0.352` (≥0.25), `final_linear_velocity: 0.0012` m/s
+  (≤0.05, robot_stopped), `topic_message_counts: {"/scan": 133, "/odom": 391}`, all 5
+  assertions green.
+- **Verdict:** broken starter = **FAIL** (correct root cause this time — real collision from a
+  live `/scan` feed, not missing sensor data). Correct controller = **PASS** (0 collisions,
+  clearance 0.352m, robot stopped). **Import-time sensor inference is confirmed fixed** — an
+  imported custom URDF's sensors now drive the compiled world's gz systems end-to-end.
+- **Note:** hit an unrelated environment snag mid-run — a stale container mount namespace
+  (`docker compose exec` refused with "possible container breakout detected") after the prior
+  Checkpoint B session's container was left running; `docker compose down && docker compose up
+  -d` recreated it cleanly. Not a compiler defect, just a leftover container from the earlier
+  BLOCKED run.
+- Cleanup: `~/import-bot` and `~/ext-robot.urdf` removed after verification.
