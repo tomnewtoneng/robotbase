@@ -51,3 +51,15 @@ def test_create_from_urdf_infers_sensors_into_world_systems():
         world = open(os.path.join(dest, "src", "imp2_description", "worlds", "warehouse.sdf"),
                      encoding="utf-8").read()
         assert "gz-sim-sensors-system" in world                     # …so the world loads its system
+
+
+def test_camera_bot_compiles_camera_and_depth():
+    import tempfile
+    with tempfile.TemporaryDirectory() as tmp:
+        dest = create_project("cam-bot", tmp, template_dir("camera-bot"))
+        urdf = open(os.path.join(dest, "src", "cam_bot_description", "urdf", "cam_bot.urdf.xacro"),
+                    encoding="utf-8").read()
+        assert 'type="camera"' in urdf and 'type="depth_camera"' in urdf
+        world = open(os.path.join(dest, "src", "cam_bot_description", "worlds", "warehouse.sdf"),
+                     encoding="utf-8").read()
+        assert "gz-sim-sensors-system" in world

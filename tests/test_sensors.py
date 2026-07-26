@@ -40,3 +40,20 @@ def test_sensor_on_nonbase_link_defaults_to_zero_offset():
     on_mast = SENSORS["lidar"]({}, "mast", ctx).joints[0].xml
     assert 'xyz="0 0 0"' in on_mast          # non-base link -> zero offset
     assert 'xyz="0 0 0"' not in on_base       # base link -> the tuned default offset
+
+
+def test_camera_and_depth_emitters():
+    from robotbase.robotspec.sensors import SENSORS, Ctx
+    ctx = Ctx(world="warehouse", robot_name="camera_bot", body_size=[0.35, 0.30, 0.15])
+    cam = SENSORS["camera"]({"resolution": [320, 240]}, "base_link", ctx)
+    assert any('type="camera"' in g for g in cam.gazebo)
+    assert [b.arg for b in cam.bridges] == ["/image@sensor_msgs/msg/Image[gz.msgs.Image"]
+    assert cam.world_systems == ["gz-sim-sensors-system"]
+    assert any(j.parent == "base_link" and j.child == "camera_link" for j in cam.joints)
+
+    dep = SENSORS["depth"]({"resolution": [320, 240]}, "base_link", ctx)
+    assert any('type="depth_camera"' in g for g in dep.gazebo)
+    args = [b.arg for b in dep.bridges]
+    assert "/depth@sensor_msgs/msg/Image[gz.msgs.Image" in args
+    assert "/depth/points@sensor_msgs/msg/PointCloud2[gz.msgs.PointCloudPacked" in args
+    assert dep.world_systems == ["gz-sim-sensors-system"]

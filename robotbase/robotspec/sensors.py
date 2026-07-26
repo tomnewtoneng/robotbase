@@ -61,6 +61,47 @@ def _imu(params, on_link, ctx) -> Fragment:
     return f
 
 
+def _camera(params, on_link, ctx) -> Fragment:
+    bx, by, bz = ctx.body_size
+    x, y, z = _mount(params, on_link, ctx, [bx / 2, 0, bz / 2])
+    topic = params.get("topic") or "/image"
+    w, h = params.get("resolution") or [320, 240]
+    f = Fragment(world_systems=["gz-sim-sensors-system"])
+    f.links.append(LinkIR("camera_link", '\n  <link name="camera_link"/>'))
+    f.joints.append(fixed_joint("camera_joint", on_link, "camera_link", xyz=f"{x} {y} {z}"))
+    f.gazebo.append(
+        f'\n  <gazebo reference="camera_link"><sensor name="camera" type="camera">'
+        f'<topic>{topic.lstrip("/")}</topic><gz_frame_id>camera_link</gz_frame_id>'
+        '<update_rate>10</update_rate><always_on>true</always_on><visualize>false</visualize>'
+        f'<camera><horizontal_fov>1.047</horizontal_fov>'
+        f'<image><width>{w}</width><height>{h}</height><format>R8G8B8</format></image>'
+        '<clip><near>0.1</near><far>100</far></clip></camera></sensor></gazebo>')
+    f.bridges.append(Bridge(f"{topic}@sensor_msgs/msg/Image[gz.msgs.Image"))
+    f.manifest_sensors["camera"] = {"enabled": True, "topic": topic}
+    return f
+
+
+def _depth(params, on_link, ctx) -> Fragment:
+    bx, by, bz = ctx.body_size
+    x, y, z = _mount(params, on_link, ctx, [bx / 2, 0, bz / 2])
+    topic = params.get("topic") or "/depth"
+    w, h = params.get("resolution") or [320, 240]
+    f = Fragment(world_systems=["gz-sim-sensors-system"])
+    f.links.append(LinkIR("depth_link", '\n  <link name="depth_link"/>'))
+    f.joints.append(fixed_joint("depth_joint", on_link, "depth_link", xyz=f"{x} {y} {z}"))
+    f.gazebo.append(
+        f'\n  <gazebo reference="depth_link"><sensor name="depth" type="depth_camera">'
+        f'<topic>{topic.lstrip("/")}</topic><gz_frame_id>depth_link</gz_frame_id>'
+        '<update_rate>10</update_rate><always_on>true</always_on><visualize>false</visualize>'
+        f'<camera><horizontal_fov>1.047</horizontal_fov>'
+        f'<image><width>{w}</width><height>{h}</height></image>'
+        '<clip><near>0.1</near><far>10.0</far></clip></camera></sensor></gazebo>')
+    f.bridges.append(Bridge(f"{topic}@sensor_msgs/msg/Image[gz.msgs.Image"))
+    f.bridges.append(Bridge(f"{topic}/points@sensor_msgs/msg/PointCloud2[gz.msgs.PointCloudPacked"))
+    f.manifest_sensors["depth"] = {"enabled": True, "topic": topic}
+    return f
+
+
 def _contact(params, on_link, ctx) -> Fragment:
     # Documented limit: contact stays on base_footprint (collision-lump naming is base-specific).
     collision = "base_footprint_fixed_joint_lump__base_link_collision"
@@ -77,4 +118,4 @@ def _contact(params, on_link, ctx) -> Fragment:
     return f
 
 
-SENSORS = {"lidar": _lidar, "imu": _imu, "contact": _contact}
+SENSORS = {"lidar": _lidar, "imu": _imu, "camera": _camera, "depth": _depth, "contact": _contact}

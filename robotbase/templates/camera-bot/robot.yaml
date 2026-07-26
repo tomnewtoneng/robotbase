@@ -1,0 +1,11 @@
+version: 1
+name: warehouse_bot
+base: differential-drive
+body: {shape: box, size: [0.35, 0.30, 0.15], mass: 5.0}
+drive: {wheel_radius: 0.05, wheel_separation: 0.34}
+sensors:
+  - {type: lidar}
+  - {type: imu}
+  - {type: camera}
+  - {type: depth}
+  - {type: contact}
