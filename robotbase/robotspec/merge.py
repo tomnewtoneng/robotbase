@@ -1,7 +1,7 @@
 """Merge Fragments into one validated robot and render the URDF (see declarative-compiler.md)."""
 from __future__ import annotations
 
-from robotbase.robotspec.ir import Bridge, Fragment, JointIR
+from robotbase.robotspec.ir import Fragment, JointIR
 
 
 class InvalidAssembly(ValueError):
@@ -36,6 +36,8 @@ def _validate(root: str, links, joints):
         if j.child in child_of:
             raise InvalidAssembly(f"link {j.child!r} has two parent joints")
         child_of[j.child] = j.parent
+    if root in child_of:
+        raise InvalidAssembly(f"root link {root!r} must not be a child of any joint (cycle through root)")
     # every non-root link must reach root by walking child->parent
     for n in linkset:
         if n == root:
@@ -50,7 +52,7 @@ def _validate(root: str, links, joints):
             cur = child_of[cur]
 
 
-def merge_and_render(name: str, root: str, fragments: list[Fragment]):
+def merge_and_render(name: str, root: str, fragments: list[Fragment]) -> tuple[str, list, list[str], dict]:
     links, joints, gazebo, bridges = [], [], [], []
     world_systems, ready_topics = [], []
     control, fixed_base, sensors = None, None, {}

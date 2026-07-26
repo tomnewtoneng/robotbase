@@ -59,3 +59,12 @@ def test_duplicate_link_name_raises():
     dup = Fragment(links=[LinkIR("base_link", '\n  <link name="base_link"/>')])
     with pytest.raises(InvalidAssembly, match="duplicate"):
         merge_and_render("r", "base_footprint", [_base_fragment(), dup])
+
+
+def test_cycle_through_root_raises():
+    f = Fragment()
+    f.links += [LinkIR("a", '\n  <link name="a"/>'), LinkIR("b", '\n  <link name="b"/>')]
+    f.joints.append(fixed_joint("ab", "a", "b"))   # b child of a
+    f.joints.append(fixed_joint("ba", "b", "a"))   # a child of b -> ring through root a
+    with pytest.raises(InvalidAssembly):
+        merge_and_render("r", "a", [f])
