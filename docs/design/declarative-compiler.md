@@ -1,8 +1,12 @@
 # Declarative compiler — modular robots & worlds (design)
 
-Status: **approved** (2026-07-25). Supersedes the archetype-only sketch in `robot-spec.md`
-by generalising it: archetypes stop being opaque blobs and become composable *modules* over a
-shared primitive layer, and the same foundation gets a sibling **world compiler**.
+Status: **shipped** (2026-07-26) — this doc is the current format reference for `robot.yaml` and
+`world.yaml`. Phases 1–5 are complete: all four templates (differential-drive, camera-bot, arm,
+drone) compile from specs, imports work via `--from-urdf`, mobile manipulators compose, and the
+compiled differential-drive template is validated end-to-end in Docker (see `../DOGFOODING.md`).
+Supersedes the archetype-only sketch in `robot-spec.md` by generalising it: archetypes stop being
+opaque blobs and become composable *modules* over a shared primitive layer, and the same
+foundation gets a sibling **world compiler**.
 
 ## Why
 

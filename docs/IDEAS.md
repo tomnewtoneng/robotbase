@@ -118,19 +118,23 @@ physics-sensitive XML that an agent can't reliably write. Close that gap so a `r
 `world.yaml` / scenario is the *complete, reproducible* source of truth for a robotics
 project, and a coding agent authors all of it by natural language:
 
-- 🚧 **Declarative robot spec (YAML → URDF)** — the key architectural move. A clean
-  `robot.yaml` that Robotbase compiles to URDF/xacro + launch bridges + manifest fields.
-  **Phase 1 shipped** (`robotbase/robotspec/`): the `differential-drive` archetype +
-  `lidar`/`imu`/`contact` sensor modules, validated by compiling a `robot.yaml` into a
-  project that builds and runs its scenario correctly. Design: `docs/design/robot-spec.md`.
-  Next: camera/depth sensors → camera-bot; `fixed-arm`/`quadrotor` archetypes → arm/drone;
-  then import (`--from-urdf`) + `robotbase init`.
-- 🔲 **Declarative world spec (YAML → SDF)** — `world.yaml` (obstacles, walls, goals, lights)
-  compiled to the world SDF. Agent builds scenes from words.
-- 🔲 **Bring-your-own-robot / world (import)** — `create --from-urdf my_robot.urdf` and
-  world import, so you test *your* robot, not just the templates. #1 usefulness unlock.
+- ✅ **Declarative robot spec (YAML → URDF)** — the key architectural move, **SHIPPED**
+  (`robotbase/robotspec/`, design `docs/design/declarative-compiler.md`). A `robot.yaml` compiles
+  to URDF + launch bridges + manifest via a shared primitive IR: a `parts` list of composable
+  modules (`differential-drive`, `arm`, `quadrotor`) or raw links/joints, sensors
+  (`lidar`/`camera`/`depth`/`imu`/`contact`) mounting to any link, tree-validated and rendered
+  once. `base:` stays as one-line sugar. **All four templates compile from specs** and the
+  differential-drive one is Docker-validated.
+- ✅ **Declarative world spec (YAML → SDF)** — **SHIPPED** (`robotbase/worldspec/`): `world.yaml`
+  (ground, light, obstacles, walls, goals, raw-SDF `include`) → world SDF, and a robot's sensors
+  automatically pull the gz systems the world needs (the seam).
+- ✅ **Bring-your-own-robot / world (import)** — **SHIPPED**: `create --from-urdf my_robot.urdf`
+  wraps an existing URDF verbatim (inferring its sensors so the world wires them); world import is
+  `world.yaml` `include:`. The runner/evals now run over *your* robot, not just the templates.
 - 🔲 **`robotbase init`** — drop Robotbase into an *existing* project (like `supabase init`),
-  not only greenfield `create`.
+  not only greenfield `create`. (The remaining import piece.)
+- 🔲 **Custom archetypes / mobile manipulators as templates** — composition works
+  (diff-drive + arm compiles as one tree); package common compositions as templates.
 - 🔲 **NL authoring end-to-end** — the agent goes from "test a diff-drive that avoids
   obstacles in a warehouse" to the robot spec + world spec + scenario + controller, all via
   the declarative formats. Robotbase becomes truly agent-native and drop-in-anywhere.
