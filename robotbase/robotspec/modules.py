@@ -74,4 +74,81 @@ def differential_drive(params: dict, mount: dict | None) -> Fragment:
     return f
 
 
-MODULES = {"differential-drive": differential_drive}
+def arm(params: dict, mount: dict | None) -> Fragment:
+    LINK_LEN, LINK_RAD = 0.40, 0.035
+    f = Fragment(exposes=["tip"],
+                 control={"joint_command_topics": ["/shoulder_cmd", "/elbow_cmd"]},
+                 ready_topics=["/joint_states"])
+
+    # Anchor: standalone -> the gz `world` frame; mounted -> the given link (mobile manipulator).
+    if mount is None:
+        f.links.append(LinkIR("world", '\n  <link name="world"/>'))
+        f.joints.append(JointIR("arm_fixed_base",
+            '\n  <joint name="arm_fixed_base" type="fixed"><parent link="world"/>'
+            '<child link="arm_base_link"/><origin xyz="0 0 0.05"/></joint>',
+            parent="world", child="arm_base_link"))
+        f.fixed_base = True
+    else:
+        to = mount.get("to", "base_link")
+        xyz = " ".join(str(v) for v in mount.get("xyz", [0, 0, 0]))
+        rpy = " ".join(str(v) for v in mount.get("rpy", [0, 0, 0]))
+        f.joints.append(JointIR("arm_mount",
+            f'\n  <joint name="arm_mount" type="fixed"><parent link="{to}"/>'
+            f'<child link="arm_base_link"/><origin xyz="{xyz}" rpy="{rpy}"/></joint>',
+            parent=to, child="arm_base_link"))
+        # mounted on a mobile base: leave fixed_base None so the base's value (False) wins
+
+    f.links.append(LinkIR("arm_base_link",
+        '\n  <link name="arm_base_link"><inertial><mass value="10.0"/>'
+        '<inertia ixx="0.05" ixy="0" ixz="0" iyy="0.05" iyz="0" izz="0.05"/></inertial>'
+        '<collision><geometry><cylinder radius="0.07" length="0.10"/></geometry></collision>'
+        '<visual><geometry><cylinder radius="0.07" length="0.10"/></geometry>'
+        '<material name="arm_base"><color rgba="0.25 0.25 0.30 1"/></material></visual></link>'))
+
+    def arm_link(name, rgba):
+        f.links.append(LinkIR(name,
+            f'\n  <link name="{name}"><inertial><origin xyz="0 0 {LINK_LEN/2}"/>'
+            '<mass value="0.15"/><inertia ixx="0.002" ixy="0" ixz="0" iyy="0.002" iyz="0" izz="0.0002"/></inertial>'
+            f'<collision><origin xyz="0 0 {LINK_LEN/2}"/><geometry><cylinder radius="{LINK_RAD}" length="{LINK_LEN}"/></geometry></collision>'
+            f'<visual><origin xyz="0 0 {LINK_LEN/2}"/><geometry><cylinder radius="{LINK_RAD}" length="{LINK_LEN}"/></geometry>'
+            f'<material name="{name}_mat"><color rgba="{rgba}"/></material></visual></link>'))
+    arm_link("upper_arm", "0.2 0.5 0.8 1")
+    arm_link("forearm", "0.2 0.7 0.5 1")
+
+    f.joints.append(JointIR("shoulder_joint",
+        '\n  <joint name="shoulder_joint" type="revolute"><parent link="arm_base_link"/>'
+        '<child link="upper_arm"/><origin xyz="0 0 0.05"/><axis xyz="0 1 0"/>'
+        '<limit lower="-3.14" upper="3.14" effort="100" velocity="3.0"/></joint>',
+        parent="arm_base_link", child="upper_arm"))
+    f.joints.append(JointIR("elbow_joint",
+        f'\n  <joint name="elbow_joint" type="revolute"><parent link="upper_arm"/>'
+        f'<child link="forearm"/><origin xyz="0 0 {LINK_LEN}"/><axis xyz="0 1 0"/>'
+        '<limit lower="-3.14" upper="3.14" effort="100" velocity="3.0"/></joint>',
+        parent="upper_arm", child="forearm"))
+    f.links.append(LinkIR("tip", '\n  <link name="tip"/>'))
+    f.joints.append(JointIR("tip_joint",
+        f'\n  <joint name="tip_joint" type="fixed"><parent link="forearm"/>'
+        f'<child link="tip"/><origin xyz="0 0 {LINK_LEN}"/></joint>',
+        parent="forearm", child="tip"))
+
+    f.gazebo.append(
+        '\n  <gazebo>'
+        '\n    <plugin filename="gz-sim-joint-position-controller-system" name="gz::sim::systems::JointPositionController">'
+        '\n      <joint_name>shoulder_joint</joint_name><topic>shoulder_cmd</topic>'
+        '\n      <p_gain>80</p_gain><i_gain>2.0</i_gain><d_gain>8.0</d_gain></plugin>'
+        '\n    <plugin filename="gz-sim-joint-position-controller-system" name="gz::sim::systems::JointPositionController">'
+        '\n      <joint_name>elbow_joint</joint_name><topic>elbow_cmd</topic>'
+        '\n      <p_gain>60</p_gain><i_gain>2.0</i_gain><d_gain>6.0</d_gain></plugin>'
+        '\n    <plugin filename="gz-sim-joint-state-publisher-system" name="gz::sim::systems::JointStatePublisher">'
+        '\n      <topic>joint_states</topic></plugin></gazebo>')
+
+    f.bridges += [
+        Bridge("/shoulder_cmd@std_msgs/msg/Float64]gz.msgs.Double"),
+        Bridge("/elbow_cmd@std_msgs/msg/Float64]gz.msgs.Double"),
+        Bridge("/joint_states@sensor_msgs/msg/JointState[gz.msgs.Model"),
+        Bridge("/clock@rosgraph_msgs/msg/Clock[gz.msgs.Clock"),
+    ]
+    return f
+
+
+MODULES = {"differential-drive": differential_drive, "arm": arm}

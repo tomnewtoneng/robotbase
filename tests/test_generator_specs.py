@@ -53,6 +53,16 @@ def test_create_from_urdf_infers_sensors_into_world_systems():
         assert "gz-sim-sensors-system" in world                     # …so the world loads its system
 
 
+def test_arm_compiles_from_specs():
+    import tempfile
+    with tempfile.TemporaryDirectory() as tmp:
+        dest = create_project("arm-bot", tmp, template_dir("arm"))
+        urdf = open(os.path.join(dest, "src", "arm_bot_description", "urdf", "arm_bot.urdf.xacro"),
+                    encoding="utf-8").read()
+        assert "shoulder_joint" in urdf and "elbow_joint" in urdf
+        assert "JointPositionController" in urdf and "arm_base_link" in urdf
+
+
 def test_camera_bot_compiles_camera_and_depth():
     import tempfile
     with tempfile.TemporaryDirectory() as tmp:
