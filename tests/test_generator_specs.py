@@ -34,3 +34,20 @@ def test_create_from_urdf_wraps_the_imported_urdf():
         assert open(placed, encoding="utf-8").read() == marker      # imported URDF is used verbatim
         robot_yaml = open(os.path.join(dest, "robot.yaml"), encoding="utf-8").read()
         assert "use: custom" in robot_yaml
+
+
+def test_create_from_urdf_infers_sensors_into_world_systems():
+    """Dogfood B: an imported URDF that declares a LiDAR must make the compiled world load the
+    Sensors system, or the LiDAR never publishes. The importer infers sensors from the URDF."""
+    with tempfile.TemporaryDirectory() as tmp:
+        src_urdf = os.path.join(tmp, "r.urdf")
+        open(src_urdf, "w").write(
+            '<?xml version="1.0"?>\n<robot name="r"><link name="base_link"/>'
+            '<gazebo reference="base_link"><sensor name="l" type="gpu_lidar"><topic>scan</topic>'
+            '</sensor></gazebo></robot>\n')
+        dest = create_project("imp2", tmp, template_dir("differential-drive"), from_urdf=src_urdf)
+        robot_yaml = open(os.path.join(dest, "robot.yaml"), encoding="utf-8").read()
+        assert "type: lidar" in robot_yaml                          # sensor inferred from the URDF
+        world = open(os.path.join(dest, "src", "imp2_description", "worlds", "warehouse.sdf"),
+                     encoding="utf-8").read()
+        assert "gz-sim-sensors-system" in world                     # …so the world loads its system
