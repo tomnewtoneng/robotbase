@@ -13,6 +13,7 @@ import json
 import os
 import shutil
 import sys
+import tempfile
 
 from robotbase.runtime import Runtime
 from robotbase.schema import Scenario
@@ -270,8 +271,10 @@ def main() -> None:
 
         tasks = expand_tasks(args.task)
         arms = expand_arms(args.arm)
-        workdir = args.out
-        os.makedirs(workdir, exist_ok=True)
+        # Generated ROS project trees are scratch artefacts — keep them out of the
+        # tracked repo (--out is only for the record JSONs, see below).
+        workdir = tempfile.mkdtemp(prefix="rbench-projects-")
+        os.makedirs(args.out, exist_ok=True)
         records = runner.run(
             tasks, arms, args.model, args.trials, agent,
             generate=real_generate(workdir), start_sim=real_start_sim,

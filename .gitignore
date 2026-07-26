@@ -9,3 +9,8 @@ log/
 .robotbase/
 *.egg-info/
 .superpowers/
+
+# robotbench: generated ROS project trees are scratch, never tracked;
+# results/*.json (trial evidence records) stay committable.
+/rbench-projects-*/
+robotbase/robotbench/results/*.mcap
