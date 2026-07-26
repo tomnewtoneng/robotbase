@@ -133,6 +133,14 @@ project, and a coding agent authors all of it by natural language:
   `world.yaml` `include:`. The runner/evals now run over *your* robot, not just the templates.
 - 🔲 **`robotbase init`** — drop Robotbase into an *existing* project (like `supabase init`),
   not only greenfield `create`. (The remaining import piece.)
+- 🔲 **Compile the launch + manifest, not just URDF/SDF.** Today `_compile_specs` regenerates only
+  the URDF and world SDF; the launch (its `parameter_bridge` args) and `robotbase.yaml` manifest
+  are still template-owned. Consequence: a `--from-urdf` import whose URDF has a **camera/depth**
+  sensor renders it in Gazebo (the world system is inferred) but the `/image`//`/depth` ROS bridge
+  is never added (the default diff-drive launch bridges lidar/imu/contact only). Regenerate the
+  launch from `compiled.bridges` (and the manifest from `compiled.manifest`) so editing
+  `robot.yaml` post-create fully rewires the project. Until then, launch/manifest are
+  template-owned — a docs caveat on `--from-urdf`.
 - 🔲 **Custom archetypes / mobile manipulators as templates** — composition works
   (diff-drive + arm compiles as one tree); package common compositions as templates.
 - 🔲 **NL authoring end-to-end** — the agent goes from "test a diff-drive that avoids
