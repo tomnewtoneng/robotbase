@@ -36,6 +36,20 @@ def test_run_iterates_tasks_arms_trials():
     assert sorted(r.seed for r in recs if r.arm == "with") == [0, 1, 2]
 
 
+def test_run_trial_persists_transcript_when_dir_given(tmp_path):
+    from robotbase.robotbench.agent import AgentResult
+    agent = type("A", (), {"run": lambda self, p, a, t, c: AgentResult(
+        True, 1, 1, 1.0, None, "end_turn", '{"msgs": ["hello"]}')})()
+    rec = run_trial(TASK, "with", "m", 0, 0, agent,
+                    generate=lambda task, trial: "/tmp/p", start_sim=lambda p: None,
+                    judge_fn=lambda p, s, seed: {"robustness": 1.0, "solved": True},
+                    transcript_dir=str(tmp_path))
+    assert rec.transcript_path is not None
+    import os
+    assert os.path.isfile(rec.transcript_path)
+    assert open(rec.transcript_path).read() == '{"msgs": ["hello"]}'
+
+
 def test_run_trial_tears_down_even_after_judge(tmp_path):
     from robotbase.robotbench.runner import run_trial
     from robotbase.robotbench.agent import AgentResult

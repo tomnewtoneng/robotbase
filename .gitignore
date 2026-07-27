@@ -16,3 +16,7 @@ log/
 robotbase/robotbench/results/*.mcap
 .robotbench_key
 .robotbench_env
+_rbench_pilot.py
+_rbench_run.py
+robotbase/robotbench/results/transcripts/
+_regen.py
