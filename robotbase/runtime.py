@@ -103,10 +103,18 @@ class Runtime:
         pre = "rm -rf build install log && " if clean else ""
         proc = self._ros(pre + "colcon build --symlink-install", timeout=600)
         lines = self._cap(proc.stdout) + self._cap(proc.stderr)
+        errors = [ln for ln in lines if "error" in ln.lower()][:50]
+        # Surface *something* actionable when the build fails but nothing matched "error"
+        # (e.g. the container isn't up, so `docker compose exec` itself failed) — otherwise
+        # the caller sees passed:false with an empty errors list and no idea why.
+        if proc.returncode != 0 and not errors:
+            tail = [ln for ln in (self._cap(proc.stderr) or self._cap(proc.stdout)) if ln.strip()][-5:]
+            errors = tail or [f"build command exited {proc.returncode} with no output "
+                              "(is the container up? run `robotbase up`)"]
         return {
             "passed": proc.returncode == 0,
             "duration_seconds": round(time.monotonic() - start, 1),
-            "errors": [ln for ln in lines if "error" in ln.lower()][:50],
+            "errors": errors,
             "warnings": [ln for ln in lines if "warning" in ln.lower()][:20],
         }
 

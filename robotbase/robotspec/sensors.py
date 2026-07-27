@@ -1,6 +1,7 @@
 """Sensor emitters — cross-archetype; each mounts to any link (see declarative-compiler.md)."""
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass
 
 from robotbase.robotspec.ir import Bridge, Fragment, LinkIR
@@ -9,6 +10,22 @@ from robotbase.robotspec.merge import fixed_joint
 
 class UnknownSensor(ValueError):
     ...
+
+
+# Map a Gazebo <sensor type="..."> to the robotbase sensor name, so an imported URDF's own
+# sensors can be recognised (to wire their bridge/world-system without re-injecting their XML).
+_GZ_SENSOR_MAP = {"gpu_lidar": "lidar", "lidar": "lidar", "imu": "imu",
+                  "contact": "contact", "camera": "camera", "depth_camera": "depth"}
+
+
+def infer_sensors_from_urdf(urdf_text: str) -> list[str]:
+    """Best-effort: the robotbase sensor types already present in an imported URDF."""
+    seen: list[str] = []
+    for gz_type in re.findall(r'<sensor\b[^>]*\btype="([^"]+)"', urdf_text):
+        rb = _GZ_SENSOR_MAP.get(gz_type)
+        if rb and rb not in seen:
+            seen.append(rb)
+    return seen
 
 
 @dataclass

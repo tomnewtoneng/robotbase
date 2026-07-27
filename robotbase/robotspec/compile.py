@@ -12,7 +12,7 @@ from robotbase.robotspec.ir import Fragment, JointIR, LinkIR, link_from_shape
 from robotbase.robotspec.merge import fixed_joint, merge_and_render
 from robotbase.robotspec.modules import MODULES, UnknownArchetype
 from robotbase.robotspec.schema import Part, RobotSpec
-from robotbase.robotspec.sensors import SENSORS, Ctx, UnknownSensor
+from robotbase.robotspec.sensors import SENSORS, Ctx, UnknownSensor, infer_sensors_from_urdf
 
 __all__ = ["CompiledRobot", "compile_robot", "UnknownArchetype", "UnknownSensor"]
 
@@ -64,16 +64,8 @@ def compile_robot(spec: RobotSpec, world_name: str = "warehouse") -> CompiledRob
             urdf = fh.read()
         bridges, world_systems, ready_topics, sensors_manifest = [], [], [], {}
         ctx = Ctx(world=world_name, robot_name=spec.name, body_size=list(spec.body.size))
-        sensor_xml: list[str] = []
-        for s in spec.sensors:
-            if s.type not in SENSORS:
-                raise UnknownSensor(f"unknown sensor {s.type!r}; known: {sorted(SENSORS)}")
-            frag = SENSORS[s.type](s.model_dump(), s.on or "base_link", ctx)
-            bridges += frag.bridges
-            # Inject the sensor's link/joint/gazebo XML into the imported URDF — otherwise the
-            # bridge exists but no gz <sensor> entity publishes (a silent /scan). The imported
-            # URDF is authoritative for the *body*; added sensors extend it.
-            sensor_xml += [l.xml for l in frag.links] + [j.xml for j in frag.joints] + frag.gazebo
+
+        def _wire(frag) -> None:
             for sys_ in frag.world_systems:
                 if sys_ not in world_systems:
                     world_systems.append(sys_)
@@ -81,6 +73,25 @@ def compile_robot(spec: RobotSpec, world_name: str = "warehouse") -> CompiledRob
                 if t not in ready_topics:
                     ready_topics.append(t)
             sensors_manifest.update(frag.manifest_sensors)
+
+        # (a) Sensors already present in the imported URDF: wire their bridge + world system so
+        # they actually publish, but do NOT re-inject XML (it's already there).
+        for t in infer_sensors_from_urdf(urdf):
+            frag = SENSORS[t]({}, "base_link", ctx)
+            bridges += frag.bridges
+            _wire(frag)
+
+        # (b) Sensors the author ADDS via `sensors:` (not in the URDF): inject their link/joint/
+        # gazebo XML into the imported URDF — otherwise the bridge exists but no gz <sensor>
+        # entity publishes (a silent /scan).
+        sensor_xml: list[str] = []
+        for s in spec.sensors:
+            if s.type not in SENSORS:
+                raise UnknownSensor(f"unknown sensor {s.type!r}; known: {sorted(SENSORS)}")
+            frag = SENSORS[s.type](s.model_dump(), s.on or "base_link", ctx)
+            bridges += frag.bridges
+            sensor_xml += [l.xml for l in frag.links] + [j.xml for j in frag.joints] + frag.gazebo
+            _wire(frag)
         if sensor_xml:
             idx = urdf.rfind("</robot>")
             if idx == -1:

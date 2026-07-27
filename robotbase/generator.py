@@ -73,42 +73,58 @@ def create_project(name: str, dest_parent: str, template_dir: str, from_urdf: st
     if from_urdf is not None:
         urdf_dir = os.path.join(dest, "src", f"{snake}_description", "urdf")
         os.makedirs(urdf_dir, exist_ok=True)
-        placed = os.path.join(urdf_dir, f"{snake}.urdf.xacro")
-        shutil.copyfile(from_urdf, placed)
-        sensors = _infer_sensors_from_urdf(open(placed, encoding="utf-8").read())
-        sensors_yaml = ("sensors: []\n" if not sensors
-                        else "sensors:\n" + "".join(f"  - {{type: {t}}}\n" for t in sensors))
+        # Keep the imported URDF pristine and separate from the compiled output: robot.yaml
+        # points at `.imported.urdf`, and the compiler writes the runnable `.urdf.xacro`
+        # (imported body + any sensors the author later adds). This keeps recompiles idempotent —
+        # the pristine source is re-read each time, never mutated.
+        shutil.copyfile(from_urdf, os.path.join(urdf_dir, f"{snake}.imported.urdf"))
         with open(os.path.join(dest, "robot.yaml"), "w", encoding="utf-8") as fh:
             fh.write(f"version: 1\nname: {snake}\n"
-                     f"parts:\n  - use: custom\n    urdf: src/{snake}_description/urdf/{snake}.urdf.xacro\n"
-                     + sensors_yaml)
+                     "parts:\n  - use: custom\n"
+                     f"    urdf: src/{snake}_description/urdf/{snake}.imported.urdf\n"
+                     "sensors: []\n")
 
     _compile_specs(dest, snake)
     return dest
 
 
-_GZ_SENSOR_MAP = {"gpu_lidar": "lidar", "lidar": "lidar", "imu": "imu",
-                  "contact": "contact", "camera": "camera", "depth_camera": "depth"}
+def recompile_project(project_dir: str) -> bool:
+    """Recompile an existing project's robot.yaml/world.yaml into its description package.
+
+    This is what closes the authoring loop: an agent edits a spec, rebuilds, and the change
+    takes effect. Returns True if a recompile ran (a robot.yaml was found)."""
+    snake = _project_snake(project_dir)
+    if not snake or not os.path.exists(os.path.join(project_dir, "robot.yaml")):
+        return False
+    _compile_specs(project_dir, snake)
+    return True
 
 
-def _infer_sensors_from_urdf(urdf_text: str) -> list[str]:
-    """Best-effort: map an imported URDF's ``<sensor type="...">`` tags to robotbase sensor
-    types, so the world compiler loads the gz systems those sensors need to actually publish."""
-    seen: list[str] = []
-    for gz_type in re.findall(r'<sensor\b[^>]*\btype="([^"]+)"', urdf_text):
-        rb = _GZ_SENSOR_MAP.get(gz_type)
-        if rb and rb not in seen:
-            seen.append(rb)
-    return seen
+def _project_snake(project_dir: str) -> str | None:
+    """The project's package prefix (``<snake>_description``), from the manifest or the tree."""
+    manifest = os.path.join(project_dir, "robotbase.yaml")
+    if os.path.exists(manifest):
+        from robotbase.schema import Manifest, ManifestError
+        try:
+            return Manifest.from_yaml(manifest).launch_package.removesuffix("_bringup")
+        except ManifestError:
+            pass
+    src = os.path.join(project_dir, "src")
+    if os.path.isdir(src):
+        for d in sorted(os.listdir(src)):
+            if d.endswith("_description"):
+                return d[: -len("_description")]
+    return None
 
 
 def _compile_specs(dest: str, snake: str) -> None:
     """Compile the project's robot.yaml/world.yaml into the description package.
 
-    For a `use: custom` import the placed URDF is authoritative and is NOT recompiled, but the
-    imported robot's sensors — inferred into robot.yaml at create time — still drive the world's
-    gz systems, so the world SDF loads Sensors/Imu/Contact exactly as the imported sensors need
-    (without this, an imported robot's LiDAR/IMU/contact would never publish).
+    Always writes the runnable ``<snake>.urdf.xacro``. For a `use: custom` import the compiler
+    reads the pristine ``.imported.urdf`` and returns the imported body plus any sensors the
+    author added, so writing it here is idempotent (the pristine source is never mutated). The
+    world SDF is regenerated with the robot's sensor-derived gz systems so imported/added
+    LiDAR/IMU/contact/camera actually publish.
     """
     robot_yaml = os.path.join(dest, "robot.yaml")
     if not os.path.exists(robot_yaml):
@@ -117,19 +133,15 @@ def _compile_specs(dest: str, snake: str) -> None:
     from robotbase.robotspec.schema import RobotSpec
 
     spec = RobotSpec.from_yaml(robot_yaml)
-    is_custom = any(p.use == "custom" for p in spec.parts)
-    if is_custom:
-        # resolve the project-relative import path so compile_robot can read the placed URDF
-        for p in spec.parts:
-            if p.use == "custom" and p.urdf and not os.path.isabs(p.urdf):
-                p.urdf = os.path.join(dest, p.urdf)
+    for p in spec.parts:                       # resolve project-relative import paths
+        if p.use == "custom" and p.urdf and not os.path.isabs(p.urdf):
+            p.urdf = os.path.join(dest, p.urdf)
     compiled = compile_robot(spec)
 
-    if not is_custom:
-        urdf_dir = os.path.join(dest, "src", f"{snake}_description", "urdf")
-        if os.path.isdir(urdf_dir):
-            with open(os.path.join(urdf_dir, f"{snake}.urdf.xacro"), "w", encoding="utf-8") as fh:
-                fh.write(compiled.urdf)
+    urdf_dir = os.path.join(dest, "src", f"{snake}_description", "urdf")
+    if os.path.isdir(urdf_dir):
+        with open(os.path.join(urdf_dir, f"{snake}.urdf.xacro"), "w", encoding="utf-8") as fh:
+            fh.write(compiled.urdf)
 
     world_yaml = os.path.join(dest, "world.yaml")
     world_dir = os.path.join(dest, "src", f"{snake}_description", "worlds")

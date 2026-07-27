@@ -38,7 +38,8 @@ def test_create_from_urdf_wraps_the_imported_urdf():
 
 def test_create_from_urdf_infers_sensors_into_world_systems():
     """Dogfood B: an imported URDF that declares a LiDAR must make the compiled world load the
-    Sensors system, or the LiDAR never publishes. The importer infers sensors from the URDF."""
+    Sensors system, or the LiDAR never publishes. The compiler scans the imported URDF's own
+    <sensor> tags to derive its world systems — WITHOUT re-injecting the sensor XML (no double)."""
     with tempfile.TemporaryDirectory() as tmp:
         src_urdf = os.path.join(tmp, "r.urdf")
         open(src_urdf, "w").write(
@@ -46,11 +47,12 @@ def test_create_from_urdf_infers_sensors_into_world_systems():
             '<gazebo reference="base_link"><sensor name="l" type="gpu_lidar"><topic>scan</topic>'
             '</sensor></gazebo></robot>\n')
         dest = create_project("imp2", tmp, template_dir("differential-drive"), from_urdf=src_urdf)
-        robot_yaml = open(os.path.join(dest, "robot.yaml"), encoding="utf-8").read()
-        assert "type: lidar" in robot_yaml                          # sensor inferred from the URDF
         world = open(os.path.join(dest, "src", "imp2_description", "worlds", "warehouse.sdf"),
                      encoding="utf-8").read()
-        assert "gz-sim-sensors-system" in world                     # …so the world loads its system
+        assert "gz-sim-sensors-system" in world                     # world loads the derived system
+        urdf = open(os.path.join(dest, "src", "imp2_description", "urdf", "imp2.urdf.xacro"),
+                    encoding="utf-8").read()
+        assert urdf.count('type="gpu_lidar"') == 1                  # imported sensor NOT doubled
 
 
 def test_arm_compiles_from_specs():

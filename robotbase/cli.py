@@ -15,6 +15,7 @@ import shutil
 import sys
 import tempfile
 
+from robotbase.generator import recompile_project
 from robotbase.runtime import Runtime
 from robotbase.schema import Scenario
 from robotbase.scenario_runner import run_scenario
@@ -295,6 +296,8 @@ def main() -> None:
     controller_pkg = rt.launch_package.removesuffix("_bringup")
 
     if args.cmd == "up":
+        if recompile_project(project):
+            _hint("Recompiled robot.yaml/world.yaml → URDF/SDF.")
         result = rt.up()
         print(json.dumps(result, indent=2))
         if result.get("build", {}).get("passed"):
@@ -303,6 +306,8 @@ def main() -> None:
             _hint("Container up, but the build failed — check the errors above.")
 
     elif args.cmd == "build":
+        if recompile_project(project):
+            _hint("Recompiled robot.yaml/world.yaml → URDF/SDF.")
         result = rt.build()
         print(json.dumps(result, indent=2))
         _hint(
