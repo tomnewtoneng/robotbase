@@ -13,6 +13,28 @@ whatever pushes more of the stack into clean, compilable config that ports acros
 
 Status key: 🔲 not started · 🚧 in progress · ✅ done.
 
+## ★ Priority roadmap (CURRENT — 2026-07-27) — read [`STRATEGY.md`](STRATEGY.md) first
+
+This ordering (from the strategic cross-reference in `STRATEGY.md`) **supersedes the thematic
+ranking at the bottom of this file**. Principle: **validation-first, then depth on the compiler
+core — not more breadth.**
+
+- **P0 — 🚧 Finish RobotBench (the gate).** Prove the core hypothesis (agents materially better
+  WITH Robotbase). If it fails, see the kill-criteria in `STRATEGY.md`. *(in progress)*
+- **P1 — 🔲 Explainability & traceability** (`robotbase explain`/`trace` + source maps in
+  generated files). Highest-leverage new capability; the moat is inspectability.
+- **P2 — 🔲 Compile the full runtime** (launch + controller + manifest from a `runtime.yaml`, not
+  template-owned). Closes the imported-sensor-not-bridged gap. *(also §G below)*
+- **P3 — 🔲 Static physical validation + value provenance** (inertia/mass/COM/TF/joint-limit
+  checks; tag measured/imported/inferred/default/estimated). Validation ≥ generation.
+- **P4 — 🔲 Lift the IR to a semantic model** — decouple `ir.py` from URDF strings; URDF/SDF/launch
+  become pure backends. Deepest moat, biggest refactor — do it *after* P1–P3 and only if the
+  thesis validates.
+- **P5 — 🔲 Knowledge layer for agents** (packaged Claude Code skill + schema docs + failure-pattern
+  tables; borrow the ROS2-skills check scripts). Amplifies the agent-native thesis.
+- **Later:** MuJoCo as a first-class backend (unlocked by P4), Studio (§H), import depth, units.
+  Breadth (§D robots/sensors) is opportunistic — not the moat.
+
 ## A. Turn scenarios into *evals* (the moat)
 
 A scenario today is a pass/fail test. The leap is making it a benchmark.

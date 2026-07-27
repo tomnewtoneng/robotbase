@@ -115,8 +115,9 @@ published Docker image; the scenario library is intentionally small and growing.
 
 ## Docs
 
-- [VISION.md](docs/VISION.md) — what Robotbase is and where it's going, strategically.
-- [ROADMAP.md](docs/ROADMAP.md) — the build path and what's done.
+- **[STRATEGY.md](docs/STRATEGY.md) — ★ current strategic source of truth: refined vision, an honest codebase cross-reference, and the prioritized roadmap. Read this first.**
+- [VISION.md](docs/VISION.md) — what Robotbase is and where it's going, strategically (supporting detail).
+- [ROADMAP.md](docs/ROADMAP.md) — the build path and what's done (supporting detail).
 - [IDEAS.md](docs/IDEAS.md) — the ranked expansion backlog.
 - [ROBOTBENCH.md](docs/ROBOTBENCH.md) — the benchmark for robot behaviours and AI agents.
 - [SCENARIO-FORMAT.md](docs/SCENARIO-FORMAT.md) — the versioned manifest/scenario/result spec.

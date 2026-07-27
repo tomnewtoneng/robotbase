@@ -1,5 +1,8 @@
 # Robotbase — Vision
 
+> **→ For the current top-level analysis + prioritized roadmap, read [STRATEGY.md](STRATEGY.md)
+> (the authoritative source of truth as of 2026-07-27). This VISION doc is supporting detail.**
+
 ## What Robotbase is
 
 Robotbase is **Terraform for robots**: fully declarative robotics. You describe your robot,

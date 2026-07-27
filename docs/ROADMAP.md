@@ -1,5 +1,10 @@
 # Robotbase — Roadmap
 
+> **→ The current prioritized roadmap lives in [STRATEGY.md](STRATEGY.md) (authoritative, 2026-07-27):
+> validation-first (RobotBench), then depth on the compiler core (explainability → runtime
+> compilation → static physical validation → semantic IR), NOT more breadth. This ROADMAP doc's
+> widening emphasis below is now secondary — read STRATEGY.md first.**
+
 Where the project is going. See `VISION.md` for the why and the strategic layers; this doc
 is the concrete build path, with an emphasis on **widening** (more robots, sensors,
 scenarios). Priorities are a recommendation, not a contract.
