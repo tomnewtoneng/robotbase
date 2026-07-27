@@ -1,0 +1,18 @@
+{
+  "benchmark_version": 1,
+  "task_id": "diff/turn-around",
+  "arm": "without",
+  "model": "claude-sonnet-5",
+  "trial": 0,
+  "seed": 0,
+  "solved": false,
+  "robustness": 0.0,
+  "claimed_solved": false,
+  "controller_edits": 0,
+  "agent_turns": 19,
+  "wall_clock_s": 102.33817143400665,
+  "tokens": 2559,
+  "stop_reason": "turns_cap",
+  "transcript_path": null,
+  "git_sha": null
+}

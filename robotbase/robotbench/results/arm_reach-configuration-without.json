@@ -1,0 +1,18 @@
+{
+  "benchmark_version": 1,
+  "task_id": "arm/reach-configuration",
+  "arm": "without",
+  "model": "claude-sonnet-5",
+  "trial": 0,
+  "seed": 0,
+  "solved": true,
+  "robustness": 1.0,
+  "claimed_solved": true,
+  "controller_edits": 1,
+  "agent_turns": 19,
+  "wall_clock_s": 113.51505150797311,
+  "tokens": 4334,
+  "stop_reason": "turns_cap",
+  "transcript_path": null,
+  "git_sha": null
+}

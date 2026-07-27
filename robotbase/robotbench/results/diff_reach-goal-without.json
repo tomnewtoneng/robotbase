@@ -1,0 +1,18 @@
+{
+  "benchmark_version": 1,
+  "task_id": "diff/reach-goal",
+  "arm": "without",
+  "model": "claude-sonnet-5",
+  "trial": 0,
+  "seed": 0,
+  "solved": true,
+  "robustness": 1.0,
+  "claimed_solved": true,
+  "controller_edits": 1,
+  "agent_turns": 19,
+  "wall_clock_s": 127.59454202401685,
+  "tokens": 5010,
+  "stop_reason": "turns_cap",
+  "transcript_path": null,
+  "git_sha": null
+}
