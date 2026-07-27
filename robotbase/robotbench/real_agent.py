@@ -139,6 +139,10 @@ class RealAgent:
                         break
         except TimeoutError:
             stop_reason = "timeout"
+        except Exception as e:  # the SDK raises an error result on max-turns and other failures
+            emsg = str(e)
+            stop_reason = "turns_cap" if "maximum number of turns" in emsg.lower() else "error"
+            transcript.append({"type": "error", "message": emsg[:500]})
         finally:
             await agen.aclose()
 
@@ -148,10 +152,13 @@ class RealAgent:
 
         claimed = False
         if session_id is not None:
-            claimed, extra_tokens, final_msgs = await self._ask_solved(options, session_id)
-            transcript.extend(final_msgs)
-            if extra_tokens is not None:
-                tokens = (tokens or 0) + extra_tokens
+            try:
+                claimed, extra_tokens, final_msgs = await self._ask_solved(options, session_id)
+                transcript.extend(final_msgs)
+                if extra_tokens is not None:
+                    tokens = (tokens or 0) + extra_tokens
+            except Exception as e:  # best-effort: a capped/errored session may reject resume
+                transcript.append({"type": "final_error", "message": str(e)[:300]})
 
         return AgentResult(
             claimed_solved=claimed,

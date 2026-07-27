@@ -31,6 +31,9 @@ def robustness_via_cli(project_dir: str, scenario: str, trials: int, seed: int) 
     for r in data.get("results", []):
         if r.get("scenario") == scenario:
             return float(r["robustness"])
+    # single-run shape (`--trials 1`): no robustness aggregation, just a pass/fail verdict.
+    if "passed" in data:
+        return 1.0 if data["passed"] else 0.0
     raise ValueError(f"could not find robustness in judge output: {proc.stdout[:200]}")
 
 
