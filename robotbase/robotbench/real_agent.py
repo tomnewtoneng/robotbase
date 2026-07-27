@@ -1,0 +1,183 @@
+"""RealAgent: drives the Claude Agent SDK (claude-agent-sdk) as the live coding agent for a
+RobotBench trial. Conforms to the Task-4 `Agent` protocol (`agent.py`). The WITH arm points the
+SDK at the robotbase MCP server (`python -m robotbase.mcp_server`, `ROBOTBASE_PROJECT_DIR` set to
+the project); the WITHOUT arm gets a raw bash shell instead. All `claude_agent_sdk` imports are
+lazy/local so Phase-1 modules keep importing without the `bench-agent` extra installed.
+See docs/design/robotbench-validation.md."""
+from __future__ import annotations
+
+import asyncio
+import dataclasses
+import glob
+import hashlib
+import json
+import os
+import sys
+import time
+from dataclasses import dataclass
+from typing import Any
+
+from robotbase.robotbench.agent import AgentResult, Caps
+from robotbase.robotbench.apikey import ensure_api_key
+from robotbase.robotbench.arms import arm_context
+
+FINAL_PROMPT = (
+    "Do you believe you solved the task? Reply with only the single word "
+    "SOLVED or NOT_SOLVED."
+)
+
+
+def _controller_path(project_dir: str) -> str | None:
+    hits = glob.glob(os.path.join(project_dir, "src", "*", "*", "controller.py"))
+    return hits[0] if hits else None
+
+
+def _controller_hash(project_dir: str) -> str | None:
+    path = _controller_path(project_dir)
+    if path is None or not os.path.isfile(path):
+        return None
+    with open(path, "rb") as fh:
+        return hashlib.sha256(fh.read()).hexdigest()
+
+
+def _sum_tokens(usage: dict[str, Any] | None) -> int | None:
+    if not usage:
+        return None
+    return int(usage.get("input_tokens", 0)) + int(usage.get("output_tokens", 0))
+
+
+def _serialize_message(msg: Any) -> dict:
+    if dataclasses.is_dataclass(msg) and not isinstance(msg, type):
+        try:
+            return {"type": type(msg).__name__, **dataclasses.asdict(msg)}
+        except TypeError:
+            pass
+    return {"type": type(msg).__name__, "repr": repr(msg)}
+
+
+@dataclass
+class RealAgent:
+    """Live coding agent via the Claude Agent SDK. Satisfies `robotbase.robotbench.agent.Agent`."""
+
+    model: str
+
+    def run(self, project_dir: str, arm: str, task: dict, caps: Caps) -> AgentResult:
+        ensure_api_key()
+        return asyncio.run(self._run_async(project_dir, arm, task, caps))
+
+    def _build_options(self, project_dir: str, arm: str, caps: Caps):
+        from claude_agent_sdk import ClaudeAgentOptions
+
+        common: dict[str, Any] = dict(
+            model=self.model,
+            cwd=project_dir,
+            permission_mode="bypassPermissions",
+            max_turns=caps.max_turns,
+            strict_mcp_config=True,
+        )
+        if arm == "with":
+            return ClaudeAgentOptions(
+                **common,
+                tools=["Read", "Edit", "Write"],
+                mcp_servers={
+                    "robotbase": {
+                        "command": sys.executable,
+                        "args": ["-m", "robotbase.mcp_server"],
+                        "env": {"ROBOTBASE_PROJECT_DIR": project_dir},
+                    },
+                },
+            )
+        if arm == "without":
+            return ClaudeAgentOptions(
+                **common,
+                tools=["Bash", "Read", "Edit", "Write"],
+                mcp_servers={},
+            )
+        raise ValueError(f"unknown arm {arm!r}; expected 'with' or 'without'")
+
+    async def _run_async(self, project_dir: str, arm: str, task: dict, caps: Caps) -> AgentResult:
+        from claude_agent_sdk import AssistantMessage, ResultMessage, query
+
+        ctx = arm_context(arm, project_dir, task)
+        options = self._build_options(project_dir, arm, caps)
+
+        start = time.monotonic()
+        transcript: list[dict] = []
+        edits = 0
+        turn_estimate = 0
+        final_turns: int | None = None
+        token_estimate = 0
+        final_tokens: int | None = None
+        stop_reason = "unknown"
+        session_id: str | None = None
+        last_hash = _controller_hash(project_dir)
+
+        agen = query(prompt=ctx["prompt"], options=options)
+        try:
+            async with asyncio.timeout(caps.timeout_s):
+                async for msg in agen:
+                    transcript.append(_serialize_message(msg))
+                    if isinstance(msg, AssistantMessage):
+                        turn_estimate += 1
+                        if msg.session_id:
+                            session_id = msg.session_id
+                        t = _sum_tokens(msg.usage)
+                        if t is not None:
+                            token_estimate += t
+                    elif isinstance(msg, ResultMessage):
+                        session_id = msg.session_id
+                        final_turns = msg.num_turns
+                        final_tokens = _sum_tokens(msg.usage)
+                        stop_reason = msg.stop_reason or msg.subtype or "unknown"
+
+                    new_hash = _controller_hash(project_dir)
+                    if new_hash is not None and new_hash != last_hash:
+                        edits += 1
+                        last_hash = new_hash
+                    if edits >= caps.max_edits:
+                        stop_reason = "max_edits"
+                        break
+        except TimeoutError:
+            stop_reason = "timeout"
+        finally:
+            await agen.aclose()
+
+        wall = time.monotonic() - start
+        turns = final_turns if final_turns is not None else turn_estimate
+        tokens = final_tokens if final_tokens is not None else (token_estimate or None)
+
+        claimed = False
+        if session_id is not None:
+            claimed, extra_tokens, final_msgs = await self._ask_solved(options, session_id)
+            transcript.extend(final_msgs)
+            if extra_tokens is not None:
+                tokens = (tokens or 0) + extra_tokens
+
+        return AgentResult(
+            claimed_solved=claimed,
+            controller_edits=edits,
+            agent_turns=turns,
+            wall_clock_s=wall,
+            tokens=tokens,
+            stop_reason=stop_reason,
+            transcript=json.dumps(transcript),
+        )
+
+    async def _ask_solved(self, options, session_id: str) -> tuple[bool, int | None, list[dict]]:
+        from claude_agent_sdk import ResultMessage, query
+
+        follow_up = dataclasses.replace(options, resume=session_id, max_turns=1)
+        claimed = False
+        tokens: int | None = None
+        msgs: list[dict] = []
+        agen = query(prompt=FINAL_PROMPT, options=follow_up)
+        try:
+            async for msg in agen:
+                msgs.append(_serialize_message(msg))
+                if isinstance(msg, ResultMessage):
+                    tokens = _sum_tokens(msg.usage)
+                    result_text = (msg.result or "").strip().upper()
+                    claimed = result_text == "SOLVED"
+        finally:
+            await agen.aclose()
+        return claimed, tokens, msgs

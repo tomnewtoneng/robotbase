@@ -14,3 +14,5 @@ log/
 # results/*.json (trial evidence records) stay committable.
 /rbench-projects-*/
 robotbase/robotbench/results/*.mcap
+.robotbench_key
+.robotbench_env
