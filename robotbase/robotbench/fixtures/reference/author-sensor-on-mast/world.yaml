@@ -1,0 +1,12 @@
+version: 1
+name: warehouse
+ground: true
+light: sun
+walls:
+  - {from: [-3, 3],  to: [3, 3],   height: 0.5}
+  - {from: [-3, -3], to: [3, -3],  height: 0.5}
+  - {from: [3, -3],  to: [3, 3],   height: 0.5}
+  - {from: [-3, -3], to: [-3, 3],  height: 0.5}
+obstacles:
+  - {shape: box, size: [0.3, 1.0, 0.2], at: [2, 0, 0.1]}     # low barrier — elevated lidar clears it
+  - {shape: box, size: [0.5, 0.5, 0.6], at: [3.5, 0, 0.3]}   # tall box — lidar sees it, robot stops

@@ -1,0 +1,11 @@
+version: 1
+name: warehouse
+ground: true
+light: sun
+walls:
+  - {from: [-3, 3],  to: [3, 3],   height: 0.5}   # north
+  - {from: [-3, -3], to: [3, -3],  height: 0.5}   # south
+  - {from: [3, -3],  to: [3, 3],   height: 0.5}   # east
+  - {from: [-3, -3], to: [-3, 3],  height: 0.5}   # west
+obstacles:
+  - {shape: box, size: [0.5, 0.5, 0.5], at: [2, 0, 0.25]}

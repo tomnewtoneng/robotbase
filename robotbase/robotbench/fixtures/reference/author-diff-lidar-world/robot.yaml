@@ -1,0 +1,5 @@
+version: 1
+name: robot
+base: differential-drive
+sensors:
+  - {type: lidar}

@@ -1,0 +1,8 @@
+version: 1
+name: robot
+# Import the foreign URDF under management, then add a LiDAR so it publishes /scan.
+parts:
+  - use: custom
+    urdf: vendor_bot.urdf
+sensors:
+  - {type: lidar}

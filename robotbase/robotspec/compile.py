@@ -52,8 +52,11 @@ def _raw_part(part: Part) -> Fragment:
 
 def compile_robot(spec: RobotSpec, world_name: str = "warehouse") -> CompiledRobot:
     parts = list(spec.parts)
-    if not parts and spec.base:
-        parts = [Part(use=spec.base, body=spec.body, drive=spec.drive)]
+    if spec.base:
+        # `base:` is sugar for a first part; any extra `parts:` compose onto it (a mast, a
+        # sensor mount, a second module). Prepending — not replacing — means `base:` + `parts:`
+        # is the natural authoring form, instead of a silent footgun where one drops the other.
+        parts = [Part(use=spec.base, body=spec.body, drive=spec.drive)] + parts
 
     custom = next((p for p in parts if p.use == "custom"), None)
     if custom is not None:
@@ -61,11 +64,16 @@ def compile_robot(spec: RobotSpec, world_name: str = "warehouse") -> CompiledRob
             urdf = fh.read()
         bridges, world_systems, ready_topics, sensors_manifest = [], [], [], {}
         ctx = Ctx(world=world_name, robot_name=spec.name, body_size=list(spec.body.size))
+        sensor_xml: list[str] = []
         for s in spec.sensors:
             if s.type not in SENSORS:
                 raise UnknownSensor(f"unknown sensor {s.type!r}; known: {sorted(SENSORS)}")
             frag = SENSORS[s.type](s.model_dump(), s.on or "base_link", ctx)
-            bridges += frag.bridges                                  # wiring only — XML assumed in the URDF
+            bridges += frag.bridges
+            # Inject the sensor's link/joint/gazebo XML into the imported URDF — otherwise the
+            # bridge exists but no gz <sensor> entity publishes (a silent /scan). The imported
+            # URDF is authoritative for the *body*; added sensors extend it.
+            sensor_xml += [l.xml for l in frag.links] + [j.xml for j in frag.joints] + frag.gazebo
             for sys_ in frag.world_systems:
                 if sys_ not in world_systems:
                     world_systems.append(sys_)
@@ -73,6 +81,11 @@ def compile_robot(spec: RobotSpec, world_name: str = "warehouse") -> CompiledRob
                 if t not in ready_topics:
                     ready_topics.append(t)
             sensors_manifest.update(frag.manifest_sensors)
+        if sensor_xml:
+            idx = urdf.rfind("</robot>")
+            if idx == -1:
+                raise UnknownArchetype("imported URDF has no </robot> element to extend with sensors")
+            urdf = urdf[:idx] + "".join(sensor_xml) + "\n" + urdf[idx:]
         manifest = {"robot": {"template": "custom", "name": spec.name},
                     "sensors": sensors_manifest, "control": {"velocity_topic": "/cmd_vel"},
                     "ready_topics": ready_topics, "fixed_base": False}
