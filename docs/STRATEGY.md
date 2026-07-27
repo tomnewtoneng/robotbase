@@ -89,6 +89,34 @@ hints yes (WITH solved in 1 edit / correct self-verification; WITHOUT made 0 edi
 Finish the breadth run → the full run → publish `ROBOTBENCH-RESULTS.md`. **If it validates, do
 P1–P4. If it doesn't, the kill-criteria (§4) are the honest off-ramp — weeks spent, not months.**
 
+### Dogfooding findings — authoring the RobotBench v2 references (2026-07-28)
+
+Authored the 4 v2 reference robots+worlds through the compiler by hand (the product-first probe
+before building the v2 harness). Results:
+
+- ✅ **`diff-lidar-world`** and ✅ **`two-sensor`** compiled cleanly first try — robot+sensor+world
+  + gz sensor-systems all correct. The declarative *core* (robot.yaml → URDF/SDF) is genuinely good.
+- 🔧 **FIXED — import + add-sensor injected no sensor XML.** `compile_robot`'s custom-import branch
+  produced a `/scan` bridge but no gz `<sensor>` in the URDF → silent `/scan`. Now the sensor
+  link/joint/gazebo XML is spliced into the imported URDF (body still verbatim). Commit + regression
+  test landed.
+- 🔧 **FIXED — `base:` + `parts:` silently dropped the base.** The natural way to add a mast
+  (`base: differential-drive` + a mast part) errored with a confusing `missing base_link`. Now
+  `base:` composes as the first part. Commit + regression test landed.
+- 🚨 **BLOCKER (not yet fixed) — the authoring loop is not closed.** `robot.yaml`/`world.yaml` are
+  compiled to URDF/SDF **only at `create` time** (`generator._compile_specs`); `build`/`up` just run
+  colcon in the container and never recompile. So an agent that authors or edits a spec and runs
+  `robotbase up` gets **no effect** — the URDF is never regenerated. For custom imports the compiled
+  URDF is never written at all (line-128 guard). **This blocks the entire WITH-arm authoring premise
+  and is a prerequisite for both the product and the v2 benchmark.** It is a sharper, now-urgent form
+  of P2 below. Also surfaced: `robotbase build` reports `passed:false` with an **empty errors list**
+  (unhelpful diagnostics — a smaller P1 item).
+
+**Verdict:** the compiler *core* is strong; the compile *loop* (edit spec → rebuild → run) must be
+closed before the v2 harness is worth building. Recommended next product task: **close the authoring
+loop** — `build`/`up` recompile specs (idempotently, keeping the pristine import separate), and
+`build` surfaces real errors. Then resume the v2 harness plan.
+
 ### P1 — Explainability & traceability (`robotbase explain` / `trace` + source maps)
 Highest-leverage *new* capability: the doc makes traceability mandatory, it's our own debugging
 pain now that we've added layers, and it's a defensibility feature (Terraform-style inspectability).
