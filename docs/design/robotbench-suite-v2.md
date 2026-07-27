@@ -221,6 +221,26 @@ WITH's result reflects a compiler bug, not its value. Each reference solution is
 - **Live integration:** one real WITH + one real WITHOUT trial on `author/diff-lidar-world` with
   Sonnet, transcripts persisted, before the full batch.
 
+## Run artifacts — durable & interrogable
+
+Every run writes a self-contained, timestamped directory so results can be re-examined later
+without re-running anything:
+
+`robotbase/robotbench/results/runs/<UTC-timestamp>-v2/`
+- `manifest.json` — run metadata: benchmark version, model, git SHA, caps, seeds, task list,
+  start/end times, per-arm bring-up commands (reproducibility).
+- `records/<task>-<arm>-<trial>.json` — the `TrialRecord` (existing schema).
+- `transcripts/<task>-<arm>-<trial>.transcript.json` — the full agent transcript (existing
+  persistence, `transcript_path` on the record).
+- `judge/<task>-<arm>-<trial>/seed-<n>/` — the **authoring judge's** per-seed evidence: the
+  ground-truth gz pose trace it sampled, the computed metric, the predicate verdict, and the
+  bring-up log. This is what lets us answer *why* a trial passed or failed after the fact.
+- `ROBOTBENCH-RESULTS.md` — the rendered report, also copied to `docs/` as the current headline.
+
+The `results/` tree is git-ignored (large, machine-specific), but each definitive run's
+`manifest.json` + `ROBOTBENCH-RESULTS.md` are committed under `docs/` as the durable record. A
+run is never overwritten — each gets its own timestamped directory.
+
 ## Run plan
 
 1. **Pilot n=1** across all 4 tasks × both arms (8 trials), transcripts saved → read every
