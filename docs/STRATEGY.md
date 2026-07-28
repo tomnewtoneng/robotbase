@@ -116,6 +116,19 @@ before building the v2 harness). Results:
 or edit a spec and `robotbase up` reflects it. **The v2 harness is now unblocked** and worth building:
 resume the plan at `docs/superpowers/plans/2026-07-27-robotbench-suite-v2.md` (Task 0 spike first).
 
+### v2 harness — Task 0 (ground-truth pose probe) spike ✅ VERIFIED (2026-07-28)
+
+The authoring judge must score behaviour from Gazebo **ground truth**, not the robot's own sensors
+(so a robot that mis-reports its own `/scan` can't fake a pass). Spike proved this is feasible via
+`gz topic -e /world/<world>/dynamic_pose/info`, read through an injected `sh(cmd)` callable
+(`robotbase/robotbench/gz_probe.py`): the top-level model entry carries the world x/y by name (gz
+omits near-zero fields → parse as 0.0). Verified live against a fresh `robotbase create` diff-drive
+project: drove `/cmd_vel` forward at 0.3 m/s and `sample_model_pose` returned a clean monotonic
+trace — x 0 → +1.036 m over ~3.8 s, y ≈ 0 exactly as commanded. `cmd_vel_is_live` (interface
+contract check) and the pure parsers are unit-tested (5 tests). The probe is arm-agnostic (same `sh`
+seam works for the WITH `docker compose exec` and WITHOUT raw-launch envs). **Task 0 done; proceed
+to Task 1 (v2 task set + benchmark version bump).**
+
 ### P1 — Explainability & traceability (`robotbase explain` / `trace` + source maps)
 Highest-leverage *new* capability: the doc makes traceability mandatory, it's our own debugging
 pain now that we've added layers, and it's a defensibility feature (Terraform-style inspectability).

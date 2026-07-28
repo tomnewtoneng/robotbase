@@ -40,9 +40,11 @@
 
 ---
 
-## Task 0: Spike — raw-ROS Gazebo pose probe (DE-RISK)
+## Task 0: Spike — raw-ROS Gazebo pose probe (DE-RISK) ✅ DONE (2026-07-28)
 
 **Goal:** Prove the judge can measure a **raw** (non-Robotbase) `ros2 launch` sim before building the suite on it. Exploratory; ends in a reusable helper + a written finding.
+
+**Outcome:** Probe viable via subprocess (no rclpy). Working mechanism: `gz topic -e -t /world/<world>/dynamic_pose/info -n 1`, parse the top-level model entry by name (gz omits near-zero fields → 0.0). Verified live: drove `/cmd_vel` fwd, `sample_model_pose` returned a clean monotonic trace (x 0→+1.036 m, y≈0). Deviation from the steps below: rather than hand-author `/tmp/spike_pkg` (world `empty`, model `robot`), I verified against a `robotbase create` diff-drive project (world `warehouse`, model `probebot`) — same `dynamic_pose/info` mechanism and same injected-`sh` seam, so it transfers to the raw WITHOUT arm unchanged. `sample_model_pose`/`cmd_vel_is_live` take an injected `sh(cmd)` (not a hardcoded world/subprocess) so both arms reuse them. See `docs/STRATEGY.md` finding + `tests/test_gz_probe.py` (5 tests).
 
 **Files:**
 - Create: `robotbase/robotbench/gz_probe.py`
