@@ -2,12 +2,10 @@ from robotbase.bench import BENCHMARK_VERSION, TASKS, scorecard
 from robotbase.evals import suite_report, trial_report
 
 
-def test_tasks_are_well_formed_and_unique():
-    assert TASKS
-    for t in TASKS:
-        assert {"id", "template", "scenario", "robot", "skill"} <= set(t)
+def test_tasks_are_unique():
+    # v2 schema/well-formedness is covered by tests/test_bench_tasks_v2.py; here just uniqueness.
     ids = [t["id"] for t in TASKS]
-    assert len(ids) == len(set(ids))
+    assert TASKS and len(ids) == len(set(ids))
 
 
 def test_scorecard_from_suite():

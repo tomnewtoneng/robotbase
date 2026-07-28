@@ -10,9 +10,9 @@ def test_expand_arms():
 
 def test_expand_tasks_all_and_single():
     tasks = expand_tasks("all")
-    assert len(tasks) >= 4 and all("scenario" in t and "template" in t for t in tasks)
-    one = expand_tasks("diff/reach-goal")
-    assert len(one) == 1 and one[0]["id"] == "diff/reach-goal"
+    assert len(tasks) == 4 and all("kind" in t and "prompt" in t for t in tasks)
+    one = expand_tasks("import/add-sensor")
+    assert len(one) == 1 and one[0]["id"] == "import/add-sensor"
 
 
 def test_expand_tasks_unknown_raises():

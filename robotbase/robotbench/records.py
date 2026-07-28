@@ -3,7 +3,7 @@ from __future__ import annotations
 
 from pydantic import BaseModel
 
-BENCHMARK_VERSION = 1
+BENCHMARK_VERSION = 2
 
 
 class TrialRecord(BaseModel):

@@ -7,21 +7,39 @@ build→test→fix loop measures how well it did. See docs/ROBOTBENCH.md for the
 """
 from __future__ import annotations
 
-BENCHMARK_VERSION = 1
+BENCHMARK_VERSION = 2
 
-# The canonical RobotBench task set: each task is a shipped template + scenario, with the
-# skill it probes. A submission runs these against a controller the agent wrote (starting
-# from the broken starter) and is scored on robustness under domain randomization.
+# The canonical RobotBench v2 task set: from-scratch **authoring** tasks that probe the compiler
+# + knowledge layer, not a fix-a-controller loop. The agent authors a robot+world (or imports and
+# augments a URDF); a single **provided** controller (byte-identical across arms, immutable to the
+# agent) must then succeed against it, scored from Gazebo ground-truth pose by the authoring judge.
+# See docs/design/robotbench-suite-v2.md ("The suite") — prompts are copied verbatim from there.
 TASKS = [
-    {"id": "diff/stop-before-obstacle", "template": "differential-drive",
-     "scenario": "stop-before-obstacle", "robot": "mobile-base",
-     "skill": "reactive obstacle avoidance (LiDAR)"},
-    {"id": "diff/reach-goal", "template": "differential-drive", "scenario": "reach-goal",
-     "robot": "mobile-base", "skill": "pose goal-seeking (odometry)"},
-    {"id": "diff/turn-around", "template": "differential-drive", "scenario": "turn-around",
-     "robot": "mobile-base", "skill": "navigate around an obstacle to a goal"},
-    {"id": "arm/reach-configuration", "template": "arm", "scenario": "reach-configuration",
-     "robot": "manipulator", "skill": "joint-space position control"},
+    {"id": "author/diff-lidar-world", "kind": "author", "robot": "mobile-base",
+     "skill": "author robot+world from spec", "model_name": "robot",
+     "controller": "stop_at_1m", "judge_scenario": "author_stop_at_1m",
+     "prompt": "Build a differential-drive robot named `robot` with a forward-facing 2-D LiDAR, "
+               "in a 6x6 m walled world containing a box obstacle at (2, 0). It must respond to "
+               "/cmd_vel and publish /scan."},
+    {"id": "author/sensor-on-mast", "kind": "author", "robot": "mobile-base",
+     "skill": "author robot+world from spec", "model_name": "robot",
+     "controller": "stop_at_1m", "judge_scenario": "author_mast_clear",
+     "prompt": "Build a differential-drive robot named `robot` with a 2-D LiDAR mounted on a mast "
+               "0.5 m above the chassis, in a 6x6 m walled world with a low barrier (0.2 m tall) "
+               "at (2, 0) and a tall box (0.6 m) at (3.5, 0). Respond to /cmd_vel, publish /scan."},
+    {"id": "author/two-sensor", "kind": "author", "robot": "mobile-base",
+     "skill": "author robot+world from spec", "model_name": "robot",
+     "controller": "stop_at_1m", "judge_scenario": "author_two_sensor",
+     "prompt": "Build a differential-drive robot named `robot` with both a forward LiDAR (/scan) "
+               "and a forward camera (/image), in a 6x6 m walled world with a box at (2, 0). "
+               "Respond to /cmd_vel."},
+    {"id": "import/add-sensor", "kind": "import", "robot": "mobile-base",
+     "skill": "import + augment an existing URDF", "model_name": "robot",
+     "controller": "stop_at_1m", "judge_scenario": "author_stop_at_1m",
+     "import_urdf": "vendor_bot.urdf",
+     "prompt": "Bring the provided vendor_bot.urdf under management and add a forward LiDAR so the "
+               "robot publishes /scan, in the provided world. Respond to /cmd_vel, spawn as model "
+               "`robot`."},
 ]
 
 
