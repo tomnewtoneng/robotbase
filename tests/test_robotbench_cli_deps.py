@@ -1,5 +1,24 @@
 import pytest
+from robotbase.robotbench import cli_deps
 from robotbase.robotbench.cli_deps import expand_tasks, expand_arms
+
+
+def test_author_generate_uses_scaffold(tmp_path, monkeypatch):
+    seen = {}
+
+    def fake_build_scaffold(task, arm, root):
+        seen["call"] = (arm, root)
+        return "/scaf"
+
+    monkeypatch.setattr(cli_deps, "build_scaffold", fake_build_scaffold)
+    gen = cli_deps.author_generate(str(tmp_path), "without")
+    assert gen({"id": "author/x", "kind": "author"}, 0) == "/scaf"
+    assert seen["call"][0] == "without"
+
+
+def test_real_author_judge_returns_callable():
+    jf = cli_deps.real_author_judge("with", trials=3, evidence_root="/tmp/e")
+    assert callable(jf)
 
 
 def test_expand_arms():
