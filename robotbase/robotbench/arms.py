@@ -27,11 +27,44 @@ def without_orientation(project_dir: str, task: dict) -> str:
     )
 
 
+def build_author_prompt(task: dict, arm: str) -> str:
+    """The v2 authoring prompt: the task text verbatim + rules identical across arms, the
+    interface contract, and the arm's own bring-up command. Fairness depends on the task text,
+    the rules, and the contract being byte-for-byte the same for both arms — only the final
+    bring-up line differs (it names each arm's tooling)."""
+    bringup = ("robotbase up" if arm == "with"
+               else "ros2 launch authored_pkg bringup.launch.py")
+    return (
+        f"{task['prompt']}\n\n"
+        "Rules:\n"
+        "- Author the robot, the world, the package, and the launch yourself.\n"
+        "- A working controller is already provided (the `stop_at_1m` node) — do NOT modify the "
+        "provided controller. Your job is only to build the robot and world it must run against.\n"
+        "- Do not claim success until you have brought the simulation up yourself and verified the "
+        "robot's behaviour from the running system — not by reading source.\n"
+        "- When you are finished, stop.\n\n"
+        f"Interface contract: the robot must spawn under model name `{task['model_name']}`, "
+        "subscribe to /cmd_vel (geometry_msgs/Twist) and drive from it, and publish /scan "
+        "(sensor_msgs/LaserScan) from a forward-facing sensor.\n"
+        f"Bring the project up with: {bringup}\n"
+    )
+
+
 def arm_context(arm: str, project_dir: str, task: dict) -> dict:
+    if arm not in ("with", "without"):
+        raise ValueError(f"unknown arm {arm!r}; expected 'with' or 'without'")
+
+    # v2 authoring/import tasks: identical authoring prompt, arm-specific tools + docs.
+    if task.get("kind") in {"author", "import"}:
+        prompt = build_author_prompt(task, arm)
+        if arm == "with":
+            return {"prompt": prompt, "tools": ["robotbase-mcp"], "docs": ["AGENTS.md"]}
+        return {"prompt": prompt, "tools": ["bash", "read", "edit", "write"],
+                "docs": ["RAW-ROS-ORIENTATION.md"]}
+
+    # Legacy v1 fix-a-controller tasks (kept for backward-compat tests).
     prompt = build_task_prompt(task)
     if arm == "with":
         return {"prompt": prompt, "tools": ["robotbase-mcp"], "docs": ["AGENTS.md"]}
-    if arm == "without":
-        return {"prompt": prompt + without_orientation(project_dir, task),
-                "tools": ["bash"], "docs": []}
-    raise ValueError(f"unknown arm {arm!r}; expected 'with' or 'without'")
+    return {"prompt": prompt + without_orientation(project_dir, task),
+            "tools": ["bash"], "docs": []}
