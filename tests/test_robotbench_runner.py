@@ -50,6 +50,17 @@ def test_run_trial_persists_transcript_when_dir_given(tmp_path):
     assert open(rec.transcript_path).read() == '{"msgs": ["hello"]}'
 
 
+def test_new_run_dir_and_manifest(tmp_path):
+    from robotbase.robotbench.runner import new_run_dir, write_manifest
+    import json
+    import pathlib
+    d = new_run_dir(str(tmp_path))
+    assert pathlib.Path(d).is_dir() and "runs/" in d.replace("\\", "/")
+    write_manifest(d, {"model": "claude-sonnet-5", "benchmark": 2, "seeds": [0, 1, 2]})
+    m = json.loads((pathlib.Path(d) / "manifest.json").read_text())
+    assert m["model"] == "claude-sonnet-5" and m["benchmark"] == 2
+
+
 def test_run_trial_tears_down_even_after_judge(tmp_path):
     from robotbase.robotbench.runner import run_trial
     from robotbase.robotbench.agent import AgentResult

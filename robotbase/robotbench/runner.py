@@ -2,7 +2,9 @@
 fakes make the orchestration offline-testable. See docs/design/robotbench-validation.md."""
 from __future__ import annotations
 
+import json
 import os
+from datetime import datetime, timezone
 
 from robotbase.robotbench.agent import Agent, Caps
 from robotbase.robotbench.records import TrialRecord
@@ -10,6 +12,22 @@ from robotbase.robotbench.records import TrialRecord
 
 def _slug(task_id: str) -> str:
     return task_id.replace("/", "_")
+
+
+def new_run_dir(results_root: str) -> str:
+    """Create and return a fresh timestamped run dir, `<results_root>/runs/<UTC>-v2/`, so every
+    RobotBench run persists to its own durable, sortable location that can be interrogated later."""
+    stamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
+    run_dir = os.path.join(results_root, "runs", f"{stamp}-v2")
+    os.makedirs(run_dir, exist_ok=True)
+    return run_dir
+
+
+def write_manifest(run_dir: str, meta: dict) -> None:
+    """Record what produced this run (model, benchmark version, seeds, arms, timestamp, ...)."""
+    meta = {"written_at": datetime.now(timezone.utc).isoformat(), **meta}
+    with open(os.path.join(run_dir, "manifest.json"), "w", encoding="utf-8") as fh:
+        json.dump(meta, fh, indent=2)
 
 
 def run_trial(task, arm, model, trial, seed, agent: Agent, *,
