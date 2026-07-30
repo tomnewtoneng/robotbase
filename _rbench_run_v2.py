@@ -59,6 +59,19 @@ def main() -> None:
     args = ap.parse_args()
     caps = Caps(max_turns=args.max_turns, timeout_s=1400, max_edits=15)
 
+    # Concurrency guard: two runs sharing Docker collide (port 8765, resource contention) and
+    # corrupt each other's sims. Refuse to start if another run holds the lock.
+    lock = pathlib.Path("/tmp/rbench_run_v2.lock")
+    if lock.exists():
+        pid = lock.read_text().strip()
+        if pid and pathlib.Path(f"/proc/{pid}").exists():
+            print(f"REFUSING: another RobotBench run is active (pid {pid}). "
+                  f"Only one run at a time — Docker/sims collide otherwise.")
+            sys.exit(3)
+    lock.write_text(str(os.getpid()))
+    import atexit
+    atexit.register(lambda: lock.unlink(missing_ok=True))
+
     arms = [a.strip() for a in args.arms.split(",") if a.strip()]
     tasks = expand_tasks("all") if args.tasks == "all" else \
         [t for tid in args.tasks.split(",") for t in expand_tasks(tid.strip())]
