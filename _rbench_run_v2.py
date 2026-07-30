@@ -23,7 +23,7 @@ from robotbase.robotbench.report import render_markdown
 from robotbase.robotbench.runner import new_run_dir, write_manifest
 
 MODEL = "claude-sonnet-5"
-CAPS = Caps(max_turns=30, timeout_s=1100, max_edits=10)
+CAPS = Caps(max_turns=50, timeout_s=1400, max_edits=15)   # raised so WITHOUT can finish + verify
 
 
 def _git_sha() -> str:
