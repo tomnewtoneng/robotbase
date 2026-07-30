@@ -123,6 +123,18 @@ def real_run_controller(project_dir: str, duration_s: float) -> None:
     sh(f"timeout {int(duration_s)} python3 {ctrl} ; true", timeout=duration_s + 15)
 
 
+def _poll_live(sh, need, timeout: float) -> bool:
+    """Wait up to `timeout` s for the required interfaces to come up. Fair to BOTH arms — a slow
+    raw-ROS bring-up gets the same readiness window as `robotbase launch`'s ready-wait, so a trial
+    fails only when the robot genuinely never exposes /cmd_vel + /scan, not because we probed early."""
+    start = time.monotonic()
+    while time.monotonic() - start < timeout:
+        if cmd_vel_is_live(sh, need, world=_WORLD):
+            return True
+        time.sleep(2)
+    return cmd_vel_is_live(sh, need, world=_WORLD)
+
+
 def real_author_judge(arm: str, trials: int = 3, evidence_root: str | None = None):
     """Factory: returns judge_fn(project, scenario, seed) that runs the behavioral author judge
     with the arm's real bring-up and the real ground-truth probe."""
@@ -138,6 +150,6 @@ def real_author_judge(arm: str, trials: int = 3, evidence_root: str | None = Non
             bringup_fn=bringup,
             run_controller_fn=real_run_controller,
             sample_fn=lambda m, d, hz=10: sample_model_pose(m, d, sh, world=_WORLD, hz=hz),
-            liveness_fn=lambda need, t: cmd_vel_is_live(sh, need, world=_WORLD),
+            liveness_fn=lambda need, t: _poll_live(sh, need, t),
             evidence_dir=evidence_dir, trials=trials, seed=seed)
     return judge_fn

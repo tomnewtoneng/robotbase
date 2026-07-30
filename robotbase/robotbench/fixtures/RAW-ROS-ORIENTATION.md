@@ -27,7 +27,9 @@ empty `urdf/`, `worlds/`, and `launch/` dirs, a `package.xml`, and a `CMakeLists
 installs those three dirs to the package share (so `ros2 launch authored_pkg <file>` resolves once
 you `colcon build`). Put your robot description in `urdf/`, your world in `worlds/`, and your
 bring-up in `launch/`. The provided controller lives at `authored_pkg/controllers/stop_at_1m.py` —
-**do not modify it**; your launch must run it (e.g. `python3` the file as a node).
+**do not modify it and do not run it yourself**: the harness runs it against your robot after
+bring-up (the same for every submission). Your launch only needs to bring up the robot, the world,
+and the ROS↔gz bridges — not the controller.
 
 ## Build & run
 

@@ -89,9 +89,10 @@ def _with_agents_md() -> str:
         "`robot`, `/scan` publishes, and `/cmd_vel` moves it. Choose whichever tools help. When\n"
         "`workspace_build` reports an error, read it: it names the exact problem (an unknown key, a\n"
         "missing link, a wrong-length size) — fix that rather than guessing.\n\n"
-        "A working controller is already provided under `controllers/` — do NOT edit it; your job\n"
-        "is only the robot and the world it runs against. Do not claim success until you have\n"
-        "launched the sim and confirmed the robot's behaviour from the running system.\n\n"
+        "A working controller is already provided under `controllers/` — do NOT edit it and do NOT\n"
+        "run it yourself: the harness runs it against your robot after bring-up (the same for every\n"
+        "submission). Your job is only the robot and the world it runs against. Do not claim success\n"
+        "until you have launched the sim and confirmed the robot's behaviour from the running system.\n\n"
         + authoring_reference()
     )
 
