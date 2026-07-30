@@ -91,8 +91,11 @@ def _with_agents_md() -> str:
         "missing link, a wrong-length size) — fix that rather than guessing.\n\n"
         "A working controller is already provided under `controllers/` — do NOT edit it and do NOT\n"
         "run it yourself: the harness runs it against your robot after bring-up (the same for every\n"
-        "submission). Your job is only the robot and the world it runs against. Do not claim success\n"
-        "until you have launched the sim and confirmed the robot's behaviour from the running system.\n\n"
+        "submission). Your job is only the robot and the world it runs against.\n"
+        "**You are finished** the moment the sim is up and you have confirmed, from the live topics,\n"
+        "that the robot spawns as model `robot`, `/scan` publishes, and `/cmd_vel` moves it. There is\n"
+        "no scenario or recorded episode for you to run or inspect — once those topics are healthy,\n"
+        "stop and report success. Do not claim success before you have confirmed them.\n\n"
         + authoring_reference()
     )
 
