@@ -117,6 +117,27 @@ def _project_snake(project_dir: str) -> str | None:
     return None
 
 
+# Runtime essentials every robot needs regardless of archetype: control in, sim clock out. A
+# `differential-drive` base emits /cmd_vel itself (deduped below); a `use: custom` import gets its
+# drivetrain from the imported URDF's own plugin, so the compiler wouldn't otherwise bridge /cmd_vel.
+_ESSENTIAL_BRIDGES = [
+    {"arg": "/cmd_vel@geometry_msgs/msg/Twist]gz.msgs.Twist", "remap": None},
+    {"arg": "/clock@rosgraph_msgs/msg/Clock[gz.msgs.Clock", "remap": None},
+]
+
+
+def _bridge_list(compiled_bridges) -> list[dict]:
+    """Serialize compiled bridges + merge the runtime essentials (deduped by ROS topic)."""
+    out, seen = [], set()
+    for b in compiled_bridges:
+        out.append({"arg": b.arg, "remap": list(b.remap) if b.remap else None})
+        seen.add(b.arg.split("@", 1)[0])
+    for e in _ESSENTIAL_BRIDGES:
+        if e["arg"].split("@", 1)[0] not in seen:
+            out.append(e)
+    return out
+
+
 def _compile_specs(dest: str, snake: str) -> None:
     """Compile the project's robot.yaml/world.yaml into the description package.
 
@@ -146,10 +167,8 @@ def _compile_specs(dest: str, snake: str) -> None:
         # exactly what was authored (an added camera/depth is exposed to ROS, not just rendered in
         # gz). Installed alongside the URDF; the launch reads it. See docs/STRATEGY.md P2.
         import json
-        bridges = [{"arg": b.arg, "remap": list(b.remap) if b.remap else None}
-                   for b in compiled.bridges]
         with open(os.path.join(urdf_dir, "bridges.json"), "w", encoding="utf-8") as fh:
-            json.dump(bridges, fh, indent=2)
+            json.dump(_bridge_list(compiled.bridges), fh, indent=2)
 
     world_yaml = os.path.join(dest, "world.yaml")
     world_dir = os.path.join(dest, "src", f"{snake}_description", "worlds")

@@ -116,42 +116,44 @@ before building the v2 harness). Results:
 or edit a spec and `robotbase up` reflects it. **The v2 harness is now unblocked** and worth building:
 resume the plan at `docs/superpowers/plans/2026-07-27-robotbench-suite-v2.md` (Task 0 spike first).
 
-### v2 harness — Task 0 (ground-truth pose probe) spike ✅ VERIFIED (2026-07-28)
-
-### v2 harness — Task 9 (reference calibration) findings so far (2026-07-29)
+### v2 harness — Task 9 (reference calibration + dogfooding) ✅ COMPLETE (2026-07-30)
 
 Offline harness complete (Tasks 0–8, pushed): v2 authoring task set, provided `stop_at_1m`
 controller, per-arm scaffolds + env-only orientation, kind-aware authoring prompt, acceptance
 registry + pure predicates, behavioral author judge, durable run manifest, real bring-up wiring.
-180+ unit tests green. Then started the live dogfooding gate:
+Then ran the live dogfooding gate — **all 4 reference solutions now score `solved` through the real
+`author_judge`** (real bring-up + ground-truth pose probe). What it took:
 
-- ✅ **Full live pipeline proven for `diff-lidar-world`.** Built a real project with the reference
-  robot.yaml/world.yaml, `robotbase up` (recompiled) + `launch`, ran the *actual* provided
-  controller, and read the robot's Gazebo ground-truth pose: it drove forward and **reliably
-  stopped at x≈0.634 — closest approach 1.366 m to the box centre**. Compile → up → launch →
-  controller → pose-probe all work end to end.
-- 🔧 **Calibrated the acceptance band to reality.** The synthetic band (centre-distance ∈ [0.8,1.2])
-  was wrong for where a real 1 m-from-face stop lands; a 0.5 m box stopped at scan≈1 m puts the
-  robot centre ~1.37 m from the box centre. Band retuned to **[1.1, 1.7]** (below ≈1.1 ≈ nearly
-  hit; above ≈1.7 ≈ stopped too early / never moved, since a non-mover sits at the ~2 m spawn).
-  Offline predicate tests updated to the measured behaviour.
-- ⚠️ **Model name = project name.** Gazebo spawn `-name` is the *project* name (generator
-  substitutes it into the launch), not robot.yaml `name:`. For the contract "spawn as model
-  `robot`" the WITH project must be created as `robot`. The scaffold/bring-up must enforce this.
-- ⚠️ **`real_bringup_with` doesn't apply the seeded spawn pose yet** (spawns at the world default),
-  so per-seed robustness is currently degenerate (all seeds identical). Needs the `-x/-y/-z`
-  spawn-override wired before robustness across seeds is meaningful.
-- ❗ **Design question — the mast task is physically inconsistent.** `author_mast_clear` asks the
-  robot to *drive past* a 0.2 m barrier its mast-high LiDAR can't see — but a 0.2 m solid barrier
-  in the robot's path physically stops the ~0.2 m-tall chassis regardless of the sensor. The task
-  needs a redesign (barrier the robot can straddle, an off-axis obstacle, or a different "clear"
-  criterion) before it's fair. **Open for decision.**
-- ⛔ **Blocked on Docker.** WSL restarted mid-calibration; Docker Desktop is down, so the full
-  `real_author_judge` run (reference → solved==True across seeds) is pending Docker coming back.
+- ✅ **Full live pipeline proven.** Real project → `robotbase up` (recompiles) + `launch` → run the
+  *actual* provided controller → read Gazebo ground-truth pose → predicate → teardown. The robot
+  reliably stops **1.37 m (centre-to-centre) from a 0.5 m box**.
+- 🔧 **Calibrated the acceptance band to reality.** Synthetic band (centre-distance ∈ [0.8,1.2]) was
+  wrong for where a real 1 m-from-face stop lands; retuned to **[1.1, 1.7]** (below ≈1.1 ≈ nearly
+  hit; above ≈1.7 ≈ stopped too early / never moved — a non-mover sits at the ~2 m spawn).
+- 🔧 **FIXED (compiler) — authored camera rendered but not ROS-bridged.** The two-sensor task failed
+  because the launch's `parameter_bridge` list was hardcoded in the template (default diff-drive
+  sensors), so an authored camera published gz `/image` but never reached ROS. Now the bridge list
+  is **compiled from the robot's sensors** (`urdf/bridges.json`) and the launch builds its bridge
+  from that — any authored sensor is bridged. This is the P2 "compile the runtime" gap, closed for
+  bridges. Regression test landed. (3rd real bug the dogfooding gate has surfaced + fixed.)
+- 🔧 **Redesigned the mast task to be physically coherent.** It previously asked the robot to drive
+  *past* a solid 0.2 m barrier its mast-high LiDAR couldn't see — but a 0.2 m barrier physically
+  blocks the ~0.2 m chassis regardless of sensor height. The mast's real discriminator is the
+  multi-link, non-base sensor mount, so it's now a stop-before-box check against a single 0.6 m box
+  a 0.5 m mast LiDAR sensibly sees.
+- 🔧 **WITH scaffold is now a real `robotbase up`-able project named `robot`** (Gazebo spawn `-name`
+  = project name, per the interface contract), with specs reset to authoring stubs for parity with
+  the empty WITHOUT workspace. Added `robotbase/__main__.py` so bring-up invokes the CLI
+  PATH-independently.
+- 📌 **Committed the live gate:** `tests/test_reference_solutions_live.py` (skipped unless
+  `ROBOTBENCH_LIVE=1`) parametrizes all 4 references → each must be `solved` by the real judge.
 
-**Next:** resolve the mast-task redesign + scaffold-runnability (WITH scaffold must be a real
-`robotbase up`-able project named `robot`) → wire spawn-pose override → run the live calibration for
-all 4 references → then the n=1 pilot (Task 10).
+**Known limitation (deferred):** `real_bringup_with` still spawns at the world default, so seeded
+spawn-jitter isn't applied yet — per-seed robustness is degenerate (all seeds identical). Wire the
+`-x/-y/-z` spawn override before robustness across seeds is meaningful.
+
+**Next:** Task 10 — the n=1 pilot (WITH vs WITHOUT agents actually authoring), which spends API +
+Docker; stop and report before the definitive n=3.
 
 ### v2 harness — Task 0 (ground-truth pose probe) spike ✅ VERIFIED (2026-07-28)
 
