@@ -48,12 +48,27 @@ class UnknownShape(ValueError):
     ...
 
 
+class ShapeSizeError(ValueError):
+    """A shape's `size` had the wrong number of values (would otherwise crash the URDF renderer)."""
+
+
+_SHAPE_SIZE = {"box": (3, "[x, y, z]"), "cylinder": (2, "[radius, length]"), "sphere": (1, "[radius]")}
+
+
 def _fmt(v: float) -> str:
     # trim trailing zeros so 0.025 not 0.025000000001; keep ints clean
     return f"{round(v, 9):g}"
 
 
 def link_from_shape(name, shape, size, mass, material="grey", rgba="0.4 0.4 0.45 1") -> LinkIR:
+    if shape not in _SHAPE_SIZE:
+        raise UnknownShape(f"unknown shape {shape!r}; known: box, cylinder, sphere")
+    need, fmt = _SHAPE_SIZE[shape]
+    size = list(size)
+    if len(size) != need:  # clean, actionable error instead of a bare unpack crash
+        raise ShapeSizeError(
+            f"{shape} '{name}' size must be {fmt} ({need} value{'s' if need > 1 else ''}), "
+            f"got {len(size)}: {size}")
     if shape == "box":
         x, y, z = size
         ixx, iyy, izz = mass * (y*y + z*z) / 12, mass * (x*x + z*z) / 12, mass * (x*x + y*y) / 12
@@ -63,12 +78,10 @@ def link_from_shape(name, shape, size, mass, material="grey", rgba="0.4 0.4 0.45
         ixx = iyy = mass * (3*r*r + h*h) / 12
         izz = mass * r*r / 2
         geom = f'<cylinder radius="{_fmt(r)}" length="{_fmt(h)}"/>'
-    elif shape == "sphere":
+    else:  # sphere
         r = size[0]
         ixx = iyy = izz = 2 * mass * r*r / 5
         geom = f'<sphere radius="{_fmt(r)}"/>'
-    else:
-        raise UnknownShape(f"unknown shape {shape!r}; known: box, cylinder, sphere")
     xml = (f'\n  <link name="{name}">'
            f'\n    <inertial><mass value="{_fmt(mass)}"/>'
            f'<inertia ixx="{_fmt(ixx)}" ixy="0" ixz="0" iyy="{_fmt(iyy)}" iyz="0" izz="{_fmt(izz)}"/></inertial>'
