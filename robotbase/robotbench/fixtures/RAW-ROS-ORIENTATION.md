@@ -55,5 +55,7 @@ the provided controller. To pass, your launched system must:
   camera task, `/image`, `sensor_msgs/msg/Image`);
 - come up within the world you were asked to build.
 
-Do not claim success until you have brought the sim up yourself and confirmed, from the topics,
-that the robot drives on `/cmd_vel` and publishes `/scan`.
+**You are finished** the moment your launch brings the sim up and you have confirmed, from the live
+topics, that the robot spawns as model `robot`, `/scan` publishes, and `/cmd_vel` moves it. There
+is nothing else to run — once those topics are healthy, stop and report success. Do not claim
+success before you have confirmed them from the running system.
