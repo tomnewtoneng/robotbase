@@ -31,8 +31,13 @@ Start a project:
   stop                           stop the simulation (keep the container)
   down                           stop and remove the container
 
-Run & inspect:
+Author & inspect the spec:
+  schema [--json]                the robot.yaml/world.yaml authoring format reference
   describe                       report the robot, world, and scenarios (structured facts)
+  validate                       static physical validation of the compiled robot
+  explain                        which links/joints/topics each spec declaration produced
+
+Run & inspect:
   build                          build the ROS workspace
   launch [--gui]                 start the simulation (--gui to watch in Foxglove)
   test [NAME] [--gui] [--list]   run a scenario, or --list them
