@@ -4,8 +4,12 @@ from __future__ import annotations
 
 import os
 import subprocess
+import sys
 import time
 import uuid
+
+# Invoke the robotbase CLI PATH-independently (the console script isn't on PATH under a bare venv).
+_RB = [sys.executable, "-m", "robotbase"]
 
 from robotbase.bench import TASKS
 from robotbase.generator import create_project, template_dir
@@ -88,16 +92,16 @@ def _spawn_robot(sh, model: str, pose) -> None:
 def real_bringup_with(project_dir: str, pose):
     """WITH arm: `robotbase up` recompiles robot.yaml/world.yaml and starts the container + sim.
     Returns a teardown callable (`robotbase down`)."""
-    subprocess.run(["robotbase", "up"], cwd=project_dir, check=True, timeout=1800)
-    subprocess.run(["robotbase", "launch"], cwd=project_dir, check=True, timeout=300)
-    return lambda: subprocess.run(["robotbase", "down"], cwd=project_dir, timeout=120)
+    subprocess.run([*_RB, "up"], cwd=project_dir, check=True, timeout=1800)
+    subprocess.run([*_RB, "launch"], cwd=project_dir, check=True, timeout=300)
+    return lambda: subprocess.run([*_RB, "down"], cwd=project_dir, timeout=120)
 
 
 def real_bringup_without(project_dir: str, pose):
     """WITHOUT arm: build the colcon workspace and `ros2 launch` the authored bring-up in the
     same headless Gazebo container. Returns a teardown callable (kill launch + `robotbase down`)."""
     sh = _sh(project_dir)
-    subprocess.run(["robotbase", "up"], cwd=project_dir, check=True, timeout=1800)
+    subprocess.run([*_RB, "up"], cwd=project_dir, check=True, timeout=1800)
     sh("colcon build", timeout=1200)
     proc = subprocess.Popen(
         ["docker", "compose", "exec", "-T", "ros", "bash", "-lc",
@@ -108,7 +112,7 @@ def real_bringup_without(project_dir: str, pose):
     def teardown():
         sh("pkill -f 'ros2 launch' ; pkill -f ros_gz_sim ; true", timeout=20)
         proc.terminate()
-        subprocess.run(["robotbase", "down"], cwd=project_dir, timeout=120)
+        subprocess.run([*_RB, "down"], cwd=project_dir, timeout=120)
     return teardown
 
 

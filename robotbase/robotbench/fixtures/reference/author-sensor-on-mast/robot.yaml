@@ -2,7 +2,7 @@ version: 1
 name: robot
 base: differential-drive
 # Extra parts compose onto the base: a mast link raised above the chassis. The lidar mounts
-# on the mast (elevated), so it clears the low barrier but still sees the tall box.
+# on the mast (elevated ~0.5 m) — the task's discriminator is this multi-link, non-base sensor mount.
 parts:
   - links:
       - {name: mast, shape: cylinder, size: [0.02, 0.5], mass: 0.1}

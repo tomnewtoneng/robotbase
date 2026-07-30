@@ -25,8 +25,8 @@ TASKS = [
      "skill": "author robot+world from spec", "model_name": "robot",
      "controller": "stop_at_1m", "judge_scenario": "author_mast_clear",
      "prompt": "Build a differential-drive robot named `robot` with a 2-D LiDAR mounted on a mast "
-               "0.5 m above the chassis, in a 6x6 m walled world with a low barrier (0.2 m tall) "
-               "at (2, 0) and a tall box (0.6 m) at (3.5, 0). Respond to /cmd_vel, publish /scan."},
+               "0.5 m above the chassis, in a 6x6 m walled world containing a 0.6 m-tall box at "
+               "(2, 0). It must stop before the box, respond to /cmd_vel, and publish /scan."},
     {"id": "author/two-sensor", "kind": "author", "robot": "mobile-base",
      "skill": "author robot+world from spec", "model_name": "robot",
      "controller": "stop_at_1m", "judge_scenario": "author_two_sensor",

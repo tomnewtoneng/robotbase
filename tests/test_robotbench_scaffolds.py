@@ -12,11 +12,15 @@ def _controller_bytes(d):
     return (pathlib.Path(d).rglob("stop_at_1m.py").__next__()).read_bytes()
 
 
-def test_with_scaffold_is_empty_robotbase_project(tmp_path):
+def test_with_scaffold_is_runnable_robotbase_project(tmp_path):
     d = build_scaffold(AUTHOR, "with", str(tmp_path))
     p = pathlib.Path(d)
-    assert (p / "robotbase.yaml").is_file()
-    assert (p / "robots").is_dir() and not any((p / "robots").iterdir())
+    assert p.name == "robot"                                   # spawns as Gazebo model `robot`
+    assert (p / "robotbase.yaml").is_file() and (p / "compose.yaml").is_file()
+    assert (p / "robot.yaml").is_file() and (p / "world.yaml").is_file()
+    # specs are reset to authoring stubs: base only, no sensors, empty world
+    assert "lidar" not in (p / "robot.yaml").read_text()
+    assert (p / "controllers" / "stop_at_1m.py").is_file()
     assert (p / "TASK.md").read_text().startswith("Build a robot")
 
 

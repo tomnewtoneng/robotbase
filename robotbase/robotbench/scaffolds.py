@@ -3,33 +3,45 @@
 Both arms are handed the *same* task and the *same* provided controller (byte-identical); only
 the authoring surface differs:
 
-- **WITH**  → an empty Robotbase project: a `robotbase.yaml` manifest, empty `robots/` and
-  `worlds/` for the agent to author into, the controller under `controllers/`, and `TASK.md`.
+- **WITH**  → a real, `robotbase up`-able project **named `robot`** (so the Gazebo model spawns as
+  `robot`, per the interface contract), with `robot.yaml`/`world.yaml` reset to minimal authoring
+  stubs so the agent builds the robot + world from scratch, plus the controller under
+  `controllers/` and `TASK.md`.
 - **WITHOUT** → an empty colcon workspace: `src/authored_pkg/` with `package.xml`, `setup.py`,
   and empty `urdf/ worlds/ launch/`, the controller under `authored_pkg/controllers/`,
   `RAW-ROS-ORIENTATION.md` (env-only, no templates), and `TASK.md`.
 
-`kind == "import"` tasks additionally drop `vendor_bot.urdf` at the scaffold root for both arms.
-The scaffold is written under a caller-provided scratch dir, never inside the repo tree.
+Both start from an equivalently *empty* robot: the WITH stub carries only `base:
+differential-drive` (the prompt already names a differential-drive robot) — sensors, mounts, and
+the world are the agent's job. `kind == "import"` tasks additionally drop `vendor_bot.urdf` at the
+scaffold root. The scaffold is written under a caller-provided scratch dir, never inside the repo.
 """
 from __future__ import annotations
 
 import os
 import shutil
 
+from robotbase.generator import create_project, template_dir
+
 _FIXTURES = os.path.join(os.path.dirname(__file__), "fixtures")
 _CONTROLLER = os.path.join(_FIXTURES, "controllers", "stop_at_1m.py")
 _ORIENTATION = os.path.join(_FIXTURES, "RAW-ROS-ORIENTATION.md")
 _VENDOR_URDF = os.path.join(_FIXTURES, "vendor_bot.urdf")
 
+# The agent authors from here: a bare differential-drive base (named in the prompt), no sensors,
+# an empty ground world. Everything the task actually tests — sensors, mounts, obstacles — is TODO.
+_STUB_ROBOT = "version: 1\nname: robot\nbase: differential-drive\n"
+_STUB_WORLD = "version: 1\nname: warehouse\nground: true\nlight: sun\n"
+
 
 def build_scaffold(task: dict, arm: str, dest_root: str) -> str:
     """Materialise the starting scaffold for `task` on `arm` under `dest_root`; return its dir."""
-    dest = os.path.join(dest_root, arm)
-    os.makedirs(dest, exist_ok=True)
+    os.makedirs(dest_root, exist_ok=True)
     if arm == "with":
-        _build_with(dest)
+        dest = _build_with(dest_root)
     elif arm == "without":
+        dest = os.path.join(dest_root, "without")
+        os.makedirs(dest, exist_ok=True)
         _build_without(dest)
     else:
         raise ValueError(f"unknown arm {arm!r}; expected 'with' or 'without'")
@@ -41,22 +53,17 @@ def build_scaffold(task: dict, arm: str, dest_root: str) -> str:
     return dest
 
 
-def _build_with(dest: str) -> None:
-    os.makedirs(os.path.join(dest, "robots"), exist_ok=True)
-    os.makedirs(os.path.join(dest, "worlds"), exist_ok=True)
-    controllers = os.path.join(dest, "controllers")
+def _build_with(dest_root: str) -> str:
+    """A real Robotbase project named `robot` with its specs reset to authoring stubs."""
+    proj = create_project("robot", dest_root, template_dir("differential-drive"))
+    with open(os.path.join(proj, "robot.yaml"), "w", encoding="utf-8") as f:
+        f.write(_STUB_ROBOT)
+    with open(os.path.join(proj, "world.yaml"), "w", encoding="utf-8") as f:
+        f.write(_STUB_WORLD)
+    controllers = os.path.join(proj, "controllers")
     os.makedirs(controllers, exist_ok=True)
     shutil.copyfile(_CONTROLLER, os.path.join(controllers, "stop_at_1m.py"))
-    with open(os.path.join(dest, "robotbase.yaml"), "w", encoding="utf-8") as f:
-        f.write(
-            "# Robotbase project manifest — empty authoring scaffold.\n"
-            "# Author robot.yaml/world.yaml (via the robotbase tools); `robotbase up` compiles + runs.\n"
-            "launch_package: robot_bringup\n"
-            "launch_file: simulation.launch.py\n"
-            "world_name: warehouse\n"
-            "robot_name: robot\n"
-            "ready_topics: [/scan]\n"
-        )
+    return proj
 
 
 def _build_without(dest: str) -> None:

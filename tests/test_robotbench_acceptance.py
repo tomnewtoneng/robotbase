@@ -21,11 +21,13 @@ def test_stop_at_1m_fails_on_collision():
     assert spec.predicate(trace, spec.world_obstacles) is False
 
 
-def test_mast_clear_requires_pass_low_stop_tall():
+def test_mast_stops_before_tall_box():
     spec = SPECS["author_mast_clear"]
-    # passes low barrier at x=2 (gap<0.5), stops ~1.37 m before tall box at x=3.5 (x ~ 2.13)
-    trace = [(i * 0.1, x, 0.0) for i, x in enumerate([0, 0.5, 1.0, 1.5, 2.0, 2.13, 2.13, 2.13])]
+    # mast-mounted LiDAR sees the 0.6 m box and stops ~1.37 m before it (x ~ 0.63)
+    trace = [(t * 0.1, x, 0.0) for t, x in enumerate([0.0, 0.3, 0.55, 0.63, 0.63, 0.63])]
     assert spec.predicate(trace, spec.world_obstacles) is True
+    crash = [(i * 0.1, i * 0.25, 0.0) for i in range(12)]      # drives into the box
+    assert spec.predicate(crash, spec.world_obstacles) is False
 
 
 def test_spawn_pose_is_deterministic_per_seed():
