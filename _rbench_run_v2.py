@@ -23,7 +23,6 @@ from robotbase.robotbench.report import render_markdown
 from robotbase.robotbench.runner import new_run_dir, write_manifest
 
 MODEL = "claude-sonnet-5"
-CAPS = Caps(max_turns=50, timeout_s=1400, max_edits=15)   # raised so WITHOUT can finish + verify
 
 
 def _git_sha() -> str:
@@ -55,7 +54,10 @@ def main() -> None:
     ap.add_argument("--tasks", default="all", help="'all' or a comma list of task ids")
     ap.add_argument("--trials", type=int, default=1, help="agent trials per (task, arm)")
     ap.add_argument("--judge-trials", type=int, default=1, help="judge seeds per trial")
+    ap.add_argument("--max-turns", type=int, default=30, help="agent turn cap (keep modest so a "
+                    "flailing run cannot burn budget; raise only if a task legitimately needs it)")
     args = ap.parse_args()
+    caps = Caps(max_turns=args.max_turns, timeout_s=1400, max_edits=15)
 
     arms = [a.strip() for a in args.arms.split(",") if a.strip()]
     tasks = expand_tasks("all") if args.tasks == "all" else \
@@ -70,7 +72,7 @@ def main() -> None:
         "benchmark": BENCHMARK_VERSION, "model": MODEL, "git_sha": _git_sha(),
         "arms": arms, "tasks": [t["id"] for t in tasks], "trials": args.trials,
         "judge_trials": args.judge_trials,
-        "caps": {"max_turns": CAPS.max_turns, "timeout_s": CAPS.timeout_s, "max_edits": CAPS.max_edits},
+        "caps": {"max_turns": caps.max_turns, "timeout_s": caps.timeout_s, "max_edits": caps.max_edits},
     })
     print(f"RUN DIR: {run_dir}", flush=True)
 
@@ -84,7 +86,7 @@ def main() -> None:
                 try:
                     project = author_generate(workdir, arm)(task, trial)
                     _bring_container_up(project, arm)
-                    result = RealAgent(model=MODEL).run(project, arm, task, CAPS)
+                    result = RealAgent(model=MODEL).run(project, arm, task, caps)
                     tpath = transcripts / f"{tag}.transcript.json"
                     tpath.write_text(result.transcript, encoding="utf-8")
                     # Clear any sim the agent left running so the judge brings up cleanly.
