@@ -9,6 +9,7 @@ continues. Never prints the API key.
     python _rbench_run_v2.py --arms with --tasks author/diff-lidar-world --trials 1 --judge-trials 1
 """
 import argparse
+import os
 import pathlib
 import subprocess
 import sys
