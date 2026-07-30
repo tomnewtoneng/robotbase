@@ -9,6 +9,7 @@ from __future__ import annotations
 
 from pydantic import BaseModel
 
+from robotbase.robotspec.ir import SHAPE_SIZE
 from robotbase.robotspec.modules import MODULES
 from robotbase.robotspec.schema import Body, Drive, JointSpec, Part, RobotSpec, SensorSpec
 from robotbase.robotspec.sensors import SENSORS
@@ -35,7 +36,12 @@ def authoring_reference() -> str:
     return f"""# Robotbase Authoring Format Reference (robot.yaml / world.yaml)
 
 You author two declarative specs; the compiler turns them into a runnable ROS 2 + Gazebo project.
-Unknown keys are rejected with an error naming the bad field, so trust the schema below over guesses.
+The compiler validates strictly and its errors name the exact problem — an unknown key, a wrong
+shape, or a wrong-length list. Trust the schema below and read the build error; don't guess.
+
+**`size` depends on `shape`** (applies to a body and to a world obstacle):
+{chr(10).join(f"    {s}: size = {fmt}" for s, (_n, fmt) in SHAPE_SIZE.items())}
+Positions are `[x, y, z]` (obstacle `at`); 2-D points are `[x, y]` (wall `from`/`to`, goal `at`).
 
 ## robot.yaml  (compiled to URDF + launch + bridges)
 

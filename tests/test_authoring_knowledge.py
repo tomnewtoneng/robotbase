@@ -45,6 +45,21 @@ def test_authoring_reference_is_general_not_task_specific():
         assert leak not in ref, f"reference leaks task-specific detail {leak!r}"
 
 
+def test_reference_covers_compiler_vocabulary_no_drift():
+    # The knowledge layer is schema-derived: it must always reflect the compiler's real registries,
+    # so adding a shape/archetype/sensor can't leave the docs silently stale.
+    from robotbase.robotspec.ir import SHAPE_SIZE
+    from robotbase.robotspec.modules import MODULES
+    from robotbase.robotspec.sensors import SENSORS
+    ref = authoring_reference()
+    for shape in SHAPE_SIZE:
+        assert shape in ref, f"reference missing shape {shape!r}"
+    for arch in MODULES:
+        assert arch in ref, f"reference missing archetype {arch!r}"
+    for sensor in SENSORS:
+        assert sensor in ref, f"reference missing sensor {sensor!r}"
+
+
 def test_with_scaffold_agents_md_is_authoring_oriented(tmp_path):
     from robotbase.robotbench.scaffolds import build_scaffold
     d = build_scaffold({"id": "author/x", "kind": "author", "prompt": "Build a robot."},
