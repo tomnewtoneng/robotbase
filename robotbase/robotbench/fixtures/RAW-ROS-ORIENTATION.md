@@ -7,9 +7,16 @@ authoring templates — designing the URDF/SDF and the launch is your job.
 
 ## Environment
 
-- **ROS 2 distro:** Jazzy Jalisco (`source /opt/ros/jazzy/setup.bash`).
-- **Simulator:** Gazebo Harmonic, running **headless** (software rendering, `llvmpipe`). No GUI —
-  inspect via topics and `gz` CLI, not a viewport.
+- **Your shell runs on the host, but ROS 2 and Gazebo live inside a Docker container.** The
+  workspace is bind-mounted into the container at `/workspace` (the container service is named
+  `ros`). Edit files directly with your file tools, but run **every** `colcon`, `ros2`, and `gz`
+  command *inside the container* via:
+
+      docker compose exec -T ros bash -lc "source /opt/ros/jazzy/setup.bash; source install/setup.bash 2>/dev/null; <your command>"
+
+  (The container is already up. Run `docker compose` from the project root.)
+- **ROS 2 distro:** Jazzy Jalisco. **Simulator:** Gazebo Harmonic, **headless** (software
+  rendering, `llvmpipe`) — inspect via topics and the `gz` CLI, not a viewport.
 - **ROS ↔ Gazebo bridge:** `ros_gz_sim` and `ros_gz_bridge` are installed. Gazebo transports
   (`gz topic`) and ROS topics (`ros2 topic`) are separate namespaces; bridge the ones you need.
 
