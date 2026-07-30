@@ -23,15 +23,20 @@ def _normalise_bool_keys(node):
     return node
 
 
+# extra="forbid": an unknown key (e.g. a sensor written with `enabled:` or `pose:`) is a wrong
+# guess at the schema; erroring names the bad field instead of silently dropping it. Raw `links`/
+# `joints` on a Part stay free-form dicts (the escape hatch) — only the typed models are strict.
 class Body(BaseModel):
     shape: str = "box"                       # box | cylinder
     size: list[float] = [0.35, 0.30, 0.15]   # metres; x,y,z for box
     mass: float = 5.0
+    model_config = {"extra": "forbid"}
 
 
 class Drive(BaseModel):                      # differential-drive params
     wheel_radius: float = 0.05
     wheel_separation: float = 0.34
+    model_config = {"extra": "forbid"}
 
 
 class SensorSpec(BaseModel):
@@ -40,6 +45,7 @@ class SensorSpec(BaseModel):
     resolution: list[int] | None = None      # camera/depth
     topic: str | None = None                 # override the default ROS topic
     on: str | None = None                    # link to mount to; defaults to the primary base link
+    model_config = {"extra": "forbid"}
 
 
 class JointSpec(BaseModel):                  # arms (ignored by mobile archetypes)
@@ -49,6 +55,7 @@ class JointSpec(BaseModel):                  # arms (ignored by mobile archetype
     limits: list[float] = [-3.14, 3.14]
     controller: str = "position"
     gains: dict = {}
+    model_config = {"extra": "forbid"}
 
 
 class Part(BaseModel):
@@ -59,9 +66,11 @@ class Part(BaseModel):
     links: list[dict] = []                   # raw links: {name, shape, size, mass} or {name, xml}
     joints: list[dict] = []                  # raw joints: {name, parent, child, type, xyz, rpy, axis}
     urdf: str | None = None                  # for use: custom (import) — a later task uses this
+    model_config = {"extra": "forbid"}
 
 
 class RobotSpec(BaseModel):
+    model_config = {"extra": "forbid"}
     version: int = 1
     name: str = "warehouse_bot"
     base: str | None = None                  # differential-drive | fixed-arm | quadrotor

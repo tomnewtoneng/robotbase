@@ -27,17 +27,29 @@ FINAL_PROMPT = (
 )
 
 
-def _controller_path(project_dir: str) -> str | None:
-    hits = glob.glob(os.path.join(project_dir, "src", "*", "*", "controller.py"))
-    return hits[0] if hits else None
+# The v2 agent AUTHORS the robot/world (it must not touch the provided controller), so an "edit"
+# is a change to the authoring surface: robot.yaml/world.yaml for WITH, the src/ package for
+# WITHOUT. The provided stop_at_1m controller is excluded — editing it is forbidden.
+_AUTHOR_EXCLUDE = "stop_at_1m.py"
 
 
-def _controller_hash(project_dir: str) -> str | None:
-    path = _controller_path(project_dir)
-    if path is None or not os.path.isfile(path):
-        return None
-    with open(path, "rb") as fh:
-        return hashlib.sha256(fh.read()).hexdigest()
+def _authoring_files(project_dir: str, arm: str) -> list[str]:
+    if arm == "with":
+        return [os.path.join(project_dir, f) for f in ("robot.yaml", "world.yaml")]
+    hits: list[str] = []
+    for ext in ("*.urdf", "*.sdf", "*.xacro", "*.py", "*.world", "*.xml"):
+        hits += glob.glob(os.path.join(project_dir, "src", "**", ext), recursive=True)
+    return [h for h in hits if _AUTHOR_EXCLUDE not in h]
+
+
+def _authoring_hash(project_dir: str, arm: str) -> str:
+    h = hashlib.sha256()
+    for p in sorted(_authoring_files(project_dir, arm)):
+        if os.path.isfile(p):
+            h.update(p.encode())
+            with open(p, "rb") as fh:
+                h.update(fh.read())
+    return h.hexdigest()
 
 
 def _sum_tokens(usage: dict[str, Any] | None) -> int | None:
@@ -110,7 +122,7 @@ class RealAgent:
         final_tokens: int | None = None
         stop_reason = "unknown"
         session_id: str | None = None
-        last_hash = _controller_hash(project_dir)
+        last_hash = _authoring_hash(project_dir, arm)
 
         agen = query(prompt=ctx["prompt"], options=options)
         try:
@@ -130,8 +142,8 @@ class RealAgent:
                         final_tokens = _sum_tokens(msg.usage)
                         stop_reason = msg.stop_reason or msg.subtype or "unknown"
 
-                    new_hash = _controller_hash(project_dir)
-                    if new_hash is not None and new_hash != last_hash:
+                    new_hash = _authoring_hash(project_dir, arm)
+                    if new_hash != last_hash:
                         edits += 1
                         last_hash = new_hash
                     if edits >= caps.max_edits:

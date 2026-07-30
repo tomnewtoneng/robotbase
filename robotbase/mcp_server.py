@@ -66,8 +66,15 @@ def environment_doctor() -> dict:
 
 @mcp.tool()
 def workspace_build(clean: bool = False) -> dict:
-    """Build the ROS workspace; returns pass/fail, duration, and parsed errors."""
-    return _runtime.build(clean=clean)
+    """Recompile robot.yaml/world.yaml to URDF/SDF, then build the ROS workspace; returns
+    pass/fail, duration, and parsed errors. Recompiling here (as the `robotbase build`/`up` CLI
+    does) is what makes edits to the declarative specs take effect before the build."""
+    from robotbase.generator import recompile_project
+    recompiled = recompile_project(PROJECT_DIR)
+    result = _runtime.build(clean=clean)
+    if isinstance(result, dict):
+        result = {"recompiled_specs": bool(recompiled), **result}
+    return result
 
 
 @mcp.tool()

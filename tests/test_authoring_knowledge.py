@@ -1,0 +1,43 @@
+"""The knowledge layer: strict schemas that name a bad key, and a GENERAL (schema-derived, not
+task-specific) authoring reference shipped in the WITH scaffold's AGENTS.md."""
+import pytest
+
+from robotbase.robotspec.schema import RobotSpec, RobotSpecError
+from robotbase.robotspec.schema_docs import authoring_reference
+from robotbase.worldspec.schema import WorldSpec, WorldSpecError
+
+
+def test_world_schema_rejects_unknown_obstacle_keys():
+    # The exact wrong guess the pilot agent made: {type, pose} instead of {shape, at}.
+    bad = {"obstacles": [{"id": "b", "type": "box", "pose": [2, 0, 0.25], "size": [0.5, 0.5, 0.5]}]}
+    with pytest.raises(Exception) as e:
+        WorldSpec.model_validate(bad)
+    assert "pose" in str(e.value)
+
+
+def test_robot_schema_rejects_unknown_sensor_keys():
+    bad = {"base": "differential-drive", "sensors": [{"type": "lidar", "enabled": True}]}
+    with pytest.raises(Exception) as e:
+        RobotSpec.model_validate(bad)
+    assert "enabled" in str(e.value)
+
+
+def test_authoring_reference_is_general_not_task_specific():
+    ref = authoring_reference().lower()
+    # documents the FORMAT / vocabulary (applies to any task)
+    for token in ("robot.yaml", "world.yaml", "differential-drive", "lidar", "camera",
+                  "shape", "at:", "obstacles", "walls", "base"):
+        assert token in ref, f"reference missing general token {token!r}"
+    # does NOT leak any benchmark task's answer
+    for leak in ("diff-lidar-world", "sensor-on-mast", "two-sensor", "add-sensor",
+                 "(2, 0)", "2 0 0.25", "stop_at_1m", "1.37"):
+        assert leak not in ref, f"reference leaks task-specific detail {leak!r}"
+
+
+def test_with_scaffold_agents_md_is_authoring_oriented(tmp_path):
+    from robotbase.robotbench.scaffolds import build_scaffold
+    d = build_scaffold({"id": "author/x", "kind": "author", "prompt": "Build a robot."},
+                       "with", str(tmp_path))
+    agents = open(f"{d}/AGENTS.md", encoding="utf-8").read().lower()
+    assert "robot.yaml" in agents and "world.yaml" in agents and "author" in agents
+    assert "implement the robot's controller" not in agents   # not the v1 fix-a-controller doc

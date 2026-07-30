@@ -63,7 +63,31 @@ def _build_with(dest_root: str) -> str:
     controllers = os.path.join(proj, "controllers")
     os.makedirs(controllers, exist_ok=True)
     shutil.copyfile(_CONTROLLER, os.path.join(controllers, "stop_at_1m.py"))
+    # Replace the template's fix-a-controller AGENTS.md with the authoring knowledge layer: a
+    # general, schema-derived format reference (never task-specific) + the tool workflow.
+    with open(os.path.join(proj, "AGENTS.md"), "w", encoding="utf-8") as f:
+        f.write(_with_agents_md())
     return proj
+
+
+def _with_agents_md() -> str:
+    from robotbase.robotspec.schema_docs import authoring_reference
+    return (
+        "# Robotbase Project Instructions\n\n"
+        "This is a ROS 2 Jazzy + Gazebo Harmonic project that runs headless in Docker. Your job is\n"
+        "to AUTHOR the robot and world described in `TASK.md` by editing the declarative specs\n"
+        "`robot.yaml` and `world.yaml`, then compiling and verifying them. You do not operate\n"
+        "Gazebo directly — use the `robotbase` MCP tools:\n\n"
+        "- `workspace_build` — recompile robot.yaml/world.yaml to URDF/SDF and build (run after edits).\n"
+        "- `simulation_launch` / `simulation_stop` / `simulation_reset` — run the headless sim.\n"
+        "- `ros_list_topics` / `ros_inspect_topic` — inspect the live ROS graph to VERIFY behaviour.\n"
+        "- `project_describe` — structured ground truth about the compiled robot/world.\n"
+        "- `environment_doctor` — diagnose infrastructure problems if build/launch fail.\n\n"
+        "A working controller is already provided under `controllers/` — do NOT edit it; your job\n"
+        "is only the robot and the world it runs against. Do not claim success until you have\n"
+        "launched the sim and confirmed the robot's behaviour from the running system.\n\n"
+        + authoring_reference()
+    )
 
 
 def _build_without(dest: str) -> None:
@@ -72,6 +96,22 @@ def _build_without(dest: str) -> None:
         os.makedirs(os.path.join(pkg, sub), exist_ok=True)
     shutil.copyfile(_CONTROLLER, os.path.join(pkg, "controllers", "stop_at_1m.py"))
     shutil.copyfile(_ORIENTATION, os.path.join(dest, "RAW-ROS-ORIENTATION.md"))
+    # The raw-ROS arm still needs the same headless ROS 2 + Gazebo container (the environment is
+    # not the thing under test — the authoring surface is). Reuse the shared runtime image; no
+    # robotbase CLI conveniences. The agent drives colcon/ros2/gz itself via `docker compose exec`.
+    with open(os.path.join(dest, "compose.yaml"), "w", encoding="utf-8") as f:
+        f.write(
+            "services:\n"
+            "  ros:\n"
+            "    image: robotbase-runtime:latest\n"
+            "    working_dir: /workspace\n"
+            "    volumes:\n"
+            "      - ./:/workspace\n"
+            "    environment:\n"
+            "      - LIBGL_ALWAYS_SOFTWARE=1\n"
+            "      - OGRE_RTT_MODE=Copy\n"
+            "    command: sleep infinity\n"
+        )
     with open(os.path.join(pkg, "package.xml"), "w", encoding="utf-8") as f:
         f.write(
             '<?xml version="1.0"?>\n'

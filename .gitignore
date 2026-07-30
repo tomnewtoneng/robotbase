@@ -21,3 +21,4 @@ _rbench_run.py
 robotbase/robotbench/results/transcripts/
 _regen.py
 _dogfood_refs.py
+robotbase/robotbench/results/runs/

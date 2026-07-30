@@ -101,7 +101,7 @@ def real_bringup_without(project_dir: str, pose):
     """WITHOUT arm: build the colcon workspace and `ros2 launch` the authored bring-up in the
     same headless Gazebo container. Returns a teardown callable (kill launch + `robotbase down`)."""
     sh = _sh(project_dir)
-    subprocess.run([*_RB, "up"], cwd=project_dir, check=True, timeout=1800)
+    subprocess.run(["docker", "compose", "up", "-d"], cwd=project_dir, check=True, timeout=600)
     sh("colcon build", timeout=1200)
     proc = subprocess.Popen(
         ["docker", "compose", "exec", "-T", "ros", "bash", "-lc",

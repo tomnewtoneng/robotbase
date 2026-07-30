@@ -37,6 +37,8 @@ def build_author_prompt(task: dict, arm: str) -> str:
     return (
         f"{task['prompt']}\n\n"
         "Rules:\n"
+        "- Before authoring, read the documentation files in this project (e.g. the project's "
+        "instructions / orientation) for the exact format and conventions.\n"
         "- Author the robot, the world, the package, and the launch yourself.\n"
         "- A working controller is already provided (the `stop_at_1m` node) — do NOT modify the "
         "provided controller. Your job is only to build the robot and world it must run against.\n"
