@@ -31,6 +31,14 @@ def generate_launch_description():
     bridge_args = [b["arg"] for b in _bridges]
     bridge_remaps = [tuple(b["remap"]) for b in _bridges if b.get("remap")]
 
+    # The spawn model name + spawn height are compiled from the specs (urdf/launch_config.json),
+    # so the model spawns under the robot.yaml `name` (matching the sensor bridges' scoped topics
+    # and the interface contract) — not the project name. Fall back to the package name.
+    launch_config = os.path.join(desc_share, "urdf", "launch_config.json")
+    _cfg = json.load(open(launch_config, encoding="utf-8")) if os.path.exists(launch_config) else {}
+    spawn_name = _cfg.get("robot_name", "warehouse_bot")
+    spawn_z = str(_cfg.get("spawn_z", 0.1))
+
     # Headless Gazebo server: -s server-only, -r run unpaused, software rendering.
     gz = ExecuteProcess(
         cmd=["gz", "sim", "-s", "-r", "--headless-rendering", world],
@@ -52,7 +60,7 @@ def generate_launch_description():
                 package="ros_gz_sim",
                 executable="create",
                 output="screen",
-                arguments=["-name", "warehouse_bot", "-string", robot_desc, "-z", "0.1"],
+                arguments=["-name", spawn_name, "-string", robot_desc, "-z", spawn_z],
             )
         ],
     )

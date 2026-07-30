@@ -169,6 +169,17 @@ def _compile_specs(dest: str, snake: str) -> None:
         import json
         with open(os.path.join(urdf_dir, "bridges.json"), "w", encoding="utf-8") as fh:
             json.dump(_bridge_list(compiled.bridges), fh, indent=2)
+        # Compile the launch config from the specs so the launch is NOT coupled to the project
+        # name: the model spawns under the robot.yaml `name` (matching the sensor bridges' scoped
+        # topics + the interface contract), and the launch reads the world name from world.yaml.
+        world_name = "warehouse"
+        _wy = os.path.join(dest, "world.yaml")
+        if os.path.exists(_wy):
+            from robotbase.worldspec.schema import WorldSpec
+            world_name = WorldSpec.from_yaml(_wy).name
+        with open(os.path.join(urdf_dir, "launch_config.json"), "w", encoding="utf-8") as fh:
+            json.dump({"robot_name": compiled.name, "world_name": world_name,
+                       "spawn_z": compiled.spawn_z}, fh, indent=2)
 
     world_yaml = os.path.join(dest, "world.yaml")
     world_dir = os.path.join(dest, "src", f"{snake}_description", "worlds")

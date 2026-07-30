@@ -29,6 +29,20 @@ def test_recompile_project_applies_edited_world_yaml():
         assert "2 0 0.25" in open(world_path, encoding="utf-8").read()   # obstacle authored in
 
 
+def test_spawn_name_is_compiled_from_robot_yaml_not_project_name():
+    # P2: the model spawns under the robot.yaml `name`, decoupled from the project name — so the
+    # sensor bridges' scoped topics and the interface contract stay consistent.
+    import json
+    with tempfile.TemporaryDirectory() as tmp:
+        dest = create_project("projname", tmp, template_dir("differential-drive"))
+        open(os.path.join(dest, "robot.yaml"), "w").write(
+            "version: 1\nname: myrobot\nbase: differential-drive\nsensors:\n  - {type: lidar}\n")
+        assert recompile_project(dest) is True
+        cfg = json.load(open(os.path.join(dest, "src", "projname_description", "urdf",
+                                          "launch_config.json"), encoding="utf-8"))
+        assert cfg["robot_name"] == "myrobot"          # spec name, not "projname"
+
+
 def test_import_add_sensor_is_idempotent_across_recompiles():
     # import a sensorless URDF, add a lidar, recompile twice -> exactly one injected sensor.
     with tempfile.TemporaryDirectory() as tmp:
