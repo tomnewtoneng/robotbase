@@ -35,7 +35,21 @@ def describe(project_dir: str) -> dict:
         "ready_topics": (m.get("runtime") or {}).get("ready_topics", ["/scan", "/odom"]),
         "world": _world(project_dir, m),
         "scenarios": _scenarios(project_dir, m),
+        "validation": _validation(project_dir),
     }
+
+
+def _validation(project_dir: str) -> dict:
+    """Static physical sanity of the compiled robot (mass/inertia/joint-limit), so agents see
+    problems here as structured facts rather than only as a misbehaving sim."""
+    from robotbase.robotspec.validate import summarize, validate_urdf
+    urdfs = glob.glob(os.path.join(project_dir, "src", "*", "urdf", "*.urdf.xacro"))
+    if not urdfs:
+        return {"ok": True, "errors": 0, "warnings": 0, "findings": []}
+    try:
+        return summarize(validate_urdf(open(urdfs[0], encoding="utf-8").read()))
+    except OSError:
+        return {"ok": True, "errors": 0, "warnings": 0, "findings": []}
 
 
 def _robot(project_dir: str, m: dict) -> dict:

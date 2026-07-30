@@ -66,6 +66,30 @@ def project_describe() -> dict:
 
 
 @mcp.tool()
+def validate_robot() -> dict:
+    """Static physical validation of the compiled robot: flags non-positive mass/inertia, unstable
+    mass ratios, and inverted joint limits BEFORE you launch. Returns {ok, errors, warnings,
+    findings}. Run after authoring/editing robot.yaml to catch physics problems the sim would only
+    reveal by misbehaving."""
+    import os as _os
+
+    from robotbase.robotspec.schema import RobotSpec
+    from robotbase.robotspec.validate import summarize, validate_robot as _vr
+    robot_yaml = _os.path.join(PROJECT_DIR, "robot.yaml")
+    if not _os.path.exists(robot_yaml):
+        return {"error": "no robot.yaml in this project"}
+    try:
+        spec = RobotSpec.from_yaml(robot_yaml)
+        for p in spec.parts:
+            if p.use == "custom" and p.urdf and not _os.path.isabs(p.urdf):
+                p.urdf = _os.path.join(PROJECT_DIR, p.urdf)
+        return summarize(_vr(spec))
+    except Exception as e:  # a compile error is itself a validation failure — report it
+        return {"ok": False, "errors": 1, "warnings": 0,
+                "findings": [{"severity": "error", "code": "compile-error", "message": str(e)}]}
+
+
+@mcp.tool()
 def environment_doctor() -> dict:
     """Check the environment for common problems (Docker reachable, the runtime image built,
     port 8765 conflicts, whether this project's container is up) and suggest fixes. Run this
