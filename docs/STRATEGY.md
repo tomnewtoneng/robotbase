@@ -89,6 +89,59 @@ hints yes (WITH solved in 1 edit / correct self-verification; WITHOUT made 0 edi
 Finish the breadth run → the full run → publish `ROBOTBENCH-RESULTS.md`. **If it validates, do
 P1–P4. If it doesn't, the kill-criteria (§4) are the honest off-ramp — weeks spent, not months.**
 
+### Post-RobotBench-v2 review — what the build EMPIRICALLY taught the roadmap (2026-07-30)
+
+Building + live-running the v2 authoring benchmark (Tasks 0–10) didn't just *test* the roadmap — it
+turned several of its items from "believed important" into "measured to be the WITH arm's active
+ingredients," and advanced three of them as byproducts. This reprioritizes what's next.
+
+**n=1 signal (both arms fair, one task):** WITH — solved, self-verified correct, 2 edits, 22 turns,
+clean finish. WITHOUT — solved, **but cut off at the turn cap before it could verify (claimed=False)**,
+5 edits. Both built a working robot; only WITH did it fast *and knew it worked*. That "solved but
+can't tell" on the raw arm is the vision's headline failure mode, observed live. (Full n=3 × 4 tasks
+running now; n=1 is directional, not proof.)
+
+**What the dogfooding + smoke proved about specific roadmap items:**
+- **P5 (knowledge layer) is decisive, not optional.** With the old (missing) knowledge layer the WITH
+  agent *failed a solvable task* (guessed the world schema, hit the turn cap). Adding a **general,
+  schema-derived** authoring reference (`robotspec/schema_docs.authoring_reference()` — fields +
+  archetype/sensor vocab from the real registries, zero task specifics, test-guarded against leakage)
+  flipped it to a clean 2-edit self-verified solve. **The WITH advantage largely IS the knowledge
+  layer + validation. Promote P5.**
+- **P3 (validation ≥ generation) started + proven.** The schemas silently accepted a wrong obstacle
+  key and defaulted the box onto the robot — a *silent physical failure* that cost the agent the task
+  with no error. `extra="forbid"` (errors naming the bad field) is the first, high-value slice of P3;
+  the deeper physical checks (inertia/mass-ratio/COM/overlap/disconnected-TF) are the natural next
+  step and the bench will keep surfacing them.
+- **P2 (compile the runtime) advanced.** The launch's ROS↔gz bridge list was template-hardcoded, so an
+  authored camera rendered but wasn't bridged; it's now **compiled from the robot's sensors**
+  (`urdf/bridges.json`). Spawn/world/robot_state_publisher are still template-owned — finishing that
+  (and making the spawn model-name compiler-owned, not "= project name") closes real friction the
+  smoke hit.
+- **P1 (explainability) is the amplifier of the money metric.** The differentiator that showed up is
+  *self-verifiability* ("did the robot actually do the task, and can the agent tell?"). `explain`/
+  `trace`/source-maps directly amplify that edge — this is the highest-leverage *new* capability once
+  P0 lands.
+
+**Reprioritized next-steps (pending the n=3 result — the n=1 says it will validate):**
+1. **Finish P0:** complete the n=3 run → publish `ROBOTBENCH-RESULTS.md` (the killer artifact:
+   product + marketing + validation in one). This is also Tom's distribution trigger (PyPI/Docker).
+2. **Lead with P5 + P3** (proven the WITH arm's active ingredients): package the knowledge layer as a
+   first-class surface (expose the schema/vocabulary as a `robotbase` tool + a Claude skill, add
+   failure-pattern tables, emit JSON Schema) and extend validation from "strict keys" to **static
+   physical checks + value provenance**.
+3. **Finish P2:** compile the launch + manifest (not just URDF/SDF/bridges) so the whole runtime is
+   compiler-owned — removes the residual template coupling (spawn name, world name, RSP).
+4. **Then P1 (explainability):** `explain`/`trace` + source maps — amplifies self-verifiability.
+5. **Defer P4 (semantic IR refactor)** until the thesis is *firmly* validated and P1–P3 are in — it is
+   the biggest, riskiest refactor; do it only when the payoff (MJCF/Isaac backends) is committed.
+
+**Harness rigor to close before scaling any claim:** (a) wire the `-x/-y/-z` seeded spawn override in
+`real_bringup_with` so per-seed robustness is real (currently degenerate — all seeds identical); (b)
+the raised turn cap (50) is in for the n=3 so WITHOUT's `claimed_solved` isn't a cut-off artifact; (c)
+report per-arm success-rate / iterations / wall-clock / **false-confidence** (claimed-but-unsolved),
+the metric the vision demands.
+
 ### Dogfooding findings — authoring the RobotBench v2 references (2026-07-28)
 
 Authored the 4 v2 reference robots+worlds through the compiler by hand (the product-first probe
