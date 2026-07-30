@@ -3,7 +3,7 @@ task-specific) authoring reference shipped in the WITH scaffold's AGENTS.md."""
 import pytest
 
 from robotbase.robotspec.schema import RobotSpec, RobotSpecError
-from robotbase.robotspec.schema_docs import authoring_reference
+from robotbase.robotspec.schema_docs import authoring_json_schema, authoring_reference
 from robotbase.worldspec.schema import WorldSpec, WorldSpecError
 
 
@@ -43,6 +43,14 @@ def test_authoring_reference_is_general_not_task_specific():
     for leak in ("diff-lidar-world", "sensor-on-mast", "two-sensor", "add-sensor",
                  "(2, 0)", "2 0 0.25", "stop_at_1m", "1.37"):
         assert leak not in ref, f"reference leaks task-specific detail {leak!r}"
+
+
+def test_authoring_json_schema_is_valid_and_complete():
+    js = authoring_json_schema()
+    assert set(js) == {"robot.yaml", "world.yaml"}
+    robot_props = js["robot.yaml"]["properties"]
+    assert {"base", "body", "sensors", "parts"} <= set(robot_props)
+    assert "obstacles" in js["world.yaml"]["properties"]
 
 
 def test_reference_covers_compiler_vocabulary_no_drift():

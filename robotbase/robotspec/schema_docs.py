@@ -73,6 +73,15 @@ Nested shapes:
   walls[]:      {{ {_fields(Wall).strip()} }}        (from/to are [x,y])
   goals[]:      {{ {_fields(Goal).strip()} }}        (at is [x,y])
 
+## Common mistakes the compiler will reject (read the error — it names the field)
+
+- An unknown key: the field name is wrong. Use the schema above (e.g. an obstacle is
+  `{{shape, size, at}}`, not `{{type, pose}}`).
+- A wrong-length `size`: it must match the `shape` (see the size table at the top).
+- A sensor `on:` a link that does not exist: the error names the missing link. Sensors default to
+  the primary base link (`base_link` for a differential-drive base).
+- `base:` + `parts:` compose (the base is the first part) — they do not replace each other.
+
 ## Workflow
 
 1. Edit robot.yaml and world.yaml to express the task.
@@ -82,3 +91,10 @@ Nested shapes:
    (`/scan` for lidar, `/image` for camera). Do not claim success until you have confirmed this
    from the running system.
 """
+
+
+def authoring_json_schema() -> dict:
+    """The robot.yaml / world.yaml JSON Schemas, straight from the Pydantic models — for editors,
+    programmatic validation, or an agent that prefers structured schema over prose."""
+    return {"robot.yaml": RobotSpec.model_json_schema(),
+            "world.yaml": WorldSpec.model_json_schema()}

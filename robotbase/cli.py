@@ -123,6 +123,8 @@ def _build_parser() -> argparse.ArgumentParser:
     sub.add_parser("templates", help="list available robot templates")
     sub.add_parser("doctor", help="check the environment for common problems")
     sub.add_parser("describe", help="report robot/world/scenario facts")
+    schema_p = sub.add_parser("schema", help="print the robot.yaml/world.yaml authoring format reference")
+    schema_p.add_argument("--json", action="store_true", help="emit JSON Schema instead of prose")
     sub.add_parser("up", help="start the container and build the workspace")
     sub.add_parser("stop", help="stop the simulation (keep the container)")
     sub.add_parser("down", help="stop and remove the container")
@@ -231,6 +233,12 @@ def main() -> None:
         project = os.environ.get("ROBOTBASE_PROJECT_DIR", ".")
         print(json.dumps(describe(project), indent=2))
         _hint("Ground truth for this project — robot geometry, world layout, and scenarios.")
+        return
+
+    if args.cmd == "schema":
+        from robotbase.robotspec.schema_docs import authoring_json_schema, authoring_reference
+
+        print(json.dumps(authoring_json_schema(), indent=2) if args.json else authoring_reference())
         return
 
     if args.cmd == "bench" and args.list:

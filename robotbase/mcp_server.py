@@ -42,6 +42,17 @@ _runtime.gui = os.environ.get("ROBOTBASE_GUI", "none")
 
 
 @mcp.tool()
+def authoring_schema(as_json: bool = False) -> str:
+    """The robot.yaml / world.yaml authoring format reference: fields, the archetype/sensor
+    vocabulary, the shape->size conventions, and common mistakes. Consult this before authoring a
+    robot or world. `as_json=True` returns the JSON Schema instead of the prose reference."""
+    import json as _json
+
+    from robotbase.robotspec.schema_docs import authoring_json_schema, authoring_reference
+    return _json.dumps(authoring_json_schema(), indent=2) if as_json else authoring_reference()
+
+
+@mcp.tool()
 def project_describe() -> dict:
     """Report structured ground truth for the project: the robot (dimensions, joints,
     sensors, control topics), the world (models + arena bounds), and the scenarios (each
