@@ -126,6 +126,7 @@ def _build_parser() -> argparse.ArgumentParser:
     schema_p = sub.add_parser("schema", help="print the robot.yaml/world.yaml authoring format reference")
     schema_p.add_argument("--json", action="store_true", help="emit JSON Schema instead of prose")
     sub.add_parser("validate", help="static physical validation of the compiled robot")
+    sub.add_parser("explain", help="attribute each compiled artifact to the spec line that made it")
     sub.add_parser("up", help="start the container and build the workspace")
     sub.add_parser("stop", help="stop the simulation (keep the container)")
     sub.add_parser("down", help="stop and remove the container")
@@ -259,6 +260,23 @@ def main() -> None:
         print(json.dumps(report, indent=2))
         _hint("Physical sanity of the compiled robot (mass, inertia, joint limits).")
         sys.exit(0 if report["ok"] else 1)
+
+    if args.cmd == "explain":
+        from robotbase.robotspec.explain import explain_robot
+        from robotbase.robotspec.schema import RobotSpec
+
+        project = os.environ.get("ROBOTBASE_PROJECT_DIR", ".")
+        robot_yaml = os.path.join(project, "robot.yaml")
+        if not os.path.exists(robot_yaml):
+            print("no robot.yaml in this project")
+            sys.exit(2)
+        spec = RobotSpec.from_yaml(robot_yaml)
+        for p in spec.parts:
+            if p.use == "custom" and p.urdf and not os.path.isabs(p.urdf):
+                p.urdf = os.path.join(project, p.urdf)
+        print(json.dumps(explain_robot(spec), indent=2))
+        _hint("Each spec declaration and the links/joints/topics/gz-systems it produced.")
+        return
 
     if args.cmd == "bench" and args.list:
         from robotbase.bench import BENCHMARK_VERSION, TASKS

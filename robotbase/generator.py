@@ -138,6 +138,31 @@ def _bridge_list(compiled_bridges) -> list[dict]:
     return out
 
 
+def _with_source_map(urdf: str, spec) -> str:
+    """Prepend a source map to the generated URDF: which spec declaration produced each element,
+    so reading the raw file is traceable (the same data `robotbase explain` reports). Best-effort.
+
+    Skipped for a `use: custom` import — an imported URDF is preserved verbatim (best-effort import
+    guarantee); use `robotbase explain` for its provenance instead."""
+    if any(p.use == "custom" for p in spec.parts):
+        return urdf
+    try:
+        from robotbase.robotspec.explain import explain_robot
+        lines = []
+        for e in explain_robot(spec).get("produced", []):
+            bits = []
+            if e.get("links"):
+                bits.append("links: " + ", ".join(e["links"]))
+            if e.get("ros_topics"):
+                bits.append("topics: " + ", ".join(e["ros_topics"]))
+            lines.append(f"       {e['source']}  ->  {'; '.join(bits) or e.get('note', '')}")
+        comment = ("<!-- Source map (robotbase explain) - which spec declaration made each element:\n"
+                   + "\n".join(lines) + "\n-->\n")
+        return urdf.replace("<robot", comment + "<robot", 1)
+    except Exception:
+        return urdf
+
+
 def _compile_specs(dest: str, snake: str) -> None:
     """Compile the project's robot.yaml/world.yaml into the description package.
 
@@ -162,7 +187,7 @@ def _compile_specs(dest: str, snake: str) -> None:
     urdf_dir = os.path.join(dest, "src", f"{snake}_description", "urdf")
     if os.path.isdir(urdf_dir):
         with open(os.path.join(urdf_dir, f"{snake}.urdf.xacro"), "w", encoding="utf-8") as fh:
-            fh.write(compiled.urdf)
+            fh.write(_with_source_map(compiled.urdf, spec))
         # Compile the ROS<->gz bridge list from the robot's actual sensors so the launch bridges
         # exactly what was authored (an added camera/depth is exposed to ROS, not just rendered in
         # gz). Installed alongside the URDF; the launch reads it. See docs/STRATEGY.md P2.

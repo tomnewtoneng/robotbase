@@ -66,6 +66,28 @@ def project_describe() -> dict:
 
 
 @mcp.tool()
+def explain_robot() -> dict:
+    """Explain the compiled robot: for each spec declaration (`base:`, each `parts[i]`, each
+    `sensors[i]`), report the links, joints, ROS topics, and gz world-systems it produced. Use it
+    to confirm an edit did what you intended (e.g. that a sensor mounted where you meant)."""
+    import os as _os
+
+    from robotbase.robotspec.explain import explain_robot as _ex
+    from robotbase.robotspec.schema import RobotSpec
+    robot_yaml = _os.path.join(PROJECT_DIR, "robot.yaml")
+    if not _os.path.exists(robot_yaml):
+        return {"error": "no robot.yaml in this project"}
+    try:
+        spec = RobotSpec.from_yaml(robot_yaml)
+        for p in spec.parts:
+            if p.use == "custom" and p.urdf and not _os.path.isabs(p.urdf):
+                p.urdf = _os.path.join(PROJECT_DIR, p.urdf)
+        return _ex(spec)
+    except Exception as e:
+        return {"error": str(e)}
+
+
+@mcp.tool()
 def validate_robot() -> dict:
     """Static physical validation of the compiled robot: flags non-positive mass/inertia, unstable
     mass ratios, and inverted joint limits BEFORE you launch. Returns {ok, errors, warnings,
