@@ -47,9 +47,14 @@ def spawn_pose(spec: AcceptanceSpec, seed: int) -> tuple[float, float, float]:
     return (round(rng.uniform(-jx, jx), 4), round(rng.uniform(-jy, jy), 4), 0.0)
 
 
-def _stop_band(target: str, band=(0.8, 1.2), floor: float = 0.4):
+def _stop_band(target: str, band=(1.1, 1.7), floor: float = 0.5):
     """Passed the task if the closest approach to `target`'s centre lands in `band` and the robot
-    never penetrated past `floor` (a collision)."""
+    never penetrated past `floor` (a collision).
+
+    The band is calibrated against the *live* stop_at_1m controller (2026-07-29): a robot that
+    spawns ~2 m from a 0.5 m box and stops when its forward /scan reads 1 m halts with its centre
+    ~1.37 m from the box centre. Below ~1.1 m it nearly hit the box; above ~1.7 m it stopped too
+    early or never moved (a non-mover sits at the ~2 m spawn distance)."""
     def predicate(trace: Trace, obstacles: Obstacles) -> bool:
         ox, oy, _ = obstacles[target]
         d = min_distance_to(_xy(trace), ox, oy)
@@ -65,7 +70,7 @@ def _mast_clear():
         lox, loy, _ = obstacles["low_barrier"]
         tox, toy, _ = obstacles["tall_box"]
         passed_low = min_distance_to(pts, lox, loy) < 0.5
-        stopped_tall = 0.8 <= min_distance_to(pts, tox, toy) <= 1.2
+        stopped_tall = 1.1 <= min_distance_to(pts, tox, toy) <= 1.7
         return passed_low and stopped_tall
     return predicate
 

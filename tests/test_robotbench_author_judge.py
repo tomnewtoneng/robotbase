@@ -17,7 +17,7 @@ def _fakes(trace, live=True):
 
 
 def test_solved_when_all_trials_pass(tmp_path):
-    good = [(i * 0.1, x, 0.0) for i, x in enumerate([0, 0.4, 0.8, 1.0, 1.05, 1.05])]
+    good = [(i * 0.1, x, 0.0) for i, x in enumerate([0, 0.3, 0.55, 0.63, 0.63, 0.63])]
     calls, bringup, runc, sample, live = _fakes(good)
     out = author_judge("/p", TASK, bringup_fn=bringup, run_controller_fn=runc,
                        sample_fn=sample, liveness_fn=live, trials=3,

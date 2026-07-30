@@ -118,6 +118,43 @@ resume the plan at `docs/superpowers/plans/2026-07-27-robotbench-suite-v2.md` (T
 
 ### v2 harness — Task 0 (ground-truth pose probe) spike ✅ VERIFIED (2026-07-28)
 
+### v2 harness — Task 9 (reference calibration) findings so far (2026-07-29)
+
+Offline harness complete (Tasks 0–8, pushed): v2 authoring task set, provided `stop_at_1m`
+controller, per-arm scaffolds + env-only orientation, kind-aware authoring prompt, acceptance
+registry + pure predicates, behavioral author judge, durable run manifest, real bring-up wiring.
+180+ unit tests green. Then started the live dogfooding gate:
+
+- ✅ **Full live pipeline proven for `diff-lidar-world`.** Built a real project with the reference
+  robot.yaml/world.yaml, `robotbase up` (recompiled) + `launch`, ran the *actual* provided
+  controller, and read the robot's Gazebo ground-truth pose: it drove forward and **reliably
+  stopped at x≈0.634 — closest approach 1.366 m to the box centre**. Compile → up → launch →
+  controller → pose-probe all work end to end.
+- 🔧 **Calibrated the acceptance band to reality.** The synthetic band (centre-distance ∈ [0.8,1.2])
+  was wrong for where a real 1 m-from-face stop lands; a 0.5 m box stopped at scan≈1 m puts the
+  robot centre ~1.37 m from the box centre. Band retuned to **[1.1, 1.7]** (below ≈1.1 ≈ nearly
+  hit; above ≈1.7 ≈ stopped too early / never moved, since a non-mover sits at the ~2 m spawn).
+  Offline predicate tests updated to the measured behaviour.
+- ⚠️ **Model name = project name.** Gazebo spawn `-name` is the *project* name (generator
+  substitutes it into the launch), not robot.yaml `name:`. For the contract "spawn as model
+  `robot`" the WITH project must be created as `robot`. The scaffold/bring-up must enforce this.
+- ⚠️ **`real_bringup_with` doesn't apply the seeded spawn pose yet** (spawns at the world default),
+  so per-seed robustness is currently degenerate (all seeds identical). Needs the `-x/-y/-z`
+  spawn-override wired before robustness across seeds is meaningful.
+- ❗ **Design question — the mast task is physically inconsistent.** `author_mast_clear` asks the
+  robot to *drive past* a 0.2 m barrier its mast-high LiDAR can't see — but a 0.2 m solid barrier
+  in the robot's path physically stops the ~0.2 m-tall chassis regardless of the sensor. The task
+  needs a redesign (barrier the robot can straddle, an off-axis obstacle, or a different "clear"
+  criterion) before it's fair. **Open for decision.**
+- ⛔ **Blocked on Docker.** WSL restarted mid-calibration; Docker Desktop is down, so the full
+  `real_author_judge` run (reference → solved==True across seeds) is pending Docker coming back.
+
+**Next:** resolve the mast-task redesign + scaffold-runnability (WITH scaffold must be a real
+`robotbase up`-able project named `robot`) → wire spawn-pose override → run the live calibration for
+all 4 references → then the n=1 pilot (Task 10).
+
+### v2 harness — Task 0 (ground-truth pose probe) spike ✅ VERIFIED (2026-07-28)
+
 The authoring judge must score behaviour from Gazebo **ground truth**, not the robot's own sensors
 (so a robot that mis-reports its own `/scan` can't fake a pass). Spike proved this is feasible via
 `gz topic -e /world/<world>/dynamic_pose/info`, read through an injected `sh(cmd)` callable
