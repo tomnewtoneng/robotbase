@@ -15,10 +15,12 @@ authoring templates — designing the URDF/SDF and the launch is your job.
 
 ## Workspace layout
 
-A colcon package `authored_pkg` is scaffolded for you under `src/authored_pkg/` with an empty
-`urdf/`, `worlds/`, and `launch/`, plus `package.xml` and `setup.py`. Put your robot description
-in `urdf/`, your world in `worlds/`, and your bring-up in `launch/`. The provided controller lives
-at `authored_pkg/controllers/stop_at_1m.py` — **do not modify it**; your launch must run it.
+A colcon `ament_cmake` package `authored_pkg` is scaffolded for you under `src/authored_pkg/` with
+empty `urdf/`, `worlds/`, and `launch/` dirs, a `package.xml`, and a `CMakeLists.txt` that already
+installs those three dirs to the package share (so `ros2 launch authored_pkg <file>` resolves once
+you `colcon build`). Put your robot description in `urdf/`, your world in `worlds/`, and your
+bring-up in `launch/`. The provided controller lives at `authored_pkg/controllers/stop_at_1m.py` —
+**do not modify it**; your launch must run it (e.g. `python3` the file as a node).
 
 ## Build & run
 

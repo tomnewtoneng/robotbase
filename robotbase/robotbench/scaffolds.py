@@ -112,6 +112,9 @@ def _build_without(dest: str) -> None:
             "      - OGRE_RTT_MODE=Copy\n"
             "    command: sleep infinity\n"
         )
+    # A COHERENT empty ament_cmake package: it builds as-is and installs launch/urdf/worlds to
+    # share/ so `ros2 launch authored_pkg <file>` resolves. The agent's job is to author the
+    # contents (URDF, world SDF, bring-up launch) — not to repair a broken skeleton.
     with open(os.path.join(pkg, "package.xml"), "w", encoding="utf-8") as f:
         f.write(
             '<?xml version="1.0"?>\n'
@@ -124,26 +127,17 @@ def _build_without(dest: str) -> None:
             "  <buildtool_depend>ament_cmake</buildtool_depend>\n"
             "  <exec_depend>ros_gz_sim</exec_depend>\n"
             "  <exec_depend>ros_gz_bridge</exec_depend>\n"
-            "  <export><build_type>ament_python</build_type></export>\n"
+            "  <exec_depend>robot_state_publisher</exec_depend>\n"
+            "  <exec_depend>xacro</exec_depend>\n"
+            "  <export><build_type>ament_cmake</build_type></export>\n"
             "</package>\n"
         )
-    with open(os.path.join(pkg, "setup.py"), "w", encoding="utf-8") as f:
+    with open(os.path.join(pkg, "CMakeLists.txt"), "w", encoding="utf-8") as f:
         f.write(
-            "from setuptools import setup\n\n"
-            "package_name = 'authored_pkg'\n\n"
-            "setup(\n"
-            "    name=package_name,\n"
-            "    version='0.0.0',\n"
-            "    packages=[package_name],\n"
-            "    data_files=[\n"
-            "        ('share/ament_index/resource_index/packages',\n"
-            "         ['resource/' + package_name]),\n"
-            "        ('share/' + package_name, ['package.xml']),\n"
-            "    ],\n"
-            "    install_requires=['setuptools'],\n"
-            "    zip_safe=True,\n"
-            "    maintainer='robotbench',\n"
-            "    license='MIT',\n"
-            "    entry_points={},\n"
-            ")\n"
+            "cmake_minimum_required(VERSION 3.8)\n"
+            "project(authored_pkg)\n"
+            "find_package(ament_cmake REQUIRED)\n"
+            "# Install whatever the agent authors so `ros2 launch authored_pkg <file>` can find it.\n"
+            "install(DIRECTORY launch urdf worlds DESTINATION share/${PROJECT_NAME})\n"
+            "ament_package()\n"
         )
