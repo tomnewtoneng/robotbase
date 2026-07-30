@@ -1,3 +1,4 @@
+import json
 import os
 
 import xacro
@@ -15,12 +16,20 @@ def generate_launch_description():
     urdf_xacro = os.path.join(desc_share, "urdf", "warehouse_bot.urdf.xacro")
     robot_desc = xacro.process_file(urdf_xacro).toxml()
 
-    # The contact sensor ignores its SDF <topic> and always publishes on the scoped
-    # gz path built from world/model/link/sensor names; bridge that and remap it to
-    # the clean /bumper. (model name must match the spawn -name below.)
-    contact_gz_topic = (
-        "/world/warehouse/model/warehouse_bot/link/base_footprint/sensor/bumper/contact"
-    )
+    # The ROS<->gz bridge list is compiled from the robot's actual sensors (urdf/bridges.json),
+    # so an authored camera/depth/extra sensor is bridged, not just rendered in gz. Fall back to
+    # the essential drivetrain bridges if the file is missing (e.g. a hand-edited legacy project).
+    bridges_json = os.path.join(desc_share, "urdf", "bridges.json")
+    if os.path.exists(bridges_json):
+        with open(bridges_json, encoding="utf-8") as fh:
+            _bridges = json.load(fh)
+    else:
+        _bridges = [
+            {"arg": "/cmd_vel@geometry_msgs/msg/Twist]gz.msgs.Twist", "remap": None},
+            {"arg": "/clock@rosgraph_msgs/msg/Clock[gz.msgs.Clock", "remap": None},
+        ]
+    bridge_args = [b["arg"] for b in _bridges]
+    bridge_remaps = [tuple(b["remap"]) for b in _bridges if b.get("remap")]
 
     # Headless Gazebo server: -s server-only, -r run unpaused, software rendering.
     gz = ExecuteProcess(
@@ -52,17 +61,8 @@ def generate_launch_description():
         package="ros_gz_bridge",
         executable="parameter_bridge",
         output="screen",
-        arguments=[
-            "/cmd_vel@geometry_msgs/msg/Twist]gz.msgs.Twist",
-            "/odom@nav_msgs/msg/Odometry[gz.msgs.Odometry",
-            "/scan@sensor_msgs/msg/LaserScan[gz.msgs.LaserScan",
-            "/imu@sensor_msgs/msg/Imu[gz.msgs.IMU",
-            contact_gz_topic + "@ros_gz_interfaces/msg/Contacts[gz.msgs.Contacts",
-            "/tf@tf2_msgs/msg/TFMessage[gz.msgs.Pose_V",
-            "/joint_states@sensor_msgs/msg/JointState[gz.msgs.Model",
-            "/clock@rosgraph_msgs/msg/Clock[gz.msgs.Clock",
-        ],
-        remappings=[(contact_gz_topic, "/bumper")],
+        arguments=bridge_args,
+        remappings=bridge_remaps,
     )
 
     # Optional visualization: a Foxglove bridge, started only when gui:=foxglove.

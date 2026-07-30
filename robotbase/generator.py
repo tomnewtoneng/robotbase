@@ -142,6 +142,14 @@ def _compile_specs(dest: str, snake: str) -> None:
     if os.path.isdir(urdf_dir):
         with open(os.path.join(urdf_dir, f"{snake}.urdf.xacro"), "w", encoding="utf-8") as fh:
             fh.write(compiled.urdf)
+        # Compile the ROS<->gz bridge list from the robot's actual sensors so the launch bridges
+        # exactly what was authored (an added camera/depth is exposed to ROS, not just rendered in
+        # gz). Installed alongside the URDF; the launch reads it. See docs/STRATEGY.md P2.
+        import json
+        bridges = [{"arg": b.arg, "remap": list(b.remap) if b.remap else None}
+                   for b in compiled.bridges]
+        with open(os.path.join(urdf_dir, "bridges.json"), "w", encoding="utf-8") as fh:
+            json.dump(bridges, fh, indent=2)
 
     world_yaml = os.path.join(dest, "world.yaml")
     world_dir = os.path.join(dest, "src", f"{snake}_description", "worlds")
