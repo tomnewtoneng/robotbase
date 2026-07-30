@@ -1,7 +1,7 @@
 """Archetype modules — each emits a Fragment (see docs/design/declarative-compiler.md)."""
 from __future__ import annotations
 
-from robotbase.robotspec.ir import Bridge, Fragment, JointIR, LinkIR, link_from_shape
+from robotbase.robotspec.ir import Bridge, Fragment, JointIR, LinkIR, body_xyz, link_from_shape
 
 
 class UnknownArchetype(ValueError):
@@ -11,7 +11,7 @@ class UnknownArchetype(ValueError):
 def differential_drive(params: dict, mount: dict | None) -> Fragment:
     body = params.get("body", {})
     drive = params.get("drive", {})
-    bx, by, bz = body.get("size", [0.35, 0.30, 0.15])
+    bx, by, bz = body_xyz(body.get("size", [0.35, 0.30, 0.15]), body.get("shape", "box"))
     m = body.get("mass", 5.0)
     wr = drive.get("wheel_radius", 0.05)
     ws = drive.get("wheel_separation", 0.34)
@@ -153,7 +153,7 @@ def arm(params: dict, mount: dict | None) -> Fragment:
 
 def quadrotor(params: dict, mount: dict | None) -> Fragment:
     body = params.get("body", {})
-    bx, by, bz = body.get("size", [0.16, 0.16, 0.06])
+    bx, by, bz = body_xyz(body.get("size", [0.16, 0.16, 0.06]), body.get("shape", "box"))
     m = body.get("mass", 1.0)
     ARM = 0.18
     f = Fragment(exposes=["base_link"], control={"velocity_topic": "/cmd_vel"},

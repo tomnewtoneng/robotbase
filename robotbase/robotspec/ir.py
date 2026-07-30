@@ -52,7 +52,24 @@ class ShapeSizeError(ValueError):
     """A shape's `size` had the wrong number of values (would otherwise crash the URDF renderer)."""
 
 
-_SHAPE_SIZE = {"box": (3, "[x, y, z]"), "cylinder": (2, "[radius, length]"), "sphere": (1, "[radius]")}
+# The one place shape -> size-length is defined; schema validators import this so the docs, the
+# schema, and the renderer can never disagree about what `size` means for each shape.
+SHAPE_SIZE = {"box": (3, "[x, y, z]"), "cylinder": (2, "[radius, length]"), "sphere": (1, "[radius]")}
+
+
+def body_xyz(size, shape: str = "box") -> list[float]:
+    """A 3-value bounding box [x, y, z] for any body shape, used for placement math (wheels,
+    default sensor mounts). Keeps a cylinder/sphere body from crashing code that needs x,y,z."""
+    size = list(size)
+    if shape == "cylinder" and len(size) == 2:
+        r, h = size
+        return [2 * r, 2 * r, h]
+    if shape == "sphere" and len(size) == 1:
+        r = size[0]
+        return [2 * r, 2 * r, 2 * r]
+    if len(size) == 3:
+        return size
+    return [0.35, 0.30, 0.15]
 
 
 def _fmt(v: float) -> str:
@@ -61,9 +78,9 @@ def _fmt(v: float) -> str:
 
 
 def link_from_shape(name, shape, size, mass, material="grey", rgba="0.4 0.4 0.45 1") -> LinkIR:
-    if shape not in _SHAPE_SIZE:
+    if shape not in SHAPE_SIZE:
         raise UnknownShape(f"unknown shape {shape!r}; known: box, cylinder, sphere")
-    need, fmt = _SHAPE_SIZE[shape]
+    need, fmt = SHAPE_SIZE[shape]
     size = list(size)
     if len(size) != need:  # clean, actionable error instead of a bare unpack crash
         raise ShapeSizeError(

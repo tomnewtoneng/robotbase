@@ -2,7 +2,10 @@
 from __future__ import annotations
 
 import yaml
-from pydantic import BaseModel, Field, ValidationError
+from pydantic import BaseModel, Field, ValidationError, model_validator
+
+from robotbase.robotspec.ir import SHAPE_SIZE
+from robotbase.robotspec.schema import _check_len
 
 
 class WorldSpecError(ValueError):
@@ -14,9 +17,18 @@ class WorldSpecError(ValueError):
 # the position to the origin — is a dangerous silent failure. Reject it with a naming error instead.
 class Obstacle(BaseModel):
     shape: str = "box"                       # box | cylinder
-    size: list[float] = [0.3, 0.3, 0.5]
+    size: list[float] = [0.3, 0.3, 0.5]      # box [x,y,z] / cylinder [radius, length]
     at: list[float] = [0, 0, 0]              # x, y, z
     model_config = {"extra": "forbid"}
+
+    @model_validator(mode="after")
+    def _check(self):
+        if self.shape not in ("box", "cylinder"):
+            raise ValueError(f"obstacle shape must be box or cylinder, got {self.shape!r}")
+        need, fmt = SHAPE_SIZE[self.shape]
+        _check_len(self.size, need, f"obstacle {self.shape} size {fmt}")
+        _check_len(self.at, 3, "obstacle at [x, y, z]")
+        return self
 
 
 class Wall(BaseModel):
@@ -26,12 +38,23 @@ class Wall(BaseModel):
     thickness: float = 0.1
     model_config = {"populate_by_name": True, "extra": "forbid"}
 
+    @model_validator(mode="after")
+    def _check(self):
+        _check_len(self.from_, 2, "wall from [x, y]")
+        _check_len(self.to, 2, "wall to [x, y]")
+        return self
+
 
 class Goal(BaseModel):
     name: str
     at: list[float]                          # x, y
     radius: float = 0.3
     model_config = {"extra": "forbid"}
+
+    @model_validator(mode="after")
+    def _check(self):
+        _check_len(self.at, 2, "goal at [x, y]")
+        return self
 
 
 class WorldSpec(BaseModel):

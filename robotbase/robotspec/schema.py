@@ -3,11 +3,18 @@ scenario/manifest spec. The agent writes this; the compiler emits URDF/launch/ma
 from __future__ import annotations
 
 import yaml
-from pydantic import BaseModel, ValidationError
+from pydantic import BaseModel, ValidationError, model_validator
+
+from robotbase.robotspec.ir import SHAPE_SIZE   # single source of truth for shape -> size length
 
 
 class RobotSpecError(ValueError):
     ...
+
+
+def _check_len(value, n: int, what: str) -> None:
+    if len(value) != n:
+        raise ValueError(f"{what} must have {n} value{'s' if n != 1 else ''}, got {len(value)}: {list(value)}")
 
 
 _BOOL_KEY = {True: "on", False: "off"}   # YAML 1.1 coerces on/off/yes/no keys to bools
@@ -27,10 +34,18 @@ def _normalise_bool_keys(node):
 # guess at the schema; erroring names the bad field instead of silently dropping it. Raw `links`/
 # `joints` on a Part stay free-form dicts (the escape hatch) — only the typed models are strict.
 class Body(BaseModel):
-    shape: str = "box"                       # box | cylinder
-    size: list[float] = [0.35, 0.30, 0.15]   # metres; x,y,z for box
+    shape: str = "box"                       # box | cylinder | sphere
+    size: list[float] = [0.35, 0.30, 0.15]   # metres; box [x,y,z] / cylinder [r,l] / sphere [r]
     mass: float = 5.0
     model_config = {"extra": "forbid"}
+
+    @model_validator(mode="after")
+    def _check(self):
+        if self.shape not in SHAPE_SIZE:
+            raise ValueError(f"body shape must be one of {sorted(SHAPE_SIZE)}, got {self.shape!r}")
+        need, fmt = SHAPE_SIZE[self.shape]
+        _check_len(self.size, need, f"body {self.shape} size {fmt}")
+        return self
 
 
 class Drive(BaseModel):                      # differential-drive params
@@ -41,11 +56,19 @@ class Drive(BaseModel):                      # differential-drive params
 
 class SensorSpec(BaseModel):
     type: str                                # lidar | camera | depth | imu | contact
-    mount: list[float] | None = None         # xyz on base_link; sensible default per type
-    resolution: list[int] | None = None      # camera/depth
+    mount: list[float] | None = None         # [x,y,z] on the mount link; sensible default per type
+    resolution: list[int] | None = None      # camera/depth [width, height]
     topic: str | None = None                 # override the default ROS topic
     on: str | None = None                    # link to mount to; defaults to the primary base link
     model_config = {"extra": "forbid"}
+
+    @model_validator(mode="after")
+    def _check(self):
+        if self.mount is not None:
+            _check_len(self.mount, 3, "sensor mount [x, y, z]")
+        if self.resolution is not None:
+            _check_len(self.resolution, 2, "sensor resolution [width, height]")
+        return self
 
 
 class JointSpec(BaseModel):                  # arms (ignored by mobile archetypes)

@@ -8,13 +8,17 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from robotbase.robotspec.ir import Fragment, JointIR, LinkIR, link_from_shape
+from robotbase.robotspec.ir import Fragment, JointIR, LinkIR, body_xyz, link_from_shape
 from robotbase.robotspec.merge import fixed_joint, merge_and_render
 from robotbase.robotspec.modules import MODULES, UnknownArchetype
 from robotbase.robotspec.schema import Part, RobotSpec
 from robotbase.robotspec.sensors import SENSORS, Ctx, UnknownSensor, infer_sensors_from_urdf
 
-__all__ = ["CompiledRobot", "compile_robot", "UnknownArchetype", "UnknownSensor"]
+__all__ = ["CompiledRobot", "compile_robot", "UnknownArchetype", "UnknownSensor", "InvalidRawPart"]
+
+
+class InvalidRawPart(ValueError):
+    """A raw links/joints part (the escape hatch) is missing a required key."""
 
 
 @dataclass
@@ -27,26 +31,35 @@ class CompiledRobot:
     spawn_z: float = 0.1
 
 
+def _need(d: dict, key: str, what: str):
+    if key not in d:
+        raise InvalidRawPart(f"raw {what} is missing required key {key!r}: {d}")
+    return d[key]
+
+
 def _raw_part(part: Part) -> Fragment:
     f = Fragment()
     for l in part.links:
+        name = _need(l, "name", "link")
         if "xml" in l:
-            f.links.append(LinkIR(l["name"], l["xml"]))
+            f.links.append(LinkIR(name, l["xml"]))
         else:
-            f.links.append(link_from_shape(l["name"], l.get("shape", "box"),
-                                           l["size"], l.get("mass", 1.0)))
+            f.links.append(link_from_shape(name, l.get("shape", "box"),
+                                           _need(l, "size", f"link {name!r}"), l.get("mass", 1.0)))
     for j in part.joints:
+        name = _need(j, "name", "joint")
+        parent, child = _need(j, "parent", f"joint {name!r}"), _need(j, "child", f"joint {name!r}")
         xyz = " ".join(str(v) for v in j.get("xyz", [0, 0, 0]))
         rpy = " ".join(str(v) for v in j.get("rpy", [0, 0, 0]))
         if j.get("type", "fixed") == "fixed":
-            f.joints.append(fixed_joint(j["name"], j["parent"], j["child"], xyz=xyz, rpy=rpy))
+            f.joints.append(fixed_joint(name, parent, child, xyz=xyz, rpy=rpy))
         else:
             axis = j.get("axis", "0 0 1")
-            f.joints.append(JointIR(j["name"],
-                f'\n  <joint name="{j["name"]}" type="{j["type"]}">'
-                f'<parent link="{j["parent"]}"/><child link="{j["child"]}"/>'
+            f.joints.append(JointIR(name,
+                f'\n  <joint name="{name}" type="{j["type"]}">'
+                f'<parent link="{parent}"/><child link="{child}"/>'
                 f'<origin xyz="{xyz}" rpy="{rpy}"/><axis xyz="{axis}"/></joint>',
-                parent=j["parent"], child=j["child"]))
+                parent=parent, child=child))
     return f
 
 
@@ -60,10 +73,16 @@ def compile_robot(spec: RobotSpec, world_name: str = "warehouse") -> CompiledRob
 
     custom = next((p for p in parts if p.use == "custom"), None)
     if custom is not None:
-        with open(custom.urdf) as fh:
-            urdf = fh.read()
+        if not custom.urdf:
+            raise InvalidRawPart("custom part requires `urdf: <path>` (the URDF file to import)")
+        try:
+            with open(custom.urdf) as fh:
+                urdf = fh.read()
+        except FileNotFoundError as e:
+            raise InvalidRawPart(f"custom part urdf not found: {custom.urdf}") from e
         bridges, world_systems, ready_topics, sensors_manifest = [], [], [], {}
-        ctx = Ctx(world=world_name, robot_name=spec.name, body_size=list(spec.body.size))
+        ctx = Ctx(world=world_name, robot_name=spec.name,
+                  body_size=body_xyz(spec.body.size, spec.body.shape))
 
         def _wire(frag) -> None:
             for sys_ in frag.world_systems:
@@ -105,7 +124,7 @@ def compile_robot(spec: RobotSpec, world_name: str = "warehouse") -> CompiledRob
 
     fragments: list[Fragment] = []
     primary_base = None
-    body_size = list(spec.body.size)
+    body_size = body_xyz(spec.body.size, spec.body.shape)
     for part in parts:
         if part.use is not None:
             if part.use not in MODULES:
@@ -116,7 +135,8 @@ def compile_robot(spec: RobotSpec, world_name: str = "warehouse") -> CompiledRob
             frag = MODULES[part.use](p, part.mount)
             if primary_base is None and frag.exposes:
                 primary_base = frag.exposes[0]
-                body_size = (part.body or spec.body).size
+                b = part.body or spec.body
+                body_size = body_xyz(b.size, b.shape)
         else:
             frag = _raw_part(part)
         fragments.append(frag)
