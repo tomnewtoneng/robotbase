@@ -138,6 +138,33 @@ def _bridge_list(compiled_bridges) -> list[dict]:
     return out
 
 
+def _sync_manifest(dest: str, compiled, world_name: str) -> None:
+    """Keep the manifest's spec-derived fields in sync with the compiled robot: the model name,
+    the world name, and the sensor list. Only rewrites when something actually changed, so a
+    stable project keeps its manifest (and comments) untouched. Runtime-critical values (spawn
+    name, bridges) are already in launch_config.json/bridges.json; this keeps the manifest — which
+    Runtime and `describe` read — accurate after an edit that renamed the robot or changed sensors."""
+    import yaml
+    path = os.path.join(dest, "robotbase.yaml")
+    if not os.path.exists(path):
+        return
+    try:
+        data = yaml.safe_load(open(path, encoding="utf-8")) or {}
+    except yaml.YAMLError:
+        return
+    # Only the runtime-relevant identity fields, so the common case (names unchanged) does not
+    # rewrite the manifest and lose its comments; the sensor list is already authoritative in
+    # bridges.json / the compiled URDF.
+    robot = data.setdefault("robot", {})
+    sim = data.setdefault("simulation", {})
+    if robot.get("name") == compiled.name and sim.get("world_name") == world_name:
+        return
+    robot["name"] = compiled.name
+    sim["world_name"] = world_name
+    with open(path, "w", encoding="utf-8") as fh:
+        fh.write(yaml.safe_dump(data, sort_keys=False))
+
+
 def _with_source_map(urdf: str, spec) -> str:
     """Prepend a source map to the generated URDF: which spec declaration produced each element,
     so reading the raw file is traceable (the same data `robotbase explain` reports). Best-effort.
@@ -205,6 +232,7 @@ def _compile_specs(dest: str, snake: str) -> None:
         with open(os.path.join(urdf_dir, "launch_config.json"), "w", encoding="utf-8") as fh:
             json.dump({"robot_name": compiled.name, "world_name": world_name,
                        "spawn_z": compiled.spawn_z}, fh, indent=2)
+        _sync_manifest(dest, compiled, world_name)
 
     world_yaml = os.path.join(dest, "world.yaml")
     world_dir = os.path.join(dest, "src", f"{snake}_description", "worlds")

@@ -16,6 +16,28 @@ from robotbase.robotspec.schema import Part, RobotSpec
 from robotbase.robotspec.sensors import SENSORS, Ctx, infer_sensors_from_urdf
 
 
+def _prov(model, field: str) -> str:
+    return "authored" if field in model.model_fields_set else "default"
+
+
+def provenance(spec: RobotSpec) -> list[dict]:
+    """Where each key physical value came from — `authored` (in the spec), `default` (the compiler
+    filled it), or `inferred` (computed). Surfacing defaults answers "did I forget to set this?" —
+    silent physical defaults are dangerous."""
+    rows = [{"field": f"body.{f}", "value": getattr(spec.body, f), "source": _prov(spec.body, f)}
+            for f in ("shape", "size", "mass")]
+    if spec.base == "differential-drive" or any(p.use == "differential-drive" for p in spec.parts):
+        rows += [{"field": f"drive.{f}", "value": getattr(spec.drive, f), "source": _prov(spec.drive, f)}
+                 for f in ("wheel_radius", "wheel_separation")]
+    for i, s in enumerate(spec.sensors):
+        rows.append({"field": f"sensors[{i}].mount",
+                     "value": s.mount if s.mount is not None else "per-type default",
+                     "source": _prov(s, "mount")})
+    rows.append({"field": "link inertia", "value": None, "source": "inferred",
+                 "note": "auto-computed from shape + mass"})
+    return rows
+
+
 def _summary(source: str, frag: Fragment, note: str = "") -> dict:
     entry = {
         "source": source,
@@ -54,7 +76,7 @@ def explain_robot(spec: RobotSpec, world_name: str = "warehouse") -> dict:
                 produced.append(_summary(f"sensors[{i}]: {s.type} (added)",
                                          SENSORS[s.type](s.model_dump(), s.on or "base_link", ctx),
                                          "injected into the imported URDF"))
-        return {"robot": spec.name, "produced": produced}
+        return {"robot": spec.name, "produced": produced, "provenance": provenance(spec)}
 
     produced, base_link, body_size = [], None, body_xyz(spec.body.size, spec.body.shape)
     for i, part in enumerate(parts):
@@ -81,4 +103,4 @@ def explain_robot(spec: RobotSpec, world_name: str = "warehouse") -> dict:
             on = f" on {s.on}" if s.on else f" on {base_link}"
             produced.append(_summary(f"sensors[{i}]: {s.type}{on}",
                                      SENSORS[s.type](s.model_dump(), s.on or base_link, ctx)))
-    return {"robot": spec.name, "produced": produced}
+    return {"robot": spec.name, "produced": produced, "provenance": provenance(spec)}

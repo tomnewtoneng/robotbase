@@ -43,6 +43,17 @@ def test_authored_project_urdf_carries_a_source_map():
         assert "Source map" in urdf and "base: differential-drive" in urdf
 
 
+def test_provenance_distinguishes_authored_from_default():
+    from robotbase.robotspec.explain import provenance
+    spec = _spec({"base": "differential-drive", "body": {"size": [0.4, 0.3, 0.15]}})
+    rows = {r["field"]: r["source"] for r in provenance(spec)}
+    assert rows["body.size"] == "authored"          # the agent set it
+    assert rows["body.mass"] == "default"           # left to the compiler default
+    assert rows["link inertia"] == "inferred"       # computed
+    # provenance rides along in the explain report
+    assert "provenance" in explain_robot(spec)
+
+
 def test_explained_links_match_compiled_urdf_no_drift():
     spec = _spec({"base": "differential-drive", "sensors": [{"type": "lidar"}, {"type": "camera"}]})
     explained = {name for e in explain_robot(spec)["produced"] for name in e["links"]}

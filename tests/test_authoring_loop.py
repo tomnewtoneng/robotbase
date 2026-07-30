@@ -43,6 +43,18 @@ def test_spawn_name_is_compiled_from_robot_yaml_not_project_name():
         assert cfg["robot_name"] == "myrobot"          # spec name, not "projname"
 
 
+def test_recompile_syncs_manifest_identity_after_rename():
+    # P2: renaming the robot in robot.yaml keeps the manifest's robot.name in sync on recompile.
+    import yaml
+    with tempfile.TemporaryDirectory() as tmp:
+        dest = create_project("projx", tmp, template_dir("differential-drive"))
+        assert yaml.safe_load(open(os.path.join(dest, "robotbase.yaml")))["robot"]["name"] == "projx"
+        open(os.path.join(dest, "robot.yaml"), "w").write(
+            "version: 1\nname: renamed\nbase: differential-drive\n")
+        recompile_project(dest)
+        assert yaml.safe_load(open(os.path.join(dest, "robotbase.yaml")))["robot"]["name"] == "renamed"
+
+
 def test_import_add_sensor_is_idempotent_across_recompiles():
     # import a sensorless URDF, add a lidar, recompile twice -> exactly one injected sensor.
     with tempfile.TemporaryDirectory() as tmp:
