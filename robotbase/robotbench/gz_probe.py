@@ -30,10 +30,22 @@ def parse_model_xy(dynamic_pose_output: str, model_name: str) -> tuple[float, fl
     return (float(xm.group(1)) if xm else 0.0, float(ym.group(1)) if ym else 0.0)
 
 
+def discover_world(sh: Sh, fallback: str = "warehouse") -> str:
+    """Find the running world's name from `gz topic -l`. The world name is NOT part of the robot
+    interface contract, so the agent may call it anything (e.g. 'default') — never assume it."""
+    out = sh("gz topic -l")
+    for line in out.splitlines():
+        m = re.match(r"/world/([^/]+)/dynamic_pose/info\s*$", line.strip())
+        if m:
+            return m.group(1)
+    return fallback
+
+
 def sample_model_pose(model_name: str, duration_s: float, sh: Sh, *,
                       world: str = "warehouse", hz: float = 10.0) -> list[tuple[float, float, float]]:
-    """Sample (t, x, y) world positions of `model_name` for `duration_s` seconds."""
-    topic = f"/world/{world}/dynamic_pose/info"
+    """Sample (t, x, y) world positions of `model_name` for `duration_s` seconds. The world name
+    is auto-discovered (the agent may name its world anything); `world` is only the fallback."""
+    topic = f"/world/{discover_world(sh, world)}/dynamic_pose/info"
     trace: list[tuple[float, float, float]] = []
     start = time.monotonic()
     period = 1.0 / hz

@@ -23,7 +23,12 @@ Trace = list[tuple[float, float, float]]
 
 
 def min_distance_to(points, ox: float, oy: float) -> float:
-    """Closest Euclidean approach of a path to (ox, oy). `points` elements are (x, y, ...)."""
+    """Closest Euclidean approach of a path to (ox, oy). `points` elements are (x, y, ...).
+
+    An empty path (no ground-truth pose samples — e.g. the robot never spawned under the expected
+    model name) yields +inf, so predicates score it a clean fail instead of crashing on min([])."""
+    if not points:
+        return float("inf")
     return min(math.hypot(p[0] - ox, p[1] - oy) for p in points)
 
 

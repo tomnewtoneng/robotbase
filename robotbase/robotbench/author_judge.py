@@ -35,7 +35,11 @@ def author_judge(project_dir: str, task: dict, *, bringup_fn, run_controller_fn,
                 run_controller_fn(project_dir, spec.duration_s)
                 trace = sample_fn(task["model_name"], spec.duration_s)
                 ok = bool(spec.predicate(trace, spec.world_obstacles))
-                reason = "pass" if ok else "predicate failed"
+                if not trace:
+                    reason = (f"no ground-truth pose samples for model '{task['model_name']}' "
+                              "(did the robot spawn under that name?)")
+                else:
+                    reason = "pass" if ok else "predicate failed"
         except Exception as e:  # a crash in bring-up/controller/sampling is a failed trial, not a crash
             reason = f"error: {e}"
         finally:

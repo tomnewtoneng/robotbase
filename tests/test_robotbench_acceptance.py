@@ -37,3 +37,11 @@ def test_spawn_pose_is_deterministic_per_seed():
 
 def test_min_distance_helper():
     assert round(min_distance_to([(0, 0, 0), (0, 1, 0)], 0.0, 3.0), 2) == 2.0
+
+
+def test_empty_trace_scores_clean_fail_not_crash():
+    # No ground-truth samples (robot never spawned as `robot`) -> inf distance -> predicate False,
+    # never a min([]) crash.
+    assert min_distance_to([], 2.0, 0.0) == float("inf")
+    spec = SPECS["author_stop_at_1m"]
+    assert spec.predicate([], spec.world_obstacles) is False

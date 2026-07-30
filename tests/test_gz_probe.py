@@ -1,4 +1,11 @@
-from robotbase.robotbench.gz_probe import parse_model_xy, sample_model_pose, cmd_vel_is_live
+from robotbase.robotbench.gz_probe import (cmd_vel_is_live, discover_world, parse_model_xy,
+                                           sample_model_pose)
+
+
+def test_discover_world_reads_actual_world_name():
+    sh = lambda _c: "/clock\n/world/default/dynamic_pose/info\n/world/default/stats"
+    assert discover_world(sh) == "default"                 # agent named it 'default', not warehouse
+    assert discover_world(lambda _c: "/clock\n/rosout") == "warehouse"   # fallback when absent
 
 DUMP = '''pose {
   name: "robot"
