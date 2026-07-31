@@ -38,8 +38,8 @@ TASKS = [
      "controller": "stop_at_1m", "judge_scenario": "author_stop_at_1m",
      "import_urdf": "vendor_bot.urdf",
      "prompt": "Bring the provided vendor_bot.urdf under management and add a forward LiDAR so the "
-               "robot publishes /scan, in the provided world. Respond to /cmd_vel, spawn as model "
-               "`robot`."},
+               "robot publishes /scan, in a 6x6 m walled world containing a box obstacle at (2, 0) "
+               "that the robot must stop before. Respond to /cmd_vel and spawn as model `robot`."},
 ]
 
 
