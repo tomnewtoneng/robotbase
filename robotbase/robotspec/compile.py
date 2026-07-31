@@ -8,8 +8,10 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from robotbase.robotspec.ir import Fragment, JointIR, LinkIR, body_xyz, link_from_shape
-from robotbase.robotspec.merge import fixed_joint, merge_and_render
+from robotbase.robotspec.ir import Fragment, body_xyz
+from robotbase.robotspec.semantic import Joint, RigidBody
+from robotbase.robotspec.backends.urdf import render_body, render_joint, render_urdf
+from robotbase.robotspec.merge import build_model, fixed_joint
 from robotbase.robotspec.modules import MODULES, UnknownArchetype
 from robotbase.robotspec.schema import Part, RobotSpec
 from robotbase.robotspec.sensors import SENSORS, Ctx, UnknownSensor, infer_sensors_from_urdf
@@ -42,10 +44,10 @@ def _raw_part(part: Part) -> Fragment:
     for l in part.links:
         name = _need(l, "name", "link")
         if "xml" in l:
-            f.links.append(LinkIR(name, l["xml"]))
+            f.links.append(RigidBody(name, raw_xml=l["xml"]))
         else:
-            f.links.append(link_from_shape(name, l.get("shape", "box"),
-                                           _need(l, "size", f"link {name!r}"), l.get("mass", 1.0)))
+            f.links.append(RigidBody(name, (l.get("shape", "box"), _need(l, "size", f"link {name!r}")),
+                                     mass=l.get("mass", 1.0)))
     for j in part.joints:
         name = _need(j, "name", "joint")
         parent, child = _need(j, "parent", f"joint {name!r}"), _need(j, "child", f"joint {name!r}")
@@ -54,12 +56,8 @@ def _raw_part(part: Part) -> Fragment:
         if j.get("type", "fixed") == "fixed":
             f.joints.append(fixed_joint(name, parent, child, xyz=xyz, rpy=rpy))
         else:
-            axis = j.get("axis", "0 0 1")
-            f.joints.append(JointIR(name,
-                f'\n  <joint name="{name}" type="{j["type"]}">'
-                f'<parent link="{parent}"/><child link="{child}"/>'
-                f'<origin xyz="{xyz}" rpy="{rpy}"/><axis xyz="{axis}"/></joint>',
-                parent=parent, child=child))
+            f.joints.append(Joint(name, j["type"], parent, child, xyz=xyz, rpy=rpy,
+                                  axis=j.get("axis", "0 0 1")))
     return f
 
 
@@ -109,7 +107,8 @@ def compile_robot(spec: RobotSpec, world_name: str = "warehouse") -> CompiledRob
                 raise UnknownSensor(f"unknown sensor {s.type!r}; known: {sorted(SENSORS)}")
             frag = SENSORS[s.type](s.model_dump(), s.on or "base_link", ctx)
             bridges += frag.bridges
-            sensor_xml += [l.xml for l in frag.links] + [j.xml for j in frag.joints] + frag.gazebo
+            sensor_xml += ([render_body(l) for l in frag.links]
+                           + [render_joint(j) for j in frag.joints] + frag.gazebo)
             _wire(frag)
         if sensor_xml:
             idx = urdf.rfind("</robot>")
@@ -157,13 +156,14 @@ def compile_robot(spec: RobotSpec, world_name: str = "warehouse") -> CompiledRob
             raise UnknownSensor(f"unknown sensor {s.type!r}; known: {sorted(SENSORS)}")
         fragments.append(SENSORS[s.type](s.model_dump(), s.on or base_link, ctx))
 
-    urdf, bridges, world_systems, m = merge_and_render(spec.name, root, fragments)
+    model = build_model(spec.name, root, fragments)
+    urdf = render_urdf(model)
     manifest = {
         "robot": {"template": spec.base, "name": spec.name},
-        "sensors": m["sensors"],
-        "control": m["control"],
-        "ready_topics": m["ready_topics"],
-        "fixed_base": m["fixed_base"],
+        "sensors": model.manifest_sensors,
+        "control": model.control,
+        "ready_topics": model.ready_topics,
+        "fixed_base": model.fixed_base,
     }
-    return CompiledRobot(name=spec.name, urdf=urdf, bridges=bridges,
-                         world_systems=world_systems, manifest=manifest, spawn_z=0.1)
+    return CompiledRobot(name=spec.name, urdf=urdf, bridges=model.bridges,
+                         world_systems=model.world_systems, manifest=manifest, spawn_z=0.1)

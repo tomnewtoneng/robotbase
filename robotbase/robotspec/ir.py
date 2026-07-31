@@ -8,6 +8,10 @@ hand-authored parts are not finicky.
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from robotbase.robotspec.semantic import Joint, RigidBody
 
 
 @dataclass
@@ -32,8 +36,8 @@ class JointIR:
 
 @dataclass
 class Fragment:
-    links: list[LinkIR] = field(default_factory=list)
-    joints: list[JointIR] = field(default_factory=list)
+    links: list[RigidBody] = field(default_factory=list)
+    joints: list[Joint] = field(default_factory=list)
     gazebo: list[str] = field(default_factory=list)          # <gazebo> blocks (plugins/sensors/per-ref)
     bridges: list[Bridge] = field(default_factory=list)
     world_systems: list[str] = field(default_factory=list)

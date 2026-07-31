@@ -4,9 +4,9 @@ from __future__ import annotations
 import re
 from dataclasses import dataclass
 
-from robotbase.robotspec.ir import Bridge, Fragment, JointIR, LinkIR
+from robotbase.robotspec.ir import Bridge, Fragment
 from robotbase.robotspec.semantic import Sensor
-from robotbase.robotspec.backends.urdf import render_sensor
+from robotbase.robotspec.backends.urdf import sensor_parts
 
 
 class UnknownSensor(ValueError):
@@ -45,13 +45,13 @@ def _mount(params, on_link, ctx, base_default):
 
 
 def _emit(f: Fragment, s: Sensor) -> None:
-    """Render a Sensor through the URDF backend and attach its link/joint/gazebo to the fragment.
-    A contact sensor has no frame link/joint (it sits on an existing chassis link)."""
-    link_xml, joint_xml, gazebo_xml = render_sensor(s)
-    if link_xml:
-        f.links.append(LinkIR(s.link_name, link_xml))
-    if joint_xml:
-        f.joints.append(JointIR(f"{s.kind}_joint", joint_xml, parent=s.mount_link, child=s.link_name))
+    """Attach a Sensor's typed link/joint + gz block to the fragment. A contact sensor has no frame
+    link/joint (it sits on an existing chassis link)."""
+    body, joint, gazebo_xml = sensor_parts(s)
+    if body is not None:
+        f.links.append(body)
+    if joint is not None:
+        f.joints.append(joint)
     f.gazebo.append(gazebo_xml)
 
 

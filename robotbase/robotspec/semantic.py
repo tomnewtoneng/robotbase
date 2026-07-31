@@ -97,6 +97,8 @@ class RigidBody:
     has_collision: bool = True
     material: str | None = "grey"
     rgba: str = "0.4 0.4 0.45 1"
+    raw_xml: str | None = None  # explicit escape hatch: a user's verbatim <link> from a raw part
+    # (portability-breaking by design — a non-URDF backend cannot render it).
 
 
 @dataclass(frozen=True)

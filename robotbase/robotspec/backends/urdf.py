@@ -43,6 +43,8 @@ def render_body(b: RigidBody) -> str:
     origins, an ODE friction surface, a visual-only body, and an omitted material are all supported so
     the archetype links render from typed fields. A plain shape (no overrides) renders exactly as the
     legacy link_from_shape did."""
+    if b.raw_xml is not None:
+        return b.raw_xml
     if b.geometry is None:
         return f'\n  <link name="{b.name}"/>'
     g = b.geometry if isinstance(b.geometry, (Box, Cylinder, Sphere)) else geometry_from_spec(*b.geometry)
@@ -119,16 +121,16 @@ def _sensor_gazebo(s: Sensor) -> str:
     raise UnknownGzSensor(f"no URDF rendering for gz sensor type {s.gz_type!r}")
 
 
-def render_sensor(s: Sensor) -> tuple[str, str, str]:
-    """Render a sensor to (link_xml, joint_xml, gazebo_xml). A contact sensor sits on an existing
-    chassis link, so it has no frame link/joint (both empty). Everything else gets a massless frame
-    link and a fixed mounting joint (rpy always present — matching the old merge.fixed_joint)."""
-    link_xml = render_body(RigidBody(s.link_name)) if s.link_name else ""
-    joint_xml = ""
+def sensor_parts(s: Sensor) -> tuple[RigidBody | None, Joint | None, str]:
+    """A sensor as typed parts: its frame link (RigidBody), its fixed mounting joint (Joint), and the
+    gz ``<sensor>`` block (still a string — plugin/sensor gz XML stays pre-rendered for now). A
+    contact sensor sits on an existing chassis link, so it has no frame link/joint (both None). The
+    mounting joint carries rpy="0 0 0" to match the old merge.fixed_joint form."""
+    body = RigidBody(s.link_name) if s.link_name else None
+    joint = None
     if s.mount_link is not None:
-        joint_xml = render_joint(
-            Joint(f"{s.kind}_joint", "fixed", s.mount_link, s.link_name, xyz=s.xyz, rpy="0 0 0"))
-    return link_xml, joint_xml, _sensor_gazebo(s)
+        joint = Joint(f"{s.kind}_joint", "fixed", s.mount_link, s.link_name, xyz=s.xyz, rpy="0 0 0")
+    return body, joint, _sensor_gazebo(s)
 
 
 def render_urdf(model: RobotModel) -> str:

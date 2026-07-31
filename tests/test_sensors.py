@@ -36,10 +36,10 @@ def test_unknown_sensor_key_absent():
 def test_sensor_on_nonbase_link_defaults_to_zero_offset():
     from robotbase.robotspec.sensors import Ctx, SENSORS
     ctx = Ctx(world="w", robot_name="r", body_size=[0.35, 0.30, 0.15], base_link="base_link")
-    on_base = SENSORS["lidar"]({}, "base_link", ctx).joints[0].xml
-    on_mast = SENSORS["lidar"]({}, "mast", ctx).joints[0].xml
-    assert 'xyz="0 0 0"' in on_mast          # non-base link -> zero offset
-    assert 'xyz="0 0 0"' not in on_base       # base link -> the tuned default offset
+    on_base = SENSORS["lidar"]({}, "base_link", ctx).joints[0].xyz
+    on_mast = SENSORS["lidar"]({}, "mast", ctx).joints[0].xyz
+    assert on_mast == "0 0 0"          # non-base link -> zero offset
+    assert on_base != "0 0 0"          # base link -> the tuned default offset
 
 
 def test_camera_and_depth_emitters():

@@ -1,19 +1,18 @@
-"""Task 5 — the URDF backend renders each sensor's gz XML byte-identically to the old sensors.py.
+"""Task 5/7 — sensor_parts yields typed link/joint + the gz block; the backend renders the gz XML.
 
-The expected strings below are snapshots of the pre-refactor output; the golden guard
+The gz strings below are snapshots of the pre-refactor output; the golden guard
 (tests/test_golden_output.py) additionally covers lidar/camera end-to-end in the templates.
 """
-from robotbase.robotspec.semantic import Sensor
-from robotbase.robotspec.backends.urdf import render_sensor
+from robotbase.robotspec.semantic import Sensor, RigidBody, Joint
+from robotbase.robotspec.backends.urdf import sensor_parts
 
 
-def test_lidar_renders_link_joint_and_gazebo():
+def test_lidar_yields_frame_link_mount_joint_and_gazebo():
     s = Sensor(kind="lidar", name="lidar", gz_type="gpu_lidar", reference="lidar_link",
                topic="/scan", mount_link="base_link", xyz="0.1 0 0.2", link_name="lidar_link")
-    link, joint, gz = render_sensor(s)
-    assert link == '\n  <link name="lidar_link"/>'
-    assert joint == ('\n  <joint name="lidar_joint" type="fixed"><parent link="base_link"/>'
-                     '<child link="lidar_link"/><origin xyz="0.1 0 0.2" rpy="0 0 0"/></joint>')
+    body, joint, gz = sensor_parts(s)
+    assert body == RigidBody("lidar_link")
+    assert joint == Joint("lidar_joint", "fixed", "base_link", "lidar_link", xyz="0.1 0 0.2", rpy="0 0 0")
     assert gz == (
         '\n  <gazebo reference="lidar_link"><sensor name="lidar" type="gpu_lidar">'
         '<topic>scan</topic><gz_frame_id>lidar_link</gz_frame_id>'
@@ -26,7 +25,7 @@ def test_lidar_renders_link_joint_and_gazebo():
 def test_imu_gazebo():
     s = Sensor(kind="imu", name="imu", gz_type="imu", reference="imu_link",
                topic="/imu", mount_link="base_link", xyz="0 0 0.075", link_name="imu_link")
-    _, _, gz = render_sensor(s)
+    _, _, gz = sensor_parts(s)
     assert gz == (
         '\n  <gazebo reference="imu_link"><sensor name="imu" type="imu">'
         '<topic>imu</topic><gz_frame_id>imu_link</gz_frame_id>'
@@ -37,7 +36,7 @@ def test_camera_gazebo_with_resolution():
     s = Sensor(kind="camera", name="camera", gz_type="camera", reference="camera_link",
                topic="/image", mount_link="base_link", xyz="0.15 0 0.075", link_name="camera_link",
                resolution=(320, 240))
-    _, _, gz = render_sensor(s)
+    _, _, gz = sensor_parts(s)
     assert gz == (
         '\n  <gazebo reference="camera_link"><sensor name="camera" type="camera">'
         '<topic>image</topic><gz_frame_id>camera_link</gz_frame_id>'
@@ -51,7 +50,7 @@ def test_depth_gazebo_with_resolution():
     s = Sensor(kind="depth", name="depth", gz_type="depth_camera", reference="depth_link",
                topic="/depth", mount_link="base_link", xyz="0.15 0 0.075", link_name="depth_link",
                resolution=(320, 240))
-    _, _, gz = render_sensor(s)
+    _, _, gz = sensor_parts(s)
     assert gz == (
         '\n  <gazebo reference="depth_link"><sensor name="depth" type="depth_camera">'
         '<topic>depth</topic><gz_frame_id>depth_link</gz_frame_id>'
@@ -61,12 +60,12 @@ def test_depth_gazebo_with_resolution():
         '<clip><near>0.1</near><far>10.0</far></clip></camera></sensor></gazebo>')
 
 
-def test_contact_gazebo_has_no_link_or_joint():
+def test_contact_has_no_link_or_joint():
     collision = "base_footprint_fixed_joint_lump__base_link_collision"
     s = Sensor(kind="contact", name="bumper", gz_type="contact", reference="base_footprint",
                topic="/bumper", collision=collision)
-    link, joint, gz = render_sensor(s)
-    assert link == "" and joint == ""
+    body, joint, gz = sensor_parts(s)
+    assert body is None and joint is None
     assert gz == (
         '\n  <gazebo reference="base_footprint"><sensor name="bumper" type="contact">'
         '<always_on>true</always_on><update_rate>30</update_rate>'

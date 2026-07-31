@@ -31,9 +31,11 @@ def test_render_body_none_geometry_is_a_frame_link():
 
 
 def test_render_joint_matches_legacy_fixed_joint():
-    legacy = fixed_joint("lidar_joint", "base_link", "lidar_link", xyz="0.1 0 0.2").xml
-    j = Joint("lidar_joint", "fixed", "base_link", "lidar_link", xyz="0.1 0 0.2", rpy="0 0 0")
-    assert render_joint(j) == legacy
+    # fixed_joint is now a Joint factory; rendering it gives the historical both-attrs origin
+    j = fixed_joint("lidar_joint", "base_link", "lidar_link", xyz="0.1 0 0.2")
+    assert render_joint(j) == (
+        '\n  <joint name="lidar_joint" type="fixed"><parent link="base_link"/>'
+        '<child link="lidar_link"/><origin xyz="0.1 0 0.2" rpy="0 0 0"/></joint>')
 
 
 def test_render_joint_without_rpy_omits_it():
