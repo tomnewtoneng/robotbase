@@ -1,4 +1,4 @@
-# RobotBench Results — RobotBench v1
+# RobotBench Results — RobotBench v2
 
 Model: `claude-sonnet-5`. The with-vs-without validation experiment (see `design/robotbench-validation.md`).
 
@@ -8,14 +8,14 @@ Model: `claude-sonnet-5`. The with-vs-without validation experiment (see `design
 
 | arm | solved | capped | self-verify acc. | fp | fn | mean turns | n (concluded) |
 |---|---|---|---|---|---|---|---|
-| with | 0.75 | 0.25 | 1.0 | 0.0 | 0.0 | 15.75 | 4 (3) |
-| without | 0.75 | 1.0 | - | - | - | 19.0 | 4 (0) |
+| with | 0.75 | 0.0 | 0.75 | 0.25 | 0.0 | 33.25 | 4 (4) |
+| without | 0.0 | 0.5 | 0.0 | 1.0 | 0.0 | 40.25 | 4 (2) |
 
 ## Per-task (solved rate)
 
 | task | with | without |
 |---|---|---|
-| arm/reach-configuration | 1.0 | 1.0 |
-| diff/reach-goal | 1.0 | 1.0 |
-| diff/stop-before-obstacle | 1.0 | 1.0 |
-| diff/turn-around | 0.0 | 0.0 |
+| author/diff-lidar-world | 1.0 | 0.0 |
+| author/sensor-on-mast | 1.0 | 0.0 |
+| author/two-sensor | 1.0 | 0.0 |
+| import/add-sensor | 0.0 | 0.0 |

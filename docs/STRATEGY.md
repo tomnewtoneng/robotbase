@@ -82,12 +82,25 @@ Gaps vs the vision (in moat order):
 explicitly warns breadth (more robots/sensors) is not the moat, and that the agent-native thesis
 must be *tested, not assumed*.
 
-### P0 — NOW: finish RobotBench (the gate). 🚧 in progress
+### P0 — RobotBench (the gate). ✅ VALIDATED (v2 authoring, n=1, 2026-07-31)
 Prove the core hypothesis before deepening the compiler: *do coding agents build reliable robotics
-faster, with fewer false-success claims, WITH Robotbase than with native ROS?* The pilot already
-hints yes (WITH solved in 1 edit / correct self-verification; WITHOUT made 0 edits and capped).
-Finish the breadth run → the full run → publish `ROBOTBENCH-RESULTS.md`. **If it validates, do
-P1–P4. If it doesn't, the kill-criteria (§4) are the honest off-ramp — weeks spent, not months.**
+faster, with fewer false-success claims, WITH Robotbase than with native ROS?* **The clean v2 run
+says yes** (`docs/ROBOTBENCH-RESULTS.md`; Sonnet, 4 authoring tasks × both arms × 1 trial, a fair
+harness — identical prompt/rules/contract/controller/judge/caps, the only difference being
+Robotbase's declarative compiler + tools vs. raw URDF/SDF/launch):
+
+| arm | solved | capped | self-verify acc. | false-positive | mean turns |
+|---|---|---|---|---|---|
+| **with** | **0.75** | 0.0 | **0.75** | 0.25 | 33 |
+| **without** | **0.0** | 0.5 | 0.0 | **1.0** | 40 |
+
+WITH agents solved 3/4 tasks and correctly knew it; raw-ROS agents solved 0/4, ran out of turns
+half the time, and every time they *did* conclude they were **wrong** (100% false-positive — claimed
+success on a robot that doesn't do the task). That is the vision's headline failure — *"an agent can
+write robot code; it can't tell if the robot works"* — measured. **Caveats:** n=1 (one trial/task,
+so treat as directional not statistical); WITH is not perfect (one genuine false-confidence on the
+hardest custom-URDF import task). **Gate passed → proceed with P1–P4.** (Cost: $6.47; a contaminated
+earlier double-run was discarded and a concurrency lock added so it cannot recur.)
 
 ### Post-RobotBench-v2 review — what the build EMPIRICALLY taught the roadmap (2026-07-30)
 
