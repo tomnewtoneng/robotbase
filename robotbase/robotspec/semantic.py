@@ -100,3 +100,23 @@ class Joint:
     rpy: str | None = None
     axis: str | None = None
     limit: tuple[str, str, str, str] | None = None
+
+
+@dataclass(frozen=True)
+class Sensor:
+    """A sensor to mount on the robot. The backend renders its frame link (``link_name``), its fixed
+    mounting joint (``mount_link`` + ``xyz``), and the gz ``<sensor>`` block (keyed by ``gz_type``).
+    ``reference`` is the ``<gazebo reference="..">``/``gz_frame_id`` link (the sensor link, or
+    ``base_footprint`` for a chassis contact sensor). ``resolution`` is camera/depth ``(w, h)``;
+    ``collision`` is the contact sensor's collision element. Bridges/world-systems/manifest entries
+    stay with the emitter — they are wiring, not geometry."""
+    kind: str
+    name: str
+    gz_type: str
+    reference: str
+    topic: str
+    mount_link: str | None = None
+    xyz: str | None = None
+    link_name: str | None = None
+    resolution: tuple[int, int] | None = None
+    collision: str | None = None

@@ -15,9 +15,14 @@ from robotbase.robotspec.semantic import (
     Geometry,
     RigidBody,
     Joint,
+    Sensor,
     geometry_from_spec,
     inertial_for,
 )
+
+
+class UnknownGzSensor(ValueError):
+    ...
 
 
 def _geom_xml(g: Geometry) -> str:
@@ -58,3 +63,54 @@ def render_joint(j: Joint) -> str:
     return (f'\n  <joint name="{j.name}" type="{j.type}">'
             f'<parent link="{j.parent}"/><child link="{j.child}"/>'
             f'{origin}{axis}{limit}</joint>')
+
+
+def _sensor_gazebo(s: Sensor) -> str:
+    """The gz `<gazebo reference=..><sensor ..>..</sensor></gazebo>` block, keyed by gz_type."""
+    gt = s.topic.lstrip("/")
+    ref = s.reference
+    head = f'\n  <gazebo reference="{ref}"><sensor name="{s.name}" type="{s.gz_type}">'
+    if s.gz_type == "gpu_lidar":
+        return (head
+                + f'<topic>{gt}</topic><gz_frame_id>{ref}</gz_frame_id>'
+                + '<update_rate>10</update_rate><always_on>true</always_on><visualize>false</visualize>'
+                + '<lidar><scan><horizontal><samples>180</samples><resolution>1</resolution>'
+                + '<min_angle>-1.5708</min_angle><max_angle>1.5708</max_angle></horizontal></scan>'
+                + '<range><min>0.08</min><max>10.0</max><resolution>0.01</resolution></range></lidar></sensor></gazebo>')
+    if s.gz_type == "imu":
+        return (head
+                + f'<topic>{gt}</topic><gz_frame_id>{ref}</gz_frame_id>'
+                + '<update_rate>50</update_rate><always_on>true</always_on></sensor></gazebo>')
+    if s.gz_type == "camera":
+        w, h = s.resolution
+        return (head
+                + f'<topic>{gt}</topic><gz_frame_id>{ref}</gz_frame_id>'
+                + '<update_rate>10</update_rate><always_on>true</always_on><visualize>false</visualize>'
+                + '<camera><horizontal_fov>1.047</horizontal_fov>'
+                + f'<image><width>{w}</width><height>{h}</height><format>R8G8B8</format></image>'
+                + '<clip><near>0.1</near><far>100</far></clip></camera></sensor></gazebo>')
+    if s.gz_type == "depth_camera":
+        w, h = s.resolution
+        return (head
+                + f'<topic>{gt}</topic><gz_frame_id>{ref}</gz_frame_id>'
+                + '<update_rate>10</update_rate><always_on>true</always_on><visualize>false</visualize>'
+                + '<camera><horizontal_fov>1.047</horizontal_fov>'
+                + f'<image><width>{w}</width><height>{h}</height></image>'
+                + '<clip><near>0.1</near><far>10.0</far></clip></camera></sensor></gazebo>')
+    if s.gz_type == "contact":
+        return (head
+                + '<always_on>true</always_on><update_rate>30</update_rate>'
+                + f'<contact><collision>{s.collision}</collision></contact></sensor></gazebo>')
+    raise UnknownGzSensor(f"no URDF rendering for gz sensor type {s.gz_type!r}")
+
+
+def render_sensor(s: Sensor) -> tuple[str, str, str]:
+    """Render a sensor to (link_xml, joint_xml, gazebo_xml). A contact sensor sits on an existing
+    chassis link, so it has no frame link/joint (both empty). Everything else gets a massless frame
+    link and a fixed mounting joint (rpy always present — matching the old merge.fixed_joint)."""
+    link_xml = render_body(RigidBody(s.link_name)) if s.link_name else ""
+    joint_xml = ""
+    if s.mount_link is not None:
+        joint_xml = render_joint(
+            Joint(f"{s.kind}_joint", "fixed", s.mount_link, s.link_name, xyz=s.xyz, rpy="0 0 0"))
+    return link_xml, joint_xml, _sensor_gazebo(s)
