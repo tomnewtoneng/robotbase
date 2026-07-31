@@ -72,3 +72,31 @@ def inertial_for(g: Geometry, mass: float) -> Inertial:
     r = g.radius
     i = 2 * mass * r*r / 5
     return Inertial(mass, i, i, i)
+
+
+@dataclass(frozen=True)
+class RigidBody:
+    """A link: a named body with an optional geometry (None = a massless frame link, e.g.
+    ``base_footprint``/``world``). ``geometry`` is a typed Geometry or a ``(shape, size)`` tuple; the
+    URDF backend auto-computes the inertia via ``inertial_for``."""
+    name: str
+    geometry: "Geometry | tuple[str, list[float]] | None" = None
+    mass: float = 0.0
+    material: str = "grey"
+    rgba: str = "0.4 0.4 0.45 1"
+
+
+@dataclass(frozen=True)
+class Joint:
+    """A joint between two links. ``xyz``/``rpy``/``axis`` are backend-agnostic strings so a migrated
+    module reproduces its exact placement bytes; ``rpy=None`` renders an xyz-only origin (the module
+    form) while a set ``rpy`` renders both (the ``fixed_joint`` form). ``limit`` is the
+    ``(lower, upper, effort, velocity)`` attribute strings, present only for revolute/prismatic."""
+    name: str
+    type: str
+    parent: str
+    child: str
+    xyz: str = "0 0 0"
+    rpy: str | None = None
+    axis: str | None = None
+    limit: tuple[str, str, str, str] | None = None
