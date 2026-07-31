@@ -78,31 +78,12 @@ def _fmt(v: float) -> str:
 
 
 def link_from_shape(name, shape, size, mass, material="grey", rgba="0.4 0.4 0.45 1") -> LinkIR:
-    if shape not in SHAPE_SIZE:
-        raise UnknownShape(f"unknown shape {shape!r}; known: box, cylinder, sphere")
-    need, fmt = SHAPE_SIZE[shape]
-    size = list(size)
-    if len(size) != need:  # clean, actionable error instead of a bare unpack crash
-        raise ShapeSizeError(
-            f"{shape} '{name}' size must be {fmt} ({need} value{'s' if need > 1 else ''}), "
-            f"got {len(size)}: {size}")
-    if shape == "box":
-        x, y, z = size
-        ixx, iyy, izz = mass * (y*y + z*z) / 12, mass * (x*x + z*z) / 12, mass * (x*x + y*y) / 12
-        geom = f'<box size="{_fmt(x)} {_fmt(y)} {_fmt(z)}"/>'
-    elif shape == "cylinder":
-        r, h = size
-        ixx = iyy = mass * (3*r*r + h*h) / 12
-        izz = mass * r*r / 2
-        geom = f'<cylinder radius="{_fmt(r)}" length="{_fmt(h)}"/>'
-    else:  # sphere
-        r = size[0]
-        ixx = iyy = izz = 2 * mass * r*r / 5
-        geom = f'<sphere radius="{_fmt(r)}"/>'
-    xml = (f'\n  <link name="{name}">'
-           f'\n    <inertial><mass value="{_fmt(mass)}"/>'
-           f'<inertia ixx="{_fmt(ixx)}" ixy="0" ixz="0" iyy="{_fmt(iyy)}" iyz="0" izz="{_fmt(izz)}"/></inertial>'
-           f'\n    <collision><geometry>{geom}</geometry></collision>'
-           f'\n    <visual><geometry>{geom}</geometry><material name="{material}"><color rgba="{rgba}"/></material></visual>'
-           f'\n  </link>')
-    return LinkIR(name, xml)
+    """Turn a {shape, size, mass} primitive into a full <link> with an auto-computed inertia tensor.
+
+    A thin adapter over the semantic IR: it builds a RigidBody and renders it through the one URDF
+    backend, so there is a single renderer. The geometry/size validation (UnknownShape/ShapeSizeError)
+    now lives in semantic.geometry_from_spec. (Local imports avoid an ir -> backends -> semantic -> ir
+    import cycle.)"""
+    from robotbase.robotspec.semantic import RigidBody
+    from robotbase.robotspec.backends.urdf import render_body
+    return LinkIR(name, render_body(RigidBody(name, (shape, size), mass, material, rgba)))

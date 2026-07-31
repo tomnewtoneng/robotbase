@@ -40,6 +40,21 @@ def test_render_joint_without_rpy_omits_it():
         '<child link="base_link"/><origin xyz="0 0 0.125"/></joint>')
 
 
+def test_link_from_shape_delegates_to_the_backend():
+    # after Task 4, ir.link_from_shape is a thin adapter over render_body — one renderer.
+    for shape, size, mass in (("box", [0.3, 0.2, 0.1], 4.0), ("cylinder", [0.05, 0.1], 0.5), ("sphere", [0.05], 0.1)):
+        assert link_from_shape("x", shape, size, mass).xml == render_body(RigidBody("x", (shape, size), mass))
+
+
+def test_link_from_shape_still_validates_via_the_semantic_path():
+    import pytest
+    from robotbase.robotspec.ir import ShapeSizeError, UnknownShape
+    with pytest.raises(ShapeSizeError):
+        link_from_shape("chassis", "box", [1, 2], 1.0)
+    with pytest.raises(UnknownShape):
+        link_from_shape("chassis", "wedge", [1, 2, 3], 1.0)
+
+
 def test_render_joint_with_axis_and_limit():
     j = Joint("shoulder_joint", "revolute", "arm_base_link", "upper_arm",
               xyz="0 0 0.05", axis="0 1 0", limit=("-3.14", "3.14", "100", "3.0"))
