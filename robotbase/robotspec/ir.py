@@ -86,4 +86,4 @@ def link_from_shape(name, shape, size, mass, material="grey", rgba="0.4 0.4 0.45
     import cycle.)"""
     from robotbase.robotspec.semantic import RigidBody
     from robotbase.robotspec.backends.urdf import render_body
-    return LinkIR(name, render_body(RigidBody(name, (shape, size), mass, material, rgba)))
+    return LinkIR(name, render_body(RigidBody(name, (shape, size), mass, material=material, rgba=rgba)))
