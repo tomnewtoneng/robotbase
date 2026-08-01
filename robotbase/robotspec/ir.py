@@ -12,7 +12,7 @@ from dataclasses import dataclass, field
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from robotbase.robotspec.semantic import Joint, RigidBody
+    from robotbase.robotspec.semantic import Controller, Joint, RigidBody
 
 
 @dataclass
@@ -25,6 +25,7 @@ class Bridge:
 class Fragment:
     links: list[RigidBody] = field(default_factory=list)
     joints: list[Joint] = field(default_factory=list)
+    controllers: list[Controller] = field(default_factory=list)   # typed control plugins
     gazebo: list[str] = field(default_factory=list)          # <gazebo> blocks (plugins/sensors/per-ref)
     bridges: list[Bridge] = field(default_factory=list)
     world_systems: list[str] = field(default_factory=list)

@@ -137,6 +137,17 @@ class Sensor:
     collision: str | None = None
 
 
+@dataclass
+class Controller:
+    """A control system the compiler configures (the vision's Controller/Actuator IR concept).
+    ``kind`` selects the gz plugin; ``params`` carries its control knobs (gains, freqs, topics);
+    ``joint`` names the target joint for per-joint controllers (an arm's joint-position controllers).
+    Non-frozen: ``control:`` overrides mutate ``params`` in place during compile."""
+    kind: str
+    params: dict = field(default_factory=dict)
+    joint: str | None = None
+
+
 class InvalidAssembly(ValueError):
     """A robot's link/joint tree is malformed (dupes, missing/orphan links, cycles)."""
 
@@ -151,6 +162,7 @@ class RobotModel:
     root: str
     bodies: list[RigidBody] = field(default_factory=list)
     joints: list[Joint] = field(default_factory=list)
+    controllers: list[Controller] = field(default_factory=list)
     gazebo: list[str] = field(default_factory=list)
     bridges: list = field(default_factory=list)
     world_systems: list[str] = field(default_factory=list)
