@@ -89,17 +89,32 @@ def _spawn_robot(sh, model: str, pose) -> None:
        f"-x {x} -y {y} -z {z} -topic robot_description", timeout=45)
 
 
+def _apply_spawn_pose(sh, pose) -> None:
+    """Teleport the robot to the seeded spawn `pose` AFTER bring-up, so per-seed robustness is real
+    (mirrors runtime.set_robot_pose's gz set_pose service). Applied to BOTH arms — each spawns the
+    model named `robot` per the interface contract, so the seeded jitter is identical and fair, with
+    zero change to either launch. The RobotBench author tasks are mobile diff-drive robots; a
+    fixed-base robot would have no base pose to move."""
+    x, y, _z = pose
+    req = (f'name: "robot", position: {{x: {x}, y: {y}, z: 0.1}}, '
+           f'orientation: {{x: 0, y: 0, z: 0, w: 1}}')
+    sh(f"gz service -s /world/{_WORLD}/set_pose --reqtype gz.msgs.Pose --reptype gz.msgs.Boolean "
+       f"--timeout 3000 --req '{req}'", timeout=15)
+
+
 def real_bringup_with(project_dir: str, pose):
-    """WITH arm: `robotbase up` recompiles robot.yaml/world.yaml and starts the container + sim.
-    Returns a teardown callable (`robotbase down`)."""
+    """WITH arm: `robotbase up` recompiles robot.yaml/world.yaml and starts the container + sim, then
+    teleports the robot to the seeded spawn `pose`. Returns a teardown callable (`robotbase down`)."""
     subprocess.run([*_RB, "up"], cwd=project_dir, check=True, timeout=1800)
     subprocess.run([*_RB, "launch"], cwd=project_dir, check=True, timeout=300)
+    _apply_spawn_pose(_sh(project_dir), pose)
     return lambda: subprocess.run([*_RB, "down"], cwd=project_dir, timeout=120)
 
 
 def real_bringup_without(project_dir: str, pose):
     """WITHOUT arm: build the colcon workspace and `ros2 launch` the authored bring-up in the
-    same headless Gazebo container. Returns a teardown callable (kill launch + `robotbase down`)."""
+    same headless Gazebo container, then teleport the robot to the seeded spawn `pose` (same fair
+    jitter as WITH). Returns a teardown callable (kill launch + `robotbase down`)."""
     sh = _sh(project_dir)
     subprocess.run(["docker", "compose", "up", "-d"], cwd=project_dir, check=True, timeout=600)
     sh("colcon build", timeout=1200)
@@ -108,6 +123,7 @@ def real_bringup_without(project_dir: str, pose):
          _SETUP + "ros2 launch authored_pkg bringup.launch.py"],
         cwd=project_dir)
     time.sleep(15)  # let the launch spawn the robot + world before the judge probes
+    _apply_spawn_pose(sh, pose)
 
     def teardown():
         sh("pkill -f 'ros2 launch' ; pkill -f ros_gz_sim ; true", timeout=20)

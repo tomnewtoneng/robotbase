@@ -56,8 +56,9 @@ def _install(task_id: str, kind: str, dest: str) -> str:
 ])
 def test_reference_solution_is_solved_by_judge(task_id, kind, tmp_path):
     proj = _install(task_id, kind, str(tmp_path))
-    # trials=1: real bring-up currently spawns at the world default (seeded jitter not yet applied),
-    # so extra trials are identical — one run is enough to confirm the reference solves.
+    # Seeded spawn jitter IS applied now (real_bringup_with teleports the robot to spawn_pose(seed)).
+    # trials=1 keeps this calibration gate fast — it only needs to confirm the reference solves at the
+    # first seed; the multi-seed robustness measure is exercised by the n-trial bench runs.
     jf = real_author_judge("with", trials=1, evidence_root=str(tmp_path / "ev"))
     out = jf(proj, _SCENARIO[task_id], seed=0)
     assert out["solved"] is True, f"{task_id} not solved by judge: {out}"

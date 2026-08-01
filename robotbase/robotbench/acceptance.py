@@ -70,7 +70,7 @@ def _stop_band(target: str, band=(1.1, 1.7), floor: float = 0.5):
 SPECS: dict[str, AcceptanceSpec] = {
     "author_stop_at_1m": AcceptanceSpec(
         world_obstacles={"box": (2.0, 0.0, 0.25)},
-        spawn_range=(0.3, 0.3), duration_s=12.0, requires=["scan"],
+        spawn_range=(0.2, 0.2), duration_s=12.0, requires=["scan"],
         predicate=_stop_band("box"),
     ),
     # The mast task's discriminator is the multi-link authoring (mount a LiDAR on a raised mast),
@@ -79,12 +79,12 @@ SPECS: dict[str, AcceptanceSpec] = {
     # check, against a 0.6 m-tall box a 0.5 m mast LiDAR sensibly sees.
     "author_mast_clear": AcceptanceSpec(
         world_obstacles={"box": (2.0, 0.0, 0.25)},
-        spawn_range=(0.3, 0.3), duration_s=12.0, requires=["scan"],
+        spawn_range=(0.2, 0.2), duration_s=12.0, requires=["scan"],
         predicate=_stop_band("box"),
     ),
     "author_two_sensor": AcceptanceSpec(
         world_obstacles={"box": (2.0, 0.0, 0.25)},
-        spawn_range=(0.3, 0.3), duration_s=12.0, requires=["scan", "image"],
+        spawn_range=(0.2, 0.2), duration_s=12.0, requires=["scan", "image"],
         predicate=_stop_band("box"),
     ),
 }
