@@ -14,6 +14,8 @@ from robotbase.robotspec.modules import MODULES
 from robotbase.robotspec.schema import Body, Drive, JointSpec, Part, RobotSpec, SensorSpec
 from robotbase.robotspec.sensors import SENSORS
 from robotbase.worldspec.schema import Goal, Obstacle, Wall, WorldSpec
+from robotbase.schema import Scenario
+from robotbase.assertions import ASSERTION_DOCS
 
 
 def _type_name(annotation) -> str:
@@ -76,6 +78,25 @@ Nested shapes:
   obstacles[]:  {{ {_fields(Obstacle).strip()} }}   (shape: box | cylinder; size/at are [x,y,z])
   walls[]:      {{ {_fields(Wall).strip()} }}        (from/to are [x,y])
   goals[]:      {{ {_fields(Goal).strip()} }}        (at is [x,y])
+
+## scenario.yaml  (your tests/evals — compiled to a run + a machine-readable result)
+
+You author the *tests* too, not just the robot. A scenario declares a `setup`, `actions` to run,
+and `assertions` that define pass/fail; `robotbase test <name>` runs it and emits a structured
+result, and `--trials N` applies domain randomization for a robustness score. Scenarios live in
+`simulation/scenarios/`.
+
+{_fields(Scenario)}
+
+Nested shapes:
+  setup:  {{ reset_world: bool, robot: {{pose: {{x, y, z, yaw}}}}, obstacles: [{{id, type, pose, size}}] }}
+  actions[]:  ordered steps, each {{type, ...}}:
+    - {{type: wait, duration_seconds: N}}
+    - {{type: wait_for_topic, topic: /scan, timeout_seconds: N}}   # block until a topic is live
+    - {{type: run_node, package: <pkg>, executable: controller}}   # run your controller node
+  assertions[]:  each {{type, ...params}} — the checks that define pass/fail:
+{chr(10).join(f"    {t}: {doc}" for t, doc in ASSERTION_DOCS.items())}
+  randomize:  optional jitter for `--trials` robustness — robot_pose/obstacles: {{x, y, yaw}}.
 
 ## Common mistakes the compiler will reject (read the error — it names the field)
 

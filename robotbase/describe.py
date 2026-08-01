@@ -30,7 +30,6 @@ def describe(project_dir: str) -> dict:
         "project": (m.get("project") or {}).get("name"),
         "robot": _robot(project_dir, m),
         "sensors": m.get("sensors", {}),
-        "control": m.get("control", {}),
         "command_joints": m.get("joints", {}),  # arm: joint -> command topic
         "ready_topics": (m.get("runtime") or {}).get("ready_topics", ["/scan", "/odom"]),
         "world": _world(project_dir, m),
@@ -50,6 +49,35 @@ def _validation(project_dir: str) -> dict:
         return summarize(validate_urdf(open(urdfs[0], encoding="utf-8").read()))
     except OSError:
         return {"ok": True, "errors": 0, "warnings": 0, "findings": []}
+
+
+# Control plugin filename -> the `control:` kind an agent tunes (see the authoring reference).
+_CONTROL_PLUGINS = {
+    "gz-sim-diff-drive-system": "diff-drive",
+    "gz-sim-joint-position-controller-system": "joint-position",
+    "gz-sim-velocity-control-system": "velocity",
+}
+_CONTROL_PARAMS = ("joint_name", "topic", "p_gain", "i_gain", "d_gain",
+                   "wheel_separation", "wheel_radius", "odom_publish_frequency")
+
+
+def _controllers(root) -> list[dict]:
+    """The compiled control plugins (kind + key params/gains) from the URDF <gazebo><plugin> blocks —
+    ground-truth control config, so an agent sees the actual gains it can tune via `control:`."""
+    out: list[dict] = []
+    for plugin in root.iter():
+        if _local(plugin.tag) != "plugin":
+            continue
+        kind = _CONTROL_PLUGINS.get(plugin.get("filename", ""))
+        if not kind:
+            continue
+        params = {_local(c.tag): (c.text or "").strip()
+                  for c in plugin if _local(c.tag) in _CONTROL_PARAMS}
+        entry: dict = {"kind": kind, "params": params}
+        if "joint_name" in params:
+            entry["joint"] = params["joint_name"]
+        out.append(entry)
+    return out
 
 
 def _robot(project_dir: str, m: dict) -> dict:
@@ -90,6 +118,9 @@ def _robot(project_dir: str, m: dict) -> dict:
         info["dimensions"] = dims
     if joints:
         info["joints"] = joints
+    controllers = _controllers(root)
+    if controllers:
+        info["controllers"] = controllers
     return info
 
 

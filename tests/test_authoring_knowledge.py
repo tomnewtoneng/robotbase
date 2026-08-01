@@ -37,8 +37,8 @@ def test_robot_schema_rejects_unknown_sensor_keys():
 def test_authoring_reference_is_general_not_task_specific():
     ref = authoring_reference().lower()
     # documents the FORMAT / vocabulary (applies to any task)
-    for token in ("robot.yaml", "world.yaml", "differential-drive", "lidar", "camera",
-                  "shape", "at:", "obstacles", "walls", "base"):
+    for token in ("robot.yaml", "world.yaml", "scenario.yaml", "differential-drive", "lidar", "camera",
+                  "shape", "at:", "obstacles", "walls", "base", "assertions", "run_node", "no_collision"):
         assert token in ref, f"reference missing general token {token!r}"
     # does NOT leak any benchmark task's answer
     for leak in ("diff-lidar-world", "sensor-on-mast", "two-sensor", "add-sensor",
@@ -67,6 +67,20 @@ def test_reference_covers_compiler_vocabulary_no_drift():
         assert arch in ref, f"reference missing archetype {arch!r}"
     for sensor in SENSORS:
         assert sensor in ref, f"reference missing sensor {sensor!r}"
+    from robotbase.assertions import ASSERTION_DOCS
+    for atype in ASSERTION_DOCS:
+        assert atype in ref, f"reference missing assertion type {atype!r}"
+
+
+def test_assertion_docs_match_the_checker_no_drift():
+    # Every documented assertion type must actually be handled by evaluate(), so the authoring
+    # vocabulary can never drift from the checker that scores it.
+    from robotbase.assertions import ASSERTION_DOCS, evaluate
+    from robotbase.schema import AssertionSpec
+    from robotbase.results import Metrics
+    for atype in ASSERTION_DOCS:
+        r = evaluate(AssertionSpec(type=atype), Metrics())
+        assert r.detail != f"Unknown assertion type: {atype}", f"{atype} documented but not handled"
 
 
 def test_with_scaffold_agents_md_is_authoring_oriented(tmp_path):

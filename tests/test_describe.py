@@ -18,6 +18,7 @@ def test_describe_differential_drive():
     assert {"drive-forward", "stop-before-obstacle", "reach-goal", "turn-around"} <= names
     turn = next(s for s in d["scenarios"] if s["name"] == "turn-around")
     assert "minimum_path_length" in turn["assertions"]
+    assert "diff-drive" in {c["kind"] for c in d["robot"]["controllers"]}   # control config is surfaced
 
 
 def test_describe_arm():
@@ -29,3 +30,6 @@ def test_describe_arm():
     assert d["ready_topics"] == ["/joint_states"]
     assert d["command_joints"]["shoulder"]["command_topic"] == "/shoulder_cmd"
     assert d["scenarios"][0]["name"] == "reach-configuration"
+    # the compiled joint-position controllers + their tunable gains are surfaced as ground truth
+    ctrl = {c["joint"]: c["params"] for c in d["robot"]["controllers"] if c["kind"] == "joint-position"}
+    assert ctrl["shoulder_joint"]["p_gain"] == "80" and ctrl["elbow_joint"]["p_gain"] == "60"

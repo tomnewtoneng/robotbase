@@ -2,6 +2,22 @@ from __future__ import annotations
 from robotbase.schema import AssertionSpec
 from robotbase.results import Metrics, AssertionResult
 
+# The assertion vocabulary — the single source of truth for the authoring reference. Each entry is a
+# one-line description naming the AssertionSpec field(s) it reads. A guard test asserts every type
+# here is actually handled by evaluate(), so the docs can never drift from the checker.
+ASSERTION_DOCS: dict[str, str] = {
+    "no_collision": "no collision occurred (LiDAR-proximity heuristic)",
+    "no_contact": "no contact occurred (ground-truth contact/bumper sensor) — prefer over no_collision",
+    "minimum_obstacle_distance": "closest approach to any obstacle >= minimum_metres",
+    "robot_stopped": "came to rest: |velocity| <= linear_velocity_tolerance / angular_velocity_tolerance",
+    "required_topic_messages": "topic published >= minimum_count messages (needs topic + minimum_count)",
+    "robot_moved_minimum_distance": "displacement from start >= minimum_distance_metres",
+    "minimum_path_length": "total path length (integrated odometry) >= minimum_metres — proves a detour",
+    "robot_reached_pose": "final pose within position_tolerance_metres of (target_x, target_y[, target_z])",
+    "joint_positions_reached": "each joint within joint_tolerance of joint_targets {joint: radians}",
+}
+
+
 def evaluate(spec: AssertionSpec, metrics: Metrics) -> AssertionResult:
     t = spec.type
     if t == "no_collision":
