@@ -38,6 +38,11 @@ core — not more breadth.**
   Proven backend-neutral by adding MJCF as an additive file. Deepest moat, closed.
 - **P5 — ✅ DONE — Knowledge layer for agents.** `robotbase schema` (+ JSON Schema), `authoring_schema`
   MCP tool, schema-derived authoring reference, common-mistakes docs.
+- **Control-config layer — ✅ DONE (2026-08-01).** The vision's `Controller` IR: control is typed
+  and declaratively tunable via a `control:` block (PID gains, drive/velocity knobs), byte-identical
+  to today's gz plugins. Config only — the algorithm stays the agent's `controller.py`. **Future:**
+  *B* selectable controllers (`control: {type: …}`); *C* a ros2_control backend (`controllers.yaml`
+  = the sim-to-real `hardware_interface` bridge) — additive backends over the same IR.
 - **Later:** MuJoCo/MJCF as a *first-class* backend (the seam exists now — full parity + Isaac next),
   Studio (§H), import depth, units. Breadth (§D robots/sensors) is opportunistic — not the moat.
 

@@ -271,6 +271,14 @@ A packaged Claude Code skill + schema docs + failure-pattern tables (borrow the 
 scripts from the ROS2-skills projects — see the competitive scan in the vault note). Amplifies the
 agent-native thesis. **Effort: medium.**
 
+### Control-config layer ✅ DONE (2026-08-01)
+The vision's `Controller`/`Actuator` IR concept: control is now typed (`semantic.Controller`) and
+declaratively tunable via a `control:` block (per-joint PID gains, drive/velocity knobs), compiled
+byte-identically to the gz plugins — finishing the "compiler owns the runtime" story (config only;
+the control *algorithm* stays the agent's `controller.py`). **Future upgrades over the same IR:**
+*B* — selectable controllers (`control: {type: …}` to swap, not just tune); *C* — a **ros2_control**
+backend (`controllers.yaml`), whose `hardware_interface` is the **sim-to-real bridge**.
+
 ### Later (post-core)
 MuJoCo as a *first-class* backend (unlocked by P4); Studio (§H — the GUI, a *client* of the core,
 built only once the compiler+runtime are useful standalone); import depth; units as first-class;
