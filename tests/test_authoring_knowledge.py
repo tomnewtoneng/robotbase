@@ -18,12 +18,13 @@ def test_world_schema_rejects_unknown_obstacle_keys():
 def test_bad_shape_size_gives_clean_error_not_crash():
     # A wrong-length size must not crash the URDF renderer with a bare unpack error (which made the
     # WITH agent flail on opaque tracebacks) — it must name the problem.
-    from robotbase.robotspec.ir import ShapeSizeError, link_from_shape
+    from robotbase.robotspec.ir import ShapeSizeError
+    from robotbase.robotspec.semantic import geometry_from_spec
     with pytest.raises(ShapeSizeError) as e:
-        link_from_shape("chassis", "box", [0.35, 0.30, 0.15, 0.1], 5.0)   # 4 values
+        geometry_from_spec("box", [0.35, 0.30, 0.15, 0.1])   # 4 values
     assert "box" in str(e.value) and "3 value" in str(e.value)
     with pytest.raises(ShapeSizeError):
-        link_from_shape("mast", "cylinder", [0.02], 0.1)                  # cylinder needs 2
+        geometry_from_spec("cylinder", [0.02])               # cylinder needs 2
 
 
 def test_robot_schema_rejects_unknown_sensor_keys():

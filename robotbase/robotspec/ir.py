@@ -1,9 +1,10 @@
-"""The primitive IR every compilation target emits into (see docs/design/declarative-compiler.md).
+"""Cross-cutting primitives the compiler emits into (see docs/design/declarative-compiler.md).
 
-Modules (archetypes) and sensors contribute Fragments; the compiler merges them, validates the
-link tree, and renders URDF once. LinkIR/JointIR carry already-rendered XML; link_from_shape
-turns a {shape,size,mass} primitive into a full <link> with an auto-computed inertia tensor so
-hand-authored parts are not finicky.
+Modules (archetypes) and sensors contribute Fragments of typed semantic parts — RigidBody/Joint
+from ``robotbase.robotspec.semantic`` — which the compiler merges into a RobotModel that the
+backends render. This module holds the pieces that don't belong to a single stage: the Bridge and
+Fragment carriers, the one shape->size rule (SHAPE_SIZE, shared by the schemas and the backend),
+the ``body_xyz`` placement helper, and the ``_fmt`` number formatter.
 """
 from __future__ import annotations
 
@@ -18,20 +19,6 @@ if TYPE_CHECKING:
 class Bridge:
     arg: str                                  # a parameter_bridge argument
     remap: tuple[str, str] | None = None      # (from, to) when the gz topic != the ROS topic
-
-
-@dataclass
-class LinkIR:
-    name: str
-    xml: str                                  # full <link>…</link>
-
-
-@dataclass
-class JointIR:
-    name: str
-    xml: str                                  # full <joint>…</joint>
-    parent: str = ""
-    child: str = ""
 
 
 @dataclass
@@ -79,15 +66,3 @@ def body_xyz(size, shape: str = "box") -> list[float]:
 def _fmt(v: float) -> str:
     # trim trailing zeros so 0.025 not 0.025000000001; keep ints clean
     return f"{round(v, 9):g}"
-
-
-def link_from_shape(name, shape, size, mass, material="grey", rgba="0.4 0.4 0.45 1") -> LinkIR:
-    """Turn a {shape, size, mass} primitive into a full <link> with an auto-computed inertia tensor.
-
-    A thin adapter over the semantic IR: it builds a RigidBody and renders it through the one URDF
-    backend, so there is a single renderer. The geometry/size validation (UnknownShape/ShapeSizeError)
-    now lives in semantic.geometry_from_spec. (Local imports avoid an ir -> backends -> semantic -> ir
-    import cycle.)"""
-    from robotbase.robotspec.semantic import RigidBody
-    from robotbase.robotspec.backends.urdf import render_body
-    return LinkIR(name, render_body(RigidBody(name, (shape, size), mass, material=material, rgba=rgba)))

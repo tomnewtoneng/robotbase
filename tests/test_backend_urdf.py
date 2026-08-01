@@ -1,37 +1,59 @@
 import pytest
 
-from robotbase.robotspec.ir import link_from_shape
 from robotbase.robotspec.merge import fixed_joint
+from robotbase.robotspec.ir import ShapeSizeError, UnknownShape
 from robotbase.robotspec.semantic import (
     RigidBody, Joint, Inertial, RobotModel, InvalidAssembly,
 )
 from robotbase.robotspec.backends.urdf import render_body, render_joint, render_urdf
 
 
-def test_render_body_matches_legacy_link_from_shape_box():
-    legacy = link_from_shape("base_link", "box", [0.35, 0.30, 0.15], 5.0).xml
-    body = RigidBody(name="base_link", geometry=("box", [0.35, 0.30, 0.15]), mass=5.0)
-    assert render_body(body) == legacy
+# --- render_body: the computed path (plain shapes, inertia auto-computed) ---
+
+def test_render_body_plain_box():
+    out = render_body(RigidBody("base_link", ("box", [0.4, 0.2, 0.1]), mass=6.0))
+    assert out.startswith('\n  <link name="base_link">')
+    assert '<box size="0.4 0.2 0.1"/>' in out
+    assert 'ixx="0.025"' in out          # 6*(0.2^2+0.1^2)/12 = 0.025
+    for tok in ("<inertial>", "<collision>", "<visual>"):
+        assert tok in out
+    assert '<material name="grey">' in out
+    assert out.endswith("\n  </link>")
 
 
-def test_render_body_matches_legacy_for_cylinder_and_sphere():
-    for shape, size, mass in (("cylinder", [0.05, 0.1], 0.5), ("sphere", [0.05], 0.1)):
-        legacy = link_from_shape("l", shape, size, mass).xml
-        assert render_body(RigidBody("l", (shape, size), mass)) == legacy
+def test_render_body_cylinder_and_sphere_geometry_and_inertia():
+    cyl = render_body(RigidBody("mast", ("cylinder", [0.03, 0.5], ), mass=0.2))
+    assert '<cylinder radius="0.03" length="0.5"/>' in cyl
+    sph = render_body(RigidBody("ball", ("sphere", [0.05]), mass=0.1))
+    assert '<sphere radius="0.05"/>' in sph
+    assert 'ixx="0.0001"' in sph          # 2/5 * 0.1 * 0.05^2 = 0.0001
 
 
 def test_render_body_honours_material_and_rgba():
-    legacy = link_from_shape("b", "box", [1, 1, 1], 2.0, material="body", rgba="0.2 0.2 0.25 1").xml
-    body = RigidBody("b", ("box", [1, 1, 1]), 2.0, material="body", rgba="0.2 0.2 0.25 1")
-    assert render_body(body) == legacy
+    out = render_body(RigidBody("b", ("box", [1, 1, 1]), mass=2.0, material="body", rgba="0.2 0.2 0.25 1"))
+    assert '<material name="body"><color rgba="0.2 0.2 0.25 1"/></material>' in out
 
 
 def test_render_body_none_geometry_is_a_frame_link():
     assert render_body(RigidBody("base_footprint")) == '\n  <link name="base_footprint"/>'
 
 
+def test_render_body_validates_geometry_via_the_semantic_path():
+    with pytest.raises(ShapeSizeError):
+        render_body(RigidBody("chassis", ("box", [1, 2])))
+    with pytest.raises(UnknownShape):
+        render_body(RigidBody("chassis", ("wedge", [1, 2, 3])))
+
+
+def test_render_body_raw_xml_is_passed_through_verbatim():
+    raw = '\n  <link name="weird"><custom/></link>'
+    assert render_body(RigidBody("weird", raw_xml=raw)) == raw
+
+
+# --- render_joint ---
+
 def test_render_joint_matches_legacy_fixed_joint():
-    # fixed_joint is now a Joint factory; rendering it gives the historical both-attrs origin
+    # fixed_joint is a Joint factory; rendering it gives the historical both-attrs origin
     j = fixed_joint("lidar_joint", "base_link", "lidar_link", xyz="0.1 0 0.2")
     assert render_joint(j) == (
         '\n  <joint name="lidar_joint" type="fixed"><parent link="base_link"/>'
@@ -39,26 +61,10 @@ def test_render_joint_matches_legacy_fixed_joint():
 
 
 def test_render_joint_without_rpy_omits_it():
-    # module joints (e.g. base_joint) emit an xyz-only origin
     j = Joint("base_joint", "fixed", "base_footprint", "base_link", xyz="0 0 0.125")
     assert render_joint(j) == (
         '\n  <joint name="base_joint" type="fixed"><parent link="base_footprint"/>'
         '<child link="base_link"/><origin xyz="0 0 0.125"/></joint>')
-
-
-def test_link_from_shape_delegates_to_the_backend():
-    # after Task 4, ir.link_from_shape is a thin adapter over render_body — one renderer.
-    for shape, size, mass in (("box", [0.3, 0.2, 0.1], 4.0), ("cylinder", [0.05, 0.1], 0.5), ("sphere", [0.05], 0.1)):
-        assert link_from_shape("x", shape, size, mass).xml == render_body(RigidBody("x", (shape, size), mass))
-
-
-def test_link_from_shape_still_validates_via_the_semantic_path():
-    import pytest
-    from robotbase.robotspec.ir import ShapeSizeError, UnknownShape
-    with pytest.raises(ShapeSizeError):
-        link_from_shape("chassis", "box", [1, 2], 1.0)
-    with pytest.raises(UnknownShape):
-        link_from_shape("chassis", "wedge", [1, 2, 3], 1.0)
 
 
 def test_render_joint_with_axis_and_limit():
@@ -70,7 +76,7 @@ def test_render_joint_with_axis_and_limit():
         '<limit lower="-3.14" upper="3.14" effort="100" velocity="3.0"/></joint>')
 
 
-# --- Task 6: enriched render_body (explicit inertia / origins / friction / visual-only) ---
+# --- enriched render_body (explicit inertia / origins / friction / visual-only) ---
 
 def test_render_body_uses_explicit_inertia_and_origins():
     # the arm's upper_arm: hand-tuned inertia + an inertial/collision/visual origin offset
@@ -102,7 +108,6 @@ def test_render_body_friction_and_no_material():
 
 
 def test_render_body_visual_only_omits_collision():
-    # a quadrotor rotor: visual-only, and 1e-5 normalizes to 1e-05 (the one-time normalization)
     b = RigidBody("rotor_fl", ("cylinder", [0.05, 0.01]), inertia=Inertial(0.02, 1e-5, 1e-5, 1e-5),
                   has_collision=False, material="rotor_fl_m", rgba="0.9 0.2 0.2 1")
     out = render_body(b)
@@ -114,13 +119,7 @@ def test_render_body_visual_only_omits_collision():
         '\n  </link>')
 
 
-def test_plain_shape_still_matches_legacy_link_from_shape():
-    # the computed path (no overrides) is unchanged, so shape links stay byte-identical
-    assert render_body(RigidBody("base_link", ("box", [0.35, 0.30, 0.15]), mass=5.0)) == \
-        link_from_shape("base_link", "box", [0.35, 0.30, 0.15], 5.0).xml
-
-
-# --- Task 6: render_urdf assembly + tree validation ---
+# --- render_urdf assembly + tree validation ---
 
 def test_render_urdf_assembles_header_bodies_joints_gazebo():
     model = RobotModel(
