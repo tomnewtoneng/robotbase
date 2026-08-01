@@ -68,6 +68,19 @@ The **only** places description strings are produced:
   backend-neutral).
 - `worldspec/backends/sdf.py` — **`render_sdf(world)`** for the `WorldModel`.
 
+### Control configuration (the `Controller` IR)
+
+Control is a typed IR concept, not hardcoded XML. Each archetype emits typed `Controller` objects
+(`semantic.Controller(kind, params, joint)`) with today's params as defaults — the diff-drive/
+joint-position/velocity actuators plus their co-located JointState/Odometry publishers. A top-level
+`control:` block in `robot.yaml` *tunes* them (per-joint PID gains via `control.joints`, the drive/
+velocity controller's non-geometry knobs via `control.base`); overrides are applied in
+`compile_model`, and `backends/urdf.render_controllers` renders the `<gazebo><plugin>` block. Wheel/
+joint **geometry** stays in `drive:`/`body:` (single source) — `control:` never duplicates it. This
+is config only; the control *algorithm* is always the agent's hand-written `controller.py`. The
+gz-plugin backend is the target today; a **ros2_control** backend (`controllers.yaml`, the
+`hardware_interface` sim-to-real bridge) is a future additive backend over the same `Controller` IR.
+
 ### Modules and sensors are fragment-emitters
 
 - **Module** (archetype): `module(params, mount) -> Fragment` of typed `RigidBody`/`Joint`. Owns a

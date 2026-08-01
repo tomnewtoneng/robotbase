@@ -38,6 +38,10 @@ Available scenarios (each `.yaml` in `simulation/scenarios/` defines its own set
 
 ## The controller
 
+Your control *algorithm* lives in `controller.py` (below) — that's always yours to write. The drive
+controller's *config* is declarative: `robot.yaml`'s `control: {base: {odom_publish_frequency, ...}}`
+tunes it, and wheel geometry stays in `drive:` (you rarely need this).
+
 The starter controller (`src/warehouse_bot/warehouse_bot/controller.py`) just
 drives straight forward and ignores its sensors — so it fails every scenario. Rewrite it to
 satisfy whichever scenario you're working on. Read that scenario's assertions to see exactly

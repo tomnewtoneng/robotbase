@@ -40,6 +40,12 @@ the controllers hold the pose while it settles.
 You do **not** need to rebuild after editing the controller (symlink-installed); just run the
 scenario again.
 
+**Controller config vs. algorithm.** The joint position controllers' PID gains are compiled from
+the spec — tune them declaratively in `robot.yaml` under
+`control: {joints: {shoulder_joint: {p, i, d}, elbow_joint: {p, i, d}}}` (e.g. if the arm droops or
+oscillates). The control *algorithm* — deciding what target to command — stays yours in
+`controller.py`. See `robotbase describe` / the authoring reference for the `control:` schema.
+
 ## Inspecting a run
 
 Start with **`robotbase diagnose`** — it explains why the last run failed in plain language

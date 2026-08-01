@@ -63,6 +63,10 @@ Nested shapes:
 {_fields(Part)}
   joints[] (arms):
 {_fields(JointSpec)}
+  control (tune the compiled control plugins — the control ALGORITHM stays your controller.py):
+    control.joints.<joint_name>: {{ p, i, d }}   # a joint-position controller's PID gains (e.g. an arm)
+    control.base: {{ odom_publish_frequency, topic, odom_topic, tf_topic }}   # the drive/velocity controller
+    (wheel geometry stays in drive: — control: only tunes non-geometry knobs, never duplicates geometry)
 
 ## world.yaml  (compiled to SDF)
 
