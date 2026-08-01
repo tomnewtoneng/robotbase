@@ -81,6 +81,27 @@ class JointSpec(BaseModel):                  # arms (ignored by mobile archetype
     model_config = {"extra": "forbid"}
 
 
+class JointControl(BaseModel):               # per-joint controller tuning (PID gains)
+    p: int | float | None = None             # int|float preserves the user's numeric form (120 -> "120")
+    i: int | float | None = None
+    d: int | float | None = None
+    model_config = {"extra": "forbid"}
+
+
+class BaseControl(BaseModel):                # drive/velocity controller tuning (non-geometry knobs)
+    odom_publish_frequency: int | float | None = None
+    topic: str | None = None
+    odom_topic: str | None = None
+    tf_topic: str | None = None
+    model_config = {"extra": "forbid"}
+
+
+class ControlSpec(BaseModel):                # declarative control config (the vision's Controller IR)
+    joints: dict[str, JointControl] = {}     # keyed by joint name, e.g. shoulder_joint
+    base: BaseControl | None = None
+    model_config = {"extra": "forbid"}
+
+
 class Part(BaseModel):
     use: str | None = None                   # a module name (or "custom"); None => raw part
     mount: dict | None = None                # {to: link, xyz: [...], rpy: [...]}
@@ -102,6 +123,7 @@ class RobotSpec(BaseModel):
     sensors: list[SensorSpec] = []
     joints: list[JointSpec] = []
     parts: list[Part] = []
+    control: ControlSpec | None = None       # tune the compiled control plugins (gains, odom rate)
 
     @classmethod
     def from_yaml(cls, path: str) -> "RobotSpec":

@@ -24,6 +24,37 @@ class InvalidRawPart(ValueError):
     """A raw links/joints part (the escape hatch) is missing a required key."""
 
 
+class ControlError(ValueError):
+    """A `control:` override targets a joint/controller the robot does not have."""
+
+
+def _apply_control(model, control) -> None:
+    """Apply a spec's `control:` overrides onto the assembled RobotModel's typed controllers (in
+    place). Raises ControlError if an override names a joint/controller the robot lacks."""
+    if control is None:
+        return
+    for jname, gains in control.joints.items():
+        matched = [c for c in model.controllers if c.joint == jname]
+        if not matched:
+            have = sorted(c.joint for c in model.controllers if c.joint)
+            raise ControlError(
+                f"control.joints: no controller for joint {jname!r}; joints with controllers: {have}")
+        for c in matched:
+            for k in ("p", "i", "d"):
+                v = getattr(gains, k)
+                if v is not None:
+                    c.params[k] = v
+    if control.base is not None:
+        matched = [c for c in model.controllers if c.kind in ("diff-drive", "velocity")]
+        if not matched:
+            raise ControlError("control.base: robot has no drive/velocity controller to configure")
+        for c in matched:
+            for k in ("odom_publish_frequency", "topic", "odom_topic", "tf_topic"):
+                v = getattr(control.base, k)
+                if v is not None and k in c.params:
+                    c.params[k] = v
+
+
 @dataclass
 class CompiledRobot:
     name: str
@@ -116,7 +147,9 @@ def compile_model(spec: RobotSpec, world_name: str = "warehouse") -> RobotModel:
             raise UnknownSensor(f"unknown sensor {s.type!r}; known: {sorted(SENSORS)}")
         fragments.append(SENSORS[s.type](s.model_dump(), s.on or base_link, ctx))
 
-    return build_model(spec.name, root, fragments)
+    model = build_model(spec.name, root, fragments)
+    _apply_control(model, spec.control)
+    return model
 
 
 def compile_robot(spec: RobotSpec, world_name: str = "warehouse") -> CompiledRobot:
