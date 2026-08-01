@@ -1,0 +1,46 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 340" font-family="'Segoe UI', system-ui, -apple-system, Roboto, sans-serif">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#0b1220"/>
+      <stop offset="1" stop-color="#0f172a"/>
+    </linearGradient>
+    <marker id="arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0 0 L10 5 L0 10 z" fill="#64748b"/>
+    </marker>
+  </defs>
+
+  <rect width="1200" height="340" rx="18" fill="url(#bg)"/>
+
+  <!-- wordmark -->
+  <rect x="60" y="50" width="14" height="46" rx="3" fill="#34d399"/>
+  <text x="90" y="92" font-size="54" font-weight="700" fill="#e6edf3" letter-spacing="-1">robotbase</text>
+  <text x="92" y="132" font-size="21" fill="#94a3b8">Terraform for robots — declarative robotics that ports from sim to real.</text>
+
+  <!-- pipeline: describe -> compile -> run -> evidence -->
+  <!-- node 1: specs -->
+  <rect x="60" y="200" width="216" height="98" rx="12" fill="#111a2e" stroke="#1e293b" stroke-width="1.5"/>
+  <text x="168" y="238" font-size="20" font-weight="600" fill="#e6edf3" text-anchor="middle">robot.yaml · world.yaml</text>
+  <text x="168" y="262" font-size="20" font-weight="600" fill="#e6edf3" text-anchor="middle">scenarios</text>
+  <text x="168" y="286" font-size="13" fill="#64748b" text-anchor="middle">describe it in YAML</text>
+
+  <path d="M286 249 H332" stroke="#64748b" stroke-width="2.5" marker-end="url(#arrow)"/>
+
+  <!-- node 2: compile -->
+  <rect x="346" y="200" width="180" height="98" rx="12" fill="#111a2e" stroke="#1e293b" stroke-width="1.5"/>
+  <text x="436" y="252" font-size="22" font-weight="700" fill="#58a6ff" text-anchor="middle">compile</text>
+  <text x="436" y="278" font-size="13" fill="#64748b" text-anchor="middle">URDF · SDF · launch</text>
+
+  <path d="M536 249 H582" stroke="#64748b" stroke-width="2.5" marker-end="url(#arrow)"/>
+
+  <!-- node 3: run -->
+  <rect x="596" y="200" width="200" height="98" rx="12" fill="#111a2e" stroke="#1e293b" stroke-width="1.5"/>
+  <text x="696" y="252" font-size="22" font-weight="700" fill="#e6edf3" text-anchor="middle">run headless</text>
+  <text x="696" y="278" font-size="13" fill="#64748b" text-anchor="middle">ROS 2 + Gazebo, in Docker</text>
+
+  <path d="M806 249 H852" stroke="#64748b" stroke-width="2.5" marker-end="url(#arrow)"/>
+
+  <!-- node 4: evidence -->
+  <rect x="866" y="200" width="228" height="98" rx="12" fill="#0f2a20" stroke="#134e39" stroke-width="1.5"/>
+  <text x="980" y="252" font-size="22" font-weight="700" fill="#34d399" text-anchor="middle">&#10003; evidence</text>
+  <text x="980" y="278" font-size="13" fill="#64748b" text-anchor="middle">pass/fail metrics + MCAP episode</text>
+</svg>

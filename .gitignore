@@ -31,3 +31,9 @@ robotbase/templates/*/src/*/urdf/bridges.json
 robotbase/templates/*/src/*/urdf/launch_config.json
 robotbase/templates/*/src/*/worlds/*.sdf
 robotbase/templates/*/src/*/launch/*.launch.py
+
+# Internal docs (strategy / vision / roadmap / design / results) are kept local — not published.
+# Only README.md is public; a GitHub-specific doc can be crafted later.
+docs/
+/PROOF.md
+/CONTRIBUTING.md
