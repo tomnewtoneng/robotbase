@@ -138,11 +138,11 @@ Full design in `design/optional-visualization.md`.
   once the deadline passes and marks the result `timed_out` (which fails it).
 - ~~A joint-controlled arm got a spurious idle `/cmd_vel` bridge.~~ **done (2026-08-01)** — `/cmd_vel`
   is bridged only for `/cmd_vel`-driven robots (`control.velocity_topic`); `/clock` stays essential.
-- **Seeded spawn `-x/-y/-z` in the RobotBench harness (per-seed robustness is degenerate).** The
-  `_spawn_robot` helper exists but `real_bringup_with`/`_without` ignore the seeded `pose` (the launch
-  spawns at its fixed position). Fix needs the generated launch to accept a spawn-pose launch arg —
-  **live-only to verify** (does a fixed-base arm respect a spawn offset? is both-arm jitter fair?), so
-  do it alongside a live Docker gate run, not blind. Matters for the n=3 statistical run.
+- ~~Seeded spawn in the RobotBench harness (per-seed robustness is degenerate).~~ **done (2026-08-01,
+  LIVE-VERIFIED)** — `real_bringup_with`/`_without` teleport the robot to `spawn_pose(seed)` after
+  bring-up via the gz `set_pose` service (fair for both arms, zero launch changes). `spawn_range`
+  dropped 0.3 → 0.2 (< the box's 0.25 half-extent) so lateral seeds don't make a forward-only
+  controller miss. Reference gate still solves 4/4 with jitter applied.
 - ~~Path-length vs. displacement metric.~~ **done** (`path_length_metres`).
 - Verify non-Windows hosts (Linux, macOS/Docker Desktop); add CI. *(fits the repo-hygiene / distribution pass.)*
 - ~~De-duplicate the bundled templates vs. a standalone reference project.~~ **done** — the
