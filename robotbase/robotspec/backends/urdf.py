@@ -16,6 +16,7 @@ from robotbase.robotspec.semantic import (
     RigidBody,
     Joint,
     Sensor,
+    Controller,
     RobotModel,
     geometry_from_spec,
     inertial_for,
@@ -24,6 +25,10 @@ from robotbase.robotspec.semantic import (
 
 
 class UnknownGzSensor(ValueError):
+    ...
+
+
+class UnknownGzController(ValueError):
     ...
 
 
@@ -131,6 +136,42 @@ def sensor_parts(s: Sensor) -> tuple[RigidBody | None, Joint | None, str]:
     if s.mount_link is not None:
         joint = Joint(f"{s.kind}_joint", "fixed", s.mount_link, s.link_name, xyz=s.xyz, rpy="0 0 0")
     return body, joint, _sensor_gazebo(s)
+
+
+def render_plugin(c: Controller) -> str:
+    """The inner gz <plugin> for one Controller. Params render with str() so the archetype defaults
+    reproduce today's exact strings (p=80 -> '80', i=2.0 -> '2.0')."""
+    p = c.params
+    if c.kind == "diff-drive":
+        return (f'\n    <plugin filename="gz-sim-diff-drive-system" name="gz::sim::systems::DiffDrive">'
+                f'\n      <left_joint>{p["left_joint"]}</left_joint><right_joint>{p["right_joint"]}</right_joint>'
+                f'\n      <wheel_separation>{p["wheel_separation"]}</wheel_separation><wheel_radius>{p["wheel_radius"]}</wheel_radius>'
+                f'\n      <topic>{p["topic"]}</topic><odom_topic>{p["odom_topic"]}</odom_topic><tf_topic>{p["tf_topic"]}</tf_topic>'
+                f'\n      <frame_id>{p["frame_id"]}</frame_id><child_frame_id>{p["child_frame_id"]}</child_frame_id>'
+                f'\n      <odom_publish_frequency>{p["odom_publish_frequency"]}</odom_publish_frequency></plugin>')
+    if c.kind == "joint-state-publisher":
+        return (f'\n    <plugin filename="gz-sim-joint-state-publisher-system" name="gz::sim::systems::JointStatePublisher">'
+                f'\n      <topic>{p["topic"]}</topic></plugin>')
+    if c.kind == "joint-position":
+        return (f'\n    <plugin filename="gz-sim-joint-position-controller-system" name="gz::sim::systems::JointPositionController">'
+                f'\n      <joint_name>{p["joint_name"]}</joint_name><topic>{p["topic"]}</topic>'
+                f'\n      <p_gain>{p["p"]}</p_gain><i_gain>{p["i"]}</i_gain><d_gain>{p["d"]}</d_gain></plugin>')
+    if c.kind == "velocity":
+        return (f'\n    <plugin filename="gz-sim-velocity-control-system" name="gz::sim::systems::VelocityControl">'
+                f'\n      <topic>{p["topic"]}</topic></plugin>')
+    if c.kind == "odometry-publisher":
+        return (f'\n    <plugin filename="gz-sim-odometry-publisher-system" name="gz::sim::systems::OdometryPublisher">'
+                f'\n      <odom_frame>{p["odom_frame"]}</odom_frame><robot_base_frame>{p["robot_base_frame"]}</robot_base_frame>'
+                f'\n      <dimensions>{p["dimensions"]}</dimensions><odom_topic>{p["odom_topic"]}</odom_topic><tf_topic>{p["tf_topic"]}</tf_topic>'
+                f'\n      <odom_publish_frequency>{p["odom_publish_frequency"]}</odom_publish_frequency></plugin>')
+    raise UnknownGzController(f"no URDF rendering for controller kind {c.kind!r}")
+
+
+def render_controllers(cs: list[Controller]) -> str:
+    """Render a group of controllers as one <gazebo> block (matches the current per-archetype grouping)."""
+    if not cs:
+        return ""
+    return '\n  <gazebo>' + "".join(render_plugin(c) for c in cs) + '</gazebo>'
 
 
 def render_urdf(model: RobotModel) -> str:
