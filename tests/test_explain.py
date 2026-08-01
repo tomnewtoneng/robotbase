@@ -59,3 +59,13 @@ def test_explained_links_match_compiled_urdf_no_drift():
     explained = {name for e in explain_robot(spec)["produced"] for name in e["links"]}
     compiled = set(re.findall(r'<link name="([^"]+)"', compile_robot(spec).urdf))
     assert explained == compiled, f"explain drifted from compile: {explained ^ compiled}"
+
+
+def test_explain_reports_controllers_and_override_provenance():
+    spec = _spec({"base": "arm", "control": {"joints": {"shoulder_joint": {"p": 120}}}})
+    ctrls = explain_robot(spec)["controllers"]
+    sh = next(c for c in ctrls if c.get("joint") == "shoulder_joint")
+    assert sh["kind"] == "joint-position"
+    assert sh["params"]["p"] == 120 and sh["source"] == "control:"        # overridden
+    el = next(c for c in ctrls if c.get("joint") == "elbow_joint")
+    assert el["source"] == "default"                                       # untouched

@@ -38,6 +38,27 @@ def provenance(spec: RobotSpec) -> list[dict]:
     return rows
 
 
+def _controllers_report(spec: RobotSpec, world_name: str = "warehouse") -> list[dict]:
+    """The compiled control plugins with override provenance — each value tagged `control:` (set in
+    the spec's control: block) or `default` (the archetype's). Custom imports have no semantic
+    controllers, so they report an empty list."""
+    from robotbase.robotspec.compile import compile_model, _parts
+    if any(p.use == "custom" for p in _parts(spec)):
+        return []
+    model = compile_model(spec, world_name)
+    overridden_joints = set(spec.control.joints) if spec.control else set()
+    base_overridden = bool(spec.control and spec.control.base)
+    rows = []
+    for c in model.controllers:
+        src = "default"
+        if c.joint and c.joint in overridden_joints:
+            src = "control:"
+        elif c.kind in ("diff-drive", "velocity") and base_overridden:
+            src = "control:"
+        rows.append({"kind": c.kind, "joint": c.joint, "params": dict(c.params), "source": src})
+    return rows
+
+
 def _summary(source: str, frag: Fragment, note: str = "") -> dict:
     entry = {
         "source": source,
@@ -76,7 +97,8 @@ def explain_robot(spec: RobotSpec, world_name: str = "warehouse") -> dict:
                 produced.append(_summary(f"sensors[{i}]: {s.type} (added)",
                                          SENSORS[s.type](s.model_dump(), s.on or "base_link", ctx),
                                          "injected into the imported URDF"))
-        return {"robot": spec.name, "produced": produced, "provenance": provenance(spec)}
+        return {"robot": spec.name, "produced": produced, "provenance": provenance(spec),
+            "controllers": _controllers_report(spec, world_name)}
 
     produced, base_link, body_size = [], None, body_xyz(spec.body.size, spec.body.shape)
     for i, part in enumerate(parts):
@@ -103,4 +125,5 @@ def explain_robot(spec: RobotSpec, world_name: str = "warehouse") -> dict:
             on = f" on {s.on}" if s.on else f" on {base_link}"
             produced.append(_summary(f"sensors[{i}]: {s.type}{on}",
                                      SENSORS[s.type](s.model_dump(), s.on or base_link, ctx)))
-    return {"robot": spec.name, "produced": produced, "provenance": provenance(spec)}
+    return {"robot": spec.name, "produced": produced, "provenance": provenance(spec),
+            "controllers": _controllers_report(spec, world_name)}
