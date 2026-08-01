@@ -22,3 +22,12 @@ robotbase/robotbench/results/transcripts/
 _regen.py
 _dogfood_refs.py
 robotbase/robotbench/results/runs/
+
+# Templates commit source only (robot.yaml/world.yaml + package skeleton + controller +
+# scenarios); the compiler generates URDF/SDF/launch/bridges from the specs on `robotbase create`.
+robotbase/templates/*/src/*/urdf/*.urdf.xacro
+robotbase/templates/*/src/*/urdf/*.imported.urdf
+robotbase/templates/*/src/*/urdf/bridges.json
+robotbase/templates/*/src/*/urdf/launch_config.json
+robotbase/templates/*/src/*/worlds/*.sdf
+robotbase/templates/*/src/*/launch/*.launch.py

@@ -1,17 +1,18 @@
-import os
-
-import robotbase
 from robotbase.describe import describe
+from robotbase.generator import create_project, template_dir
 
-TEMPLATES = os.path.join(os.path.dirname(robotbase.__file__), "templates")
+
+def _describe_created(name, template, dest):
+    # describe a freshly-created project (real compiled output), not a committed template artifact
+    return describe(create_project(name, dest, template_dir(template)))
 
 
-def test_describe_differential_drive():
-    d = describe(os.path.join(TEMPLATES, "differential-drive"))
+def test_describe_differential_drive(tmp_path):
+    d = _describe_created("dbot", "differential-drive", str(tmp_path))
     assert d["robot"]["template"] == "differential-drive"
     assert d["robot"]["fixed_base"] is False
-    assert d["robot"]["dimensions"]["body_x"] == 0.35
-    assert d["robot"]["dimensions"]["body_y"] == 0.30
+    base = next(l for l in d["robot"]["links"] if l["name"] == "base_link")
+    assert base["shape"] == "box" and base["size"][:2] == [0.35, 0.3]   # real body geometry
     # arena bounds come from the walls, not the (much larger) ground plane
     assert d["world"]["bounds"] == {"x": [-4.05, 4.05], "y": [-4.05, 4.05]}
     names = {s["name"] for s in d["scenarios"]}
@@ -21,8 +22,8 @@ def test_describe_differential_drive():
     assert "diff-drive" in {c["kind"] for c in d["robot"]["controllers"]}   # control config is surfaced
 
 
-def test_describe_arm():
-    d = describe(os.path.join(TEMPLATES, "arm"))
+def test_describe_arm(tmp_path):
+    d = _describe_created("armbot", "arm", str(tmp_path))
     assert d["robot"]["fixed_base"] is True
     joints = {j["name"]: j for j in d["robot"]["joints"]}
     assert joints["shoulder_joint"]["type"] == "revolute"

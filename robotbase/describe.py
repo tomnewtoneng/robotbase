@@ -6,6 +6,7 @@ restated in prose. Pure host-side parsing of the manifest, the robot URDF (xacro
 from __future__ import annotations
 
 import glob
+import math
 import os
 import xml.etree.ElementTree as ET
 
@@ -80,6 +81,22 @@ def _controllers(root) -> list[dict]:
     return out
 
 
+def _link_geometry(link_el) -> dict | None:
+    """The first geometry (shape + dimensions) on a link, from its collision/visual — the robot's
+    real dimensions as ground truth. The compiled URDF is resolved geometry, not xacro properties, so
+    this reads the actual `<box>/<cylinder>/<sphere>` a created project runs, not authoring macros."""
+    for g in link_el.iter():
+        t = _local(g.tag)
+        if t == "box" and g.get("size"):
+            return {"shape": "box", "size": _floats(g.get("size"))}
+        if t == "cylinder" and g.get("radius"):
+            return {"shape": "cylinder", "radius": float(g.get("radius")),
+                    "length": float(g.get("length") or 0)}
+        if t == "sphere" and g.get("radius"):
+            return {"shape": "sphere", "radius": float(g.get("radius"))}
+    return None
+
+
 def _robot(project_dir: str, m: dict) -> dict:
     info = {
         "template": (m.get("robot") or {}).get("template"),
@@ -94,16 +111,15 @@ def _robot(project_dir: str, m: dict) -> dict:
     except (ET.ParseError, OSError):
         return info
 
-    # xacro properties = the robot's parameters/dimensions (literal numeric ones only).
-    dims: dict[str, float] = {}
+    # Per-link geometry (the robot's real dimensions) + the joints, from the compiled URDF.
+    links: list[dict] = []
     joints: list[dict] = []
     for el in root.iter():
         tag = _local(el.tag)
-        if tag == "property" and el.get("name") and el.get("value") is not None:
-            try:
-                dims[el.get("name")] = float(el.get("value"))
-            except ValueError:
-                pass
+        if tag == "link" and el.get("name"):
+            g = _link_geometry(el)
+            if g:
+                links.append({"name": el.get("name"), **g})
         elif tag == "joint" and el.get("name") and "${" not in el.get("name"):
             # literal (non-macro) joints, with axis / limits where present
             j = {"name": el.get("name"), "type": el.get("type")}
@@ -114,8 +130,8 @@ def _robot(project_dir: str, m: dict) -> dict:
                 elif ct == "limit" and child.get("lower") and child.get("upper"):
                     j["limits"] = [float(child.get("lower")), float(child.get("upper"))]
             joints.append(j)
-    if dims:
-        info["dimensions"] = dims
+    if links:
+        info["links"] = links
     if joints:
         info["joints"] = joints
     controllers = _controllers(root)
@@ -154,9 +170,14 @@ def _world(project_dir: str, m: dict) -> dict:
         entry = {"name": model.get("name"), "static": static, "pose": [round(p, 3) for p in pose[:3]]}
         if size:
             entry["box_size"] = size
-            if static:  # track arena extent from static box models (walls)
-                xs += [pose[0] - size[0] / 2, pose[0] + size[0] / 2]
-                ys += [pose[1] - size[1] / 2, pose[1] + size[1] / 2]
+            if static:  # arena extent from static box models (walls) — yaw-aware AABB, since the
+                # compiler emits rotated wall boxes (a vertical wall is size[0]=length + yaw=90°).
+                yaw = pose[5] if len(pose) > 5 else 0.0
+                hx, hy = size[0] / 2, size[1] / 2
+                ax = abs(hx * math.cos(yaw)) + abs(hy * math.sin(yaw))
+                ay = abs(hx * math.sin(yaw)) + abs(hy * math.cos(yaw))
+                xs += [pose[0] - ax, pose[0] + ax]
+                ys += [pose[1] - ay, pose[1] + ay]
         models.append(entry)
 
     world: dict = {"models": models}
