@@ -26,46 +26,61 @@ stays a one-liner). This is the Terraform model made literal: **modules composed
 resources.** Archetypes are modules; links/joints/sensors/plugins are the resources; you
 author at either level and mix them, and there is always a level below so nothing is locked.
 
-## Core architecture — a primitive IR that everything emits into
+## Core architecture — a typed semantic IR that backends render
 
-The one idea everything rests on: modules and sensors **contribute fragments to a shared
-intermediate representation** instead of each printing a finished blob. The compiler merges
-the fragments, validates the result, and renders URDF **once**.
+> **P4 (semantic IR) shipped, 2026-07-31.** The IR is now a **typed, backend-neutral semantic
+> model** — `RigidBody` / `Joint` / `Sensor` / `RobotModel` (and `WorldModel` on the world side) —
+> and URDF/SDF/MJCF are **pure backends** that render it. This closed the vision's #1 technical
+> kill-signal ("the IR becomes tightly coupled to Gazebo/URDF"): adding the MJCF backend was an
+> *additive file* (`backends/mjcf.py`) over the same `RobotModel`, not a re-authoring of every
+> module. Earlier this section described a string IR (`LinkIR`/`JointIR` carrying rendered URDF);
+> that is gone.
 
-### The IR (`robotbase/robotspec/ir.py`)
+The one idea everything rests on: modules and sensors **contribute typed fragments to a shared
+intermediate representation** instead of each printing a finished blob. The compiler merges the
+fragments into a `RobotModel`, and a backend renders it — validating once, rendering once.
+
+### The semantic types (`robotbase/robotspec/semantic.py`)
 
 ```
-LinkIR    name, shape(box|cylinder|sphere)+size+mass+material   (sugar -> auto inertia)
-          OR explicit visual / collision / inertial              (escape hatch)
-JointIR   name, type, parent, child, xyz, rpy, axis, limits
-Fragment  links[], joints[], gazebo[] (plugin/sensor/per-ref XML),
-          bridges[], world_systems[], ready_topics[], manifest_contrib,
-          exposes[]  (link names this fragment offers as mount points)
-RobotIR   the accumulator: merged links/joints/gazebo/bridges/world_systems/
-          ready_topics/manifest
+Geometry   Box(size) | Cylinder(radius,length) | Sphere(radius)        (typed, real numbers)
+Inertial   mass, ixx, iyy, izz            (inertial_for(geom,mass) auto-computes; or explicit)
+RigidBody  name, geometry, mass|inertia, per-element origins, friction, has_collision,
+           material/rgba          (raw_xml = an explicit, portability-breaking escape hatch)
+Joint      name, type, parent, child, xyz, rpy, axis, limit
+Sensor     kind, gz_type, reference, topic, mount_link, xyz, resolution, collision
+RobotModel name, root, bodies[], joints[], gazebo[], bridges[], world_systems[],
+           ready_topics[], control, fixed_base, manifest_sensors    (the merged accumulator)
 ```
 
-`LinkIR` shape-sugar computes the inertia tensor from the primitive shape + mass (box /
-cylinder / sphere formulas), so a raw `{name, shape, size, mass}` link "just works" — the
-reason hand-authored parts aren't finicky. Explicit `visual`/`collision`/`inertial` blocks
-remain available for anything the sugar can't express.
+`RigidBody` shape-sugar auto-computes the inertia tensor from geometry + mass (box / cylinder /
+sphere formulas in `inertial_for`), so a raw `{name, shape, size, mass}` link "just works". The
+archetype links (wheels, arm segments, rotors) carry explicit `inertia` + per-element origins +
+friction, all as *real numbers* — so a non-URDF backend can read them.
+
+### The backends (`robotbase/robotspec/backends/`, `robotbase/worldspec/backends/`)
+
+The **only** places description strings are produced:
+
+- `backends/urdf.py` — `render_body` / `render_joint` / `render_sensor` / **`render_urdf(model)`**
+  (production-quality; drives the Gazebo path).
+- `backends/mjcf.py` — **`render_mjcf(model)`** (common-subset skeleton; the proof the IR is
+  backend-neutral).
+- `worldspec/backends/sdf.py` — **`render_sdf(world)`** for the `WorldModel`.
 
 ### Modules and sensors are fragment-emitters
 
-- **Module** (archetype): `module(params, mount) -> Fragment`. Owns a chassis's links/joints,
-  its control/odometry plugin, its runtime facts (`control`, `ready_topics`, `fixed_base`),
-  and declares the links it `exposes` as mount points. `differential-drive` exposes
-  `base_link`; `arm` exposes `tool0`; `quadrotor` exposes `base_link`.
-- **Sensor**: `sensor(params, on_link, mount) -> Fragment`. Owns one link + a fixed joint to
-  `on_link` + the gz `<sensor>` + the bridge + the world system it requires.
-
-`_differential_drive` is rewritten from a string blob into an emitter — **same emitted URDF**,
-composable shape. This keeps the Phase-1 validation intact while unlocking composition.
+- **Module** (archetype): `module(params, mount) -> Fragment` of typed `RigidBody`/`Joint`. Owns a
+  chassis's bodies/joints, its control/odometry gz plugin, its runtime facts (`control`,
+  `ready_topics`, `fixed_base`), and declares the links it `exposes` as mount points.
+- **Sensor**: `sensor(params, on_link, ctx) -> Fragment`. Owns one frame `RigidBody` + a fixed
+  `Joint` to `on_link` + the gz `<sensor>` block + the bridge + the world system it requires.
 
 ### Merge + validation (what keeps it non-finicky)
 
-The compiler merges all fragments into one `RobotIR`, then validates before rendering. Clear
-errors replace broken URDF:
+`compile_model(spec)` merges all fragments into one `RobotModel` (`merge.build_model`); the backend
+validates the link tree (`semantic.validate_tree`) before rendering. Clear errors replace broken
+URDF:
 
 - every joint's `parent`/`child` link exists (missing mount target -> explicit error);
 - links form a **single tree** rooted at one base link — no orphans, no cycles;

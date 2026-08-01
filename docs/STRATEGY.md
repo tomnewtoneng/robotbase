@@ -60,10 +60,14 @@ Aligned with the vision today:
   best-effort `--from-urdf` import.
 
 Gaps vs the vision (in moat order):
-- ❌ **The IR is a URDF buffer, not a semantic model.** `ir.py` `Fragment.links` hold
-  *already-rendered URDF strings*; modules emit URDF directly. The doc's #1 technical
-  kill-signal — *"the IR becomes tightly coupled to Gazebo/URDF"* — is already partly true of us.
-  Adding an MJCF/Isaac backend today means re-authoring every module, not adding a backend.
+- ✅ **RESOLVED (P4, 2026-07-31) — the IR is now a typed semantic model, not a URDF buffer.** The IR
+  is `RigidBody`/`Joint`/`Sensor`/`RobotModel` (+ `WorldModel`) in `robotspec/semantic.py` with real
+  numeric geometry/inertia; URDF, SDF, and MJCF are **pure backends** (`backends/{urdf,mjcf}.py`,
+  `worldspec/backends/sdf.py`) that render the model. The vision's #1 technical kill-signal — *"the IR
+  becomes tightly coupled to Gazebo/URDF"* — is closed: **the MuJoCo backend was an additive file over
+  the same `RobotModel`, not a re-authoring of every module.** Behaviour-preserving refactor (a
+  golden-output guard froze the compiled URDF/SDF; the one intentional change was a reviewed,
+  provably-inert numeric/whitespace normalization of the URDF formatting). ~255 offline tests.
 - ❌ **No explainability/traceability** (`explain`/`trace`/source maps). `describe` shows facts,
   not "why this was generated / from which source line." Matters *more* now that we've added
   layers (yaml→IR→urdf→sdf→sim).
@@ -251,11 +255,14 @@ disconnected-TF detection, joint-limit validation; and tag every value as measur
 inferred / default / estimated. Moves validation from "launch the sim and see" to static.
 "Validation ≥ generation." **Effort: medium-high. Moat: high.**
 
-### P4 — Lift the IR to a semantic model (the big one)
-Decouple the IR from URDF strings: typed Robot/RigidBody/Joint/Sensor/Actuator/Controller/World
-concepts; URDF/SDF/launch become *pure backends* over the IR. This is the deepest moat (kills the
-"IR coupled to Gazebo" signal; makes MJCF/Isaac real) **and** the biggest, riskiest refactor — so
-do it **after** P1–P3 and only if the thesis validates. **Effort: high. Moat: highest.**
+### P4 — Lift the IR to a semantic model (the big one) ✅ DONE (2026-07-31)
+Decoupled the IR from URDF strings: typed `RigidBody`/`Joint`/`Sensor`/`RobotModel` (+ `WorldModel`)
+in `robotspec/semantic.py`; URDF/SDF/MJCF are now *pure backends* over the IR. **The deepest moat —
+kills the "IR coupled to Gazebo" signal — proven by adding a MuJoCo backend as an additive file, not
+a rewrite.** Executed as a behaviour-preserving, incremental refactor (14 tasks) behind a
+golden-output guard; the one intentional output change was a reviewed, provably-inert numeric/
+whitespace normalization of the compiled URDF. Remaining (future): a *first-class* MJCF backend
+(full parity — sensors/actuators/nesting) and the Isaac target now that the seam exists.
 
 ### P5 — Knowledge layer for agents
 A packaged Claude Code skill + schema docs + failure-pattern tables (borrow the ground-truth check

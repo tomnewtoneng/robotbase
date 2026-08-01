@@ -68,6 +68,10 @@ Everything runs headless in Docker (software-rendered Gazebo — no GPU required
   ground, lights, obstacles, walls, and goals. Robotbase compiles both to URDF + SDF — you never
   hand-write the XML. Bring your own robot with **`robotbase create --from-urdf my_robot.urdf`**.
   Format: [docs/design/declarative-compiler.md](docs/design/declarative-compiler.md).
+  Under the hood the compiler builds a **typed, backend-neutral semantic model**
+  (`RigidBody`/`Joint`/`Sensor`/`RobotModel`); URDF, SDF, and MJCF are pure *rendering backends* over
+  it — so a new description format is an additive file, not a rewrite (a MuJoCo/MJCF backend already
+  proves the seam).
 - **`robotbase describe`** — structured ground truth: the robot's dimensions and joints,
   the world's layout and arena bounds, and every scenario's assertions.
 - **`robotbase test [--all] [--trials N]`** — run a scenario, or the whole suite; with
