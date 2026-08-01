@@ -38,6 +38,9 @@ container, ROS, or Gazebo) should also be verified against a generated project:
 - **An assertion / metric:** `robotbase/assertions.py` + the metrics collector, documented in
   `docs/SCENARIO-FORMAT.md` (bump nothing — additive fields don't change the v1 format).
 - **A sim backend:** implement the `SimAdapter` protocol (`robotbase/sim/base.py`).
+- **A description backend (URDF/SDF/MJCF/…):** render the semantic IR — add a `render_*(model)`
+  over `RobotModel` in `robotbase/robotspec/backends/<fmt>.py` (see `backends/mjcf.py`). The typed
+  IR in `robotbase/robotspec/semantic.py` is the single source of truth; backends only format it.
 
 ## PRs
 

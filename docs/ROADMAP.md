@@ -23,8 +23,11 @@ randomization + suites + regression (`test --all --trials`), **auto-diagnosis**
 (`robotbase diagnose`), **RobotBench** (`robotbase bench`, see `ROBOTBENCH.md`); the
 **agent-DX** tools `robotbase describe` and `robotbase doctor`; the full **MCAP episode**
 record/query/attachments; a proven **sim-agnostic** adapter (Gazebo + MuJoCo); and a
-**Gymnasium RL env** (train and eval in one format). This doc's remaining focus is
-**widening** — more robots, sensors, and behaviours.
+**Gymnasium RL env** (train and eval in one format). **Compiler-core depth (the moat, per
+`STRATEGY.md`) also shipped:** explainability (`robotbase explain` + source maps, P1), static
+physical validation (`robotbase validate`, P3), the knowledge-layer surface (`robotbase schema`,
+P5), and the **semantic-IR refactor (P4, 2026-07-31)** — a typed `RobotModel` with URDF/SDF/MJCF as
+pure backends. This doc's remaining focus is **widening** — more robots, sensors, and behaviours.
 
 ## Now — distribution (Track A, mostly human-driven)
 

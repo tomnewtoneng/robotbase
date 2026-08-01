@@ -141,6 +141,8 @@ running now; n=1 is directional, not proof.)
   P0 lands.
 
 **Reprioritized next-steps (pending the n=3 result — the n=1 says it will validate):**
+> **Update (2026-08-01): items 1–5 below are now shipped — P0 validated (n=1), P1/P3/P5 done, P2
+> partial, and P4 (the "deferred" item 5) is complete. See the P0–P5 sections in §3 for current status.**
 1. **Finish P0:** complete the n=3 run → publish `ROBOTBENCH-RESULTS.md` (the killer artifact:
    product + marketing + validation in one). This is also Tom's distribution trigger (PyPI/Docker).
 2. **Lead with P5 + P3** (proven the WITH arm's active ingredients): package the knowledge layer as a
