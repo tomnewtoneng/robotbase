@@ -1,9 +1,15 @@
 # Robotbase Project Instructions
 
-This is a ROS 2 Jazzy + Gazebo Harmonic **quadrotor drone** project that runs headless in
-Docker. Your job is to implement the drone's controller so that the **simulation scenario
-you're asked to satisfy passes** — verified by running it, not by inspection. Read the
-scenario's YAML first for its target and tolerance.
+This is a Robotbase **quadrotor drone** project — a ROS 2 Jazzy + Gazebo Harmonic stack that runs
+headless in Docker. You build and verify robots *declaratively*: everything here is yours to change
+— the drone and its sensors (`robot.yaml`), the world (`world.yaml`), the control config, and the
+test scenarios — plus the control logic you implement. You edit, compile, and run, verifying by the
+structured result, never by inspection.
+
+This project ships a working drone, a scenario, and a **starter controller you implement**. Run
+`robotbase describe` for ground truth and `robotbase schema` for the full authoring format (robot /
+world / **scenario**). When a task is about a specific scenario, **read its YAML first** for its
+target and tolerance.
 
 ## Environment
 

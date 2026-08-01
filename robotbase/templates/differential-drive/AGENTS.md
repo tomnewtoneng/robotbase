@@ -1,10 +1,16 @@
 # Robotbase Project Instructions
 
-This is a ROS 2 Jazzy + Gazebo Harmonic **differential-drive robot** project that runs
-headless in Docker. Your job is to implement the robot's controller so that the
-**simulation scenario you're asked to satisfy passes** — verified by running it, not by
-inspection. Different scenarios require different behaviour, so **read the scenario's YAML
-first** to learn what it checks; don't assume the task from the file names.
+This is a Robotbase **differential-drive robot** project — a ROS 2 Jazzy + Gazebo Harmonic stack
+that runs headless in Docker. You build and verify robots *declaratively*: everything here is yours
+to change — the robot and its sensors (`robot.yaml`), the world (`world.yaml`), the control config,
+and the test scenarios — plus the control logic you implement. You edit, compile, and run, verifying
+by the structured result, never by inspection.
+
+This project ships a working differential-drive robot with a LiDAR, a set of scenarios, and a
+**starter controller you implement** for the behaviour you want. Run `robotbase describe` for ground
+truth and `robotbase schema` for the full authoring format (robot / world / **scenario**). When a
+task is about a specific scenario, **read its YAML first** — it declares exactly what it checks; don't
+assume the task from file names.
 
 ## Environment
 

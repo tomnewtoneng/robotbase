@@ -14,19 +14,38 @@ CLI.
 
 Local-first and open-core. No cloud, no accounts in the core.
 
-## Watch an agent teach itself
+## How it works
 
-The reason Robotbase exists, demonstrated end-to-end: a coding agent with **no knowledge of
-the solution** was given a project whose controller drives forward and ignores the LiDAR,
-and told to make it stop before obstacles. Using only the Robotbase tools, it read the
-failing scenario assertions, wrote an obstacle-avoidance controller, re-ran the scenario,
-and drove it from FAIL to PASS — stopping 0.5 m before the box, zero collisions, never
-touching Gazebo by hand. Full write-up in [PROOF.md](PROOF.md).
+You describe the robot, its sensors, the world, and the behaviours you want to verify in two
+small YAML files — `robot.yaml` and `world.yaml` — plus scenarios that declare what "working"
+means. Robotbase **compiles** those into a complete, runnable ROS 2 + Gazebo project (URDF, world
+SDF, launch, bridges, control config) and runs it **headless**. Every run yields a machine-readable
+result and a recorded MCAP episode. The whole loop is driven by a CLI and an MCP server, so a human
+or a coding agent works it the same way:
 
-That's the thesis: **a declarative local ROS environment plus structured agent tools makes
-coding agents materially better at robotics.** We've since re-run that loop on harder tasks
-(goal-seeking, navigate-around-an-obstacle, arm joint control) — see
-[ROBOTBENCH.md](docs/ROBOTBENCH.md).
+```text
+edit robot.yaml / world.yaml / a scenario  →  robotbase up  →  robotbase test
+                       ▲                                              │
+                       └────────── read the structured result / episode ──────────┘
+```
+
+## Why it makes coding agents better at robotics
+
+Standing up ROS 2 + Gazebo by hand is a tax an agent pays in opaque C++ tracebacks and terminal
+scraping. Robotbase removes it and replaces it with the things agents are actually good at:
+
+- **Declarative, not fiddly.** The agent edits a few lines of YAML; the compiler owns every sim
+  gotcha (collision lumping, scoped contact topics, bridge wiring, inertia, control config) and,
+  when the spec is wrong, returns an error that *names the field* instead of a crash.
+- **Structured state, not log-scraping.** `describe`, `explain`, `validate`, and the episode query
+  verbs hand the agent ground truth — the compiled robot, why each artifact exists, static physics
+  problems, a downsampled slice of any topic around a failure — instead of console output to parse.
+- **Evidence, not vibes.** A scenario is an objective pass/fail with metrics; the agent can't *claim*
+  a robot works and be believed — it has to make the assertions pass. That closes the gap the whole
+  project exists to close: **a coding agent can write robot code; on its own it can't tell whether the
+  robot actually works.** Robotbase gives it a robot to run and evidence to read.
+
+*Benchmark data — coding agents with vs. without Robotbase — coming soon.*
 
 ## Quickstart
 
@@ -107,8 +126,8 @@ policy trains against the env and is scored against the identical scenario throu
 
 ## Status
 
-**Alpha, and proven end-to-end.** The full local loop works (create → build → launch → run
-scenarios → agent fixes the controller). It ships **three robot templates across two robot
+**Alpha, and proven end-to-end.** The full local loop works (create → author the specs → build →
+launch → run scenarios → read the evidence). It ships **four robot templates across three robot
 classes**, a growing scenario/assertion/metric vocabulary, MCAP episode recording +
 query + attachments, auto-diagnosis, `robotbase doctor`, a domain-randomized eval/suite
 layer, RobotBench, a proven sim-agnostic adapter (Gazebo + MuJoCo), and a Gymnasium RL env.

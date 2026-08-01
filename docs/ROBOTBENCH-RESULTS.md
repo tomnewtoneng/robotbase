@@ -1,5 +1,10 @@
 # RobotBench Results — RobotBench v2
 
+> **⚠️ PRELIMINARY — n=1 (one trial per task). Directional, not statistical.** These numbers are
+> **held back from public / marketing materials until a full n=3 run** — don't cite them externally
+> yet (README and docs say "benchmark data coming soon"). This file is the internal record of the
+> first clean run; the seeded-spawn robustness (fixed 2026-08-01) makes a proper n=3 meaningful.
+
 Model: `claude-sonnet-5`. The with-vs-without validation experiment (see `design/robotbench-validation.md`).
 
 ## Headline
