@@ -117,22 +117,28 @@ def _project_snake(project_dir: str) -> str | None:
     return None
 
 
-# Runtime essentials every robot needs regardless of archetype: control in, sim clock out. A
-# `differential-drive` base emits /cmd_vel itself (deduped below); a `use: custom` import gets its
-# drivetrain from the imported URDF's own plugin, so the compiler wouldn't otherwise bridge /cmd_vel.
+# The sim clock every robot needs, regardless of archetype.
 _ESSENTIAL_BRIDGES = [
-    {"arg": "/cmd_vel@geometry_msgs/msg/Twist]gz.msgs.Twist", "remap": None},
     {"arg": "/clock@rosgraph_msgs/msg/Clock[gz.msgs.Clock", "remap": None},
 ]
+# /cmd_vel is essential only for robots DRIVEN by it: a `differential-drive` base emits it itself
+# (deduped below), and a `use: custom` import gets its drivetrain from the imported URDF's own plugin
+# so the compiler wouldn't otherwise bridge it. A joint-controlled arm is NOT driven by /cmd_vel, so
+# it must not get a spurious idle bridge — hence the `velocity_topic` gate.
+_CMD_VEL_BRIDGE = {"arg": "/cmd_vel@geometry_msgs/msg/Twist]gz.msgs.Twist", "remap": None}
 
 
-def _bridge_list(compiled_bridges) -> list[dict]:
-    """Serialize compiled bridges + merge the runtime essentials (deduped by ROS topic)."""
+def _bridge_list(compiled_bridges, control=None) -> list[dict]:
+    """Serialize compiled bridges + merge the runtime essentials (deduped by ROS topic). `control` is
+    the compiled manifest's control block; /cmd_vel is added only when the robot is /cmd_vel-driven."""
     out, seen = [], set()
     for b in compiled_bridges:
         out.append({"arg": b.arg, "remap": list(b.remap) if b.remap else None})
         seen.add(b.arg.split("@", 1)[0])
-    for e in _ESSENTIAL_BRIDGES:
+    essentials = list(_ESSENTIAL_BRIDGES)
+    if control and control.get("velocity_topic"):
+        essentials.append(_CMD_VEL_BRIDGE)
+    for e in essentials:
         if e["arg"].split("@", 1)[0] not in seen:
             out.append(e)
     return out
@@ -220,7 +226,7 @@ def _compile_specs(dest: str, snake: str) -> None:
         # gz). Installed alongside the URDF; the launch reads it. See docs/STRATEGY.md P2.
         import json
         with open(os.path.join(urdf_dir, "bridges.json"), "w", encoding="utf-8") as fh:
-            json.dump(_bridge_list(compiled.bridges), fh, indent=2)
+            json.dump(_bridge_list(compiled.bridges, compiled.manifest.get("control")), fh, indent=2)
         # Compile the launch config from the specs so the launch is NOT coupled to the project
         # name: the model spawns under the robot.yaml `name` (matching the sensor bridges' scoped
         # topics + the interface contract), and the launch reads the world name from world.yaml.

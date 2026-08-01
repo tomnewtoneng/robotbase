@@ -54,6 +54,25 @@ def test_create_rejects_existing(tmp_path):
         create_project("obstacle-bot", str(tmp_path / "out"), template)
 
 
+def test_bridge_list_omits_cmd_vel_for_non_mobile_robots():
+    # a joint-controlled arm must not get a spurious idle /cmd_vel bridge; /clock stays essential
+    from robotbase.generator import _bridge_list
+    from robotbase.robotspec.ir import Bridge
+    arm_bridges = [Bridge("/shoulder_cmd@std_msgs/msg/Float64]gz.msgs.Double"),
+                   Bridge("/joint_states@sensor_msgs/msg/JointState[gz.msgs.Model"),
+                   Bridge("/clock@rosgraph_msgs/msg/Clock[gz.msgs.Clock")]
+    args = [b["arg"].split("@")[0] for b in _bridge_list(arm_bridges, {"joint_command_topics": ["/shoulder_cmd"]})]
+    assert "/cmd_vel" not in args and "/clock" in args
+
+
+def test_bridge_list_adds_cmd_vel_for_a_cmd_vel_driven_robot():
+    # a custom import is driven by /cmd_vel (control) but the compiler didn't bridge it -> fallback adds it
+    from robotbase.generator import _bridge_list
+    from robotbase.robotspec.ir import Bridge
+    out = _bridge_list([Bridge("/clock@rosgraph_msgs/msg/Clock[gz.msgs.Clock")], {"velocity_topic": "/cmd_vel"})
+    assert "/cmd_vel" in [b["arg"].split("@")[0] for b in out]
+
+
 def test_created_project_generates_a_data_driven_launch(tmp_path):
     # a real template compiles specs on create; the launch is generated (P2), package-scoped,
     # data-driven, and the compiled launch_config carries the spawn name + fixed_base flag.
