@@ -133,10 +133,18 @@ Full design in `design/optional-visualization.md`.
 ## Hardening backlog
 
 - The contact sensor now provides ground truth (`no_contact`); consider deprecating the
-  LiDAR `no_collision` heuristic once scenarios have migrated.
-- Enforce `scenario.timeout_seconds`.
+  LiDAR `no_collision` heuristic once scenarios have migrated. *(left as-is — coexists fine.)*
+- ~~Enforce `scenario.timeout_seconds`.~~ **done (2026-08-01)** — the runner cuts a scenario off
+  once the deadline passes and marks the result `timed_out` (which fails it).
+- ~~A joint-controlled arm got a spurious idle `/cmd_vel` bridge.~~ **done (2026-08-01)** — `/cmd_vel`
+  is bridged only for `/cmd_vel`-driven robots (`control.velocity_topic`); `/clock` stays essential.
+- **Seeded spawn `-x/-y/-z` in the RobotBench harness (per-seed robustness is degenerate).** The
+  `_spawn_robot` helper exists but `real_bringup_with`/`_without` ignore the seeded `pose` (the launch
+  spawns at its fixed position). Fix needs the generated launch to accept a spawn-pose launch arg —
+  **live-only to verify** (does a fixed-base arm respect a spawn offset? is both-arm jitter fair?), so
+  do it alongside a live Docker gate run, not blind. Matters for the n=3 statistical run.
 - ~~Path-length vs. displacement metric.~~ **done** (`path_length_metres`).
-- Verify non-Windows hosts (Linux, macOS/Docker Desktop); add CI.
+- Verify non-Windows hosts (Linux, macOS/Docker Desktop); add CI. *(fits the repo-hygiene / distribution pass.)*
 - ~~De-duplicate the bundled templates vs. a standalone reference project.~~ **done** — the
   vestigial `warehouse-bot/` reference project was removed; `robotbase create` is the single
   source of a working project.
