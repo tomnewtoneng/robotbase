@@ -47,3 +47,26 @@ def test_massless_frame_links_are_not_flagged():
     # base_footprint / tip have no <inertial> — expected, must not error.
     urdf = '<robot name="r"><link name="base_footprint"/></robot>'
     assert validate_urdf(urdf) == []
+
+
+def test_validate_model_reads_typed_fields_no_xml():
+    # the physical checks now run over a typed RobotModel, not parsed XML
+    from robotbase.robotspec.semantic import RobotModel, RigidBody, Inertial, Joint
+    from robotbase.robotspec.validate import validate_model
+    model = RobotModel(name="r", root="a", bodies=[
+        RigidBody("base_footprint"),                                   # frame link -> ignored
+        RigidBody("a", ("box", [1, 1, 1]), inertia=Inertial(0.0, 1, 1, 1)),   # zero mass
+        RigidBody("b", ("box", [1, 1, 1]), mass=2.0),                  # fine
+    ], joints=[Joint("j", "revolute", "a", "b", limit=("1.0", "-1.0", "10", "1"))])
+    codes = {f.code for f in validate_model(model)}
+    assert "non-positive-mass" in codes
+    assert "inverted-joint-limit" in codes
+
+
+def test_compile_model_returns_a_robot_model():
+    from robotbase.robotspec.compile import compile_model
+    from robotbase.robotspec.semantic import RobotModel
+    model = compile_model(RobotSpec.model_validate(
+        {"name": "robot", "base": "differential-drive", "sensors": [{"type": "lidar"}]}))
+    assert isinstance(model, RobotModel)
+    assert {b.name for b in model.bodies} >= {"base_footprint", "base_link", "left_wheel", "lidar_link"}

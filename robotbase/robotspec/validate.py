@@ -16,6 +16,10 @@ from __future__ import annotations
 import xml.etree.ElementTree as ET
 from dataclasses import dataclass
 
+from robotbase.robotspec.semantic import (
+    Box, Cylinder, Sphere, RobotModel, geometry_from_spec, inertial_for,
+)
+
 MASS_RATIO_WARN = 1000.0   # heaviest / lightest link above this risks solver instability
 
 
@@ -79,10 +83,62 @@ def validate_urdf(urdf: str) -> list[Finding]:
     return findings
 
 
-def validate_robot(spec) -> list[Finding]:
-    """Compile `spec` and physically validate the result (raises the usual compile errors first)."""
-    from robotbase.robotspec.compile import compile_robot
-    return validate_urdf(compile_robot(spec).urdf)
+def validate_model(model: RobotModel) -> list[Finding]:
+    """Physically validate a typed RobotModel — the same checks as validate_urdf, read from typed
+    bodies/joints instead of parsing XML. Massless frame links (no geometry/inertia) are ignored, as
+    are raw-XML escape-hatch links (their physics is the author's, and not introspectable here —
+    validate_urdf on the rendered output can still check those)."""
+    findings: list[Finding] = []
+    masses: dict[str, float] = {}
+    for b in model.bodies:
+        if b.raw_xml is not None:
+            continue
+        if b.geometry is None and b.inertia is None:
+            continue  # a massless frame link (base_footprint, tip) — expected, not physical
+        if b.inertia is not None:
+            inr = b.inertia
+        else:
+            g = b.geometry if isinstance(b.geometry, (Box, Cylinder, Sphere)) else geometry_from_spec(*b.geometry)
+            inr = inertial_for(g, b.mass)
+        if inr.mass <= 0:
+            findings.append(Finding("error", "non-positive-mass",
+                                    f"link '{b.name}' has non-positive mass ({inr.mass}) — it will "
+                                    "not behave under physics"))
+        else:
+            masses[b.name] = inr.mass
+        for ax, v in (("ixx", inr.ixx), ("iyy", inr.iyy), ("izz", inr.izz)):
+            if v <= 0:
+                findings.append(Finding("error", "non-positive-inertia",
+                                        f"link '{b.name}' has non-positive {ax} ({v}) — an invalid "
+                                        "inertia tensor"))
+
+    if len(masses) >= 2:
+        heavy_name, heavy = max(masses.items(), key=lambda kv: kv[1])
+        light_name, light = min(masses.items(), key=lambda kv: kv[1])
+        ratio = heavy / light
+        if ratio > MASS_RATIO_WARN:
+            findings.append(Finding("warning", "mass-ratio",
+                                    f"mass ratio {ratio:.0f}:1 between '{heavy_name}' ({heavy} kg) "
+                                    f"and '{light_name}' ({light} kg) — large ratios make the "
+                                    "physics solver unstable"))
+
+    for j in model.joints:
+        if j.limit is not None:
+            lo, hi = float(j.limit[0]), float(j.limit[1])
+            if lo >= hi:
+                findings.append(Finding("error", "inverted-joint-limit",
+                                        f"joint '{j.name}' has lower limit {lo} >= upper {hi} — it "
+                                        "cannot move"))
+    return findings
+
+
+def validate_robot(spec, world_name: str = "warehouse") -> list[Finding]:
+    """Compile `spec` and physically validate the result (raises the usual compile errors first).
+    Non-custom robots validate their typed RobotModel; custom imports validate the rendered URDF."""
+    from robotbase.robotspec.compile import compile_model, compile_robot, _parts
+    if any(p.use == "custom" for p in _parts(spec)):
+        return validate_urdf(compile_robot(spec, world_name).urdf)
+    return validate_model(compile_model(spec, world_name))
 
 
 def summarize(findings: list[Finding]) -> dict:

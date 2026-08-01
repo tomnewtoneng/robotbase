@@ -9,14 +9,15 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 from robotbase.robotspec.ir import Fragment, body_xyz
-from robotbase.robotspec.semantic import Joint, RigidBody
+from robotbase.robotspec.semantic import Joint, RigidBody, RobotModel
 from robotbase.robotspec.backends.urdf import render_body, render_joint, render_urdf
 from robotbase.robotspec.merge import build_model, fixed_joint
 from robotbase.robotspec.modules import MODULES, UnknownArchetype
 from robotbase.robotspec.schema import Part, RobotSpec
 from robotbase.robotspec.sensors import SENSORS, Ctx, UnknownSensor, infer_sensors_from_urdf
 
-__all__ = ["CompiledRobot", "compile_robot", "UnknownArchetype", "UnknownSensor", "InvalidRawPart"]
+__all__ = ["CompiledRobot", "compile_robot", "compile_model",
+           "UnknownArchetype", "UnknownSensor", "InvalidRawPart"]
 
 
 class InvalidRawPart(ValueError):
@@ -61,13 +62,65 @@ def _raw_part(part: Part) -> Fragment:
     return f
 
 
-def compile_robot(spec: RobotSpec, world_name: str = "warehouse") -> CompiledRobot:
+def _parts(spec: RobotSpec) -> list[Part]:
+    # `base:` is sugar for a first part; any extra `parts:` compose onto it (a mast, a sensor mount,
+    # a second module). Prepending — not replacing — means `base:` + `parts:` is the natural
+    # authoring form, instead of a silent footgun where one drops the other.
     parts = list(spec.parts)
     if spec.base:
-        # `base:` is sugar for a first part; any extra `parts:` compose onto it (a mast, a
-        # sensor mount, a second module). Prepending — not replacing — means `base:` + `parts:`
-        # is the natural authoring form, instead of a silent footgun where one drops the other.
         parts = [Part(use=spec.base, body=spec.body, drive=spec.drive)] + parts
+    return parts
+
+
+def compile_model(spec: RobotSpec, world_name: str = "warehouse") -> RobotModel:
+    """Assemble a spec into a typed RobotModel (the non-custom path) — the semantic surface the
+    URDF/MJCF backends render and validate/explain read. Custom-import robots have no semantic model
+    (their body is a verbatim external URDF); `compile_robot` handles those directly."""
+    parts = _parts(spec)
+    if any(p.use == "custom" for p in parts):
+        raise InvalidRawPart(
+            "custom-import robots have no semantic RobotModel; render/validate the imported URDF directly")
+
+    fragments: list[Fragment] = []
+    primary_base = None
+    body_size = body_xyz(spec.body.size, spec.body.shape)
+    for part in parts:
+        if part.use is not None:
+            if part.use not in MODULES:
+                raise UnknownArchetype(
+                    f"unknown module {part.use!r}; known: {sorted(MODULES)} (or use raw links/joints)")
+            p = {"body": (part.body or spec.body).model_dump(),
+                 "drive": (part.drive or spec.drive).model_dump()}
+            frag = MODULES[part.use](p, part.mount)
+            if primary_base is None and frag.exposes:
+                primary_base = frag.exposes[0]
+                b = part.body or spec.body
+                body_size = body_xyz(b.size, b.shape)
+        else:
+            frag = _raw_part(part)
+        fragments.append(frag)
+
+    if not fragments:
+        raise ValueError("robot has no parts: set `base:` or `parts:` in the spec")
+    root = "base_footprint"
+    all_links = [l for f in fragments for l in f.links]
+    if not any(l.name == root for l in all_links):
+        if not all_links:
+            raise ValueError("robot has no links: every part is empty")
+        root = all_links[0].name
+
+    base_link = primary_base or root
+    ctx = Ctx(world=world_name, robot_name=spec.name, body_size=body_size, base_link=base_link)
+    for s in spec.sensors:
+        if s.type not in SENSORS:
+            raise UnknownSensor(f"unknown sensor {s.type!r}; known: {sorted(SENSORS)}")
+        fragments.append(SENSORS[s.type](s.model_dump(), s.on or base_link, ctx))
+
+    return build_model(spec.name, root, fragments)
+
+
+def compile_robot(spec: RobotSpec, world_name: str = "warehouse") -> CompiledRobot:
+    parts = _parts(spec)
 
     custom = next((p for p in parts if p.use == "custom"), None)
     if custom is not None:
@@ -121,42 +174,7 @@ def compile_robot(spec: RobotSpec, world_name: str = "warehouse") -> CompiledRob
         return CompiledRobot(name=spec.name, urdf=urdf, bridges=bridges,
                              world_systems=world_systems, manifest=manifest, spawn_z=0.1)
 
-    fragments: list[Fragment] = []
-    primary_base = None
-    body_size = body_xyz(spec.body.size, spec.body.shape)
-    for part in parts:
-        if part.use is not None:
-            if part.use not in MODULES:
-                raise UnknownArchetype(
-                    f"unknown module {part.use!r}; known: {sorted(MODULES)} (or use raw links/joints)")
-            p = {"body": (part.body or spec.body).model_dump(),
-                 "drive": (part.drive or spec.drive).model_dump()}
-            frag = MODULES[part.use](p, part.mount)
-            if primary_base is None and frag.exposes:
-                primary_base = frag.exposes[0]
-                b = part.body or spec.body
-                body_size = body_xyz(b.size, b.shape)
-        else:
-            frag = _raw_part(part)
-        fragments.append(frag)
-
-    if not fragments:
-        raise ValueError("robot has no parts: set `base:` or `parts:` in the spec")
-    root = "base_footprint"
-    all_links = [l for f in fragments for l in f.links]
-    if not any(l.name == root for l in all_links):
-        if not all_links:
-            raise ValueError("robot has no links: every part is empty")
-        root = all_links[0].name
-
-    base_link = primary_base or root
-    ctx = Ctx(world=world_name, robot_name=spec.name, body_size=body_size, base_link=base_link)
-    for s in spec.sensors:
-        if s.type not in SENSORS:
-            raise UnknownSensor(f"unknown sensor {s.type!r}; known: {sorted(SENSORS)}")
-        fragments.append(SENSORS[s.type](s.model_dump(), s.on or base_link, ctx))
-
-    model = build_model(spec.name, root, fragments)
+    model = compile_model(spec, world_name)
     urdf = render_urdf(model)
     manifest = {
         "robot": {"template": spec.base, "name": spec.name},
