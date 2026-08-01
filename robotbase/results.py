@@ -40,6 +40,7 @@ class ScenarioResult(BaseModel):
     started_at: str = ""
     finished_at: str = ""
     duration_seconds: float = 0.0
+    timed_out: bool = False
     metrics: Metrics
     assertions: list[AssertionResult] = []
     diagnostics: list[Diagnostic] = []
@@ -47,7 +48,8 @@ class ScenarioResult(BaseModel):
     @model_validator(mode="after")
     def _compute_passed(self) -> "ScenarioResult":
         object.__setattr__(self, "passed",
-                           bool(self.assertions) and all(a.passed for a in self.assertions))
+                           bool(self.assertions) and all(a.passed for a in self.assertions)
+                           and not self.timed_out)
         return self
 
     @field_serializer("metrics")

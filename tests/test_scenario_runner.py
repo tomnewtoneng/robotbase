@@ -1,3 +1,5 @@
+import time
+
 from robotbase.schema import Scenario, SetupSpec, ActionSpec, AssertionSpec
 from robotbase.results import Metrics
 from robotbase.scenario_runner import run_scenario
@@ -63,3 +65,26 @@ def test_runner_fails_on_collision(tmp_path):
     result = run_scenario(_scenario(), FakeRuntime(m), str(tmp_path))
     assert result.passed is False
     assert result.metrics.collision_count == 1
+
+
+class SlowRuntime(FakeRuntime):
+    def run_action(self, action):
+        super().run_action(action)
+        time.sleep(0.03)
+
+
+def test_runner_enforces_scenario_timeout(tmp_path):
+    # a scenario whose actions overrun timeout_seconds is cut off and fails (not silently over-run)
+    m = Metrics(collision_count=0, minimum_obstacle_distance_metres=0.4,
+                topic_message_counts={"/scan": 20})
+    scenario = Scenario(
+        version=1, name="slow", setup=SetupSpec(reset_world=True), timeout_seconds=0.05,
+        actions=[ActionSpec(type="wait", duration_seconds=1),
+                 ActionSpec(type="wait", duration_seconds=1),
+                 ActionSpec(type="wait", duration_seconds=1)],
+        assertions=[AssertionSpec(type="no_collision")])
+    rt = SlowRuntime(m)
+    result = run_scenario(scenario, rt, str(tmp_path))
+    assert result.timed_out is True
+    assert result.passed is False                                   # a timeout fails the scenario
+    assert len([c for c in rt.calls if c.startswith("action:")]) < 3  # stopped early

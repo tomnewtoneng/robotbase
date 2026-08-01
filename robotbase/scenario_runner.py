@@ -26,7 +26,16 @@ def run_scenario(scenario: Scenario, runtime, run_dir: str) -> ScenarioResult:
     for obstacle in scenario.setup.obstacles:
         runtime.spawn_box(obstacle)
 
+    # Enforce the whole-scenario budget: stop before any action once the deadline passes, so a
+    # scenario whose actions overrun `timeout_seconds` is cut off and fails instead of running
+    # unbounded. (A single blocking runtime call isn't interrupted here — that is the runtime's
+    # responsibility — but multi-action / long-scenario overruns are bounded at action granularity.)
+    deadline = time.monotonic() + scenario.timeout_seconds
+    timed_out = False
     for action in scenario.actions:
+        if time.monotonic() >= deadline:
+            timed_out = True
+            break
         runtime.run_action(action)
 
     metrics = runtime.collect_metrics()
@@ -39,6 +48,7 @@ def run_scenario(scenario: Scenario, runtime, run_dir: str) -> ScenarioResult:
         metrics=metrics,
         assertions=assertion_results,
         duration_seconds=round(time.time() - started, 1),
+        timed_out=timed_out,
         started_at=started_at,
         finished_at=finished_at,
     )
