@@ -25,6 +25,7 @@ def build_model(name: str, root: str, fragments: list[Fragment]) -> RobotModel:
     for f in fragments:
         model.bodies += f.links
         model.joints += f.joints
+        model.controllers += f.controllers
         model.gazebo += f.gazebo
         model.bridges += f.bridges
         for s in f.world_systems:

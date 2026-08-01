@@ -42,7 +42,7 @@ def test_arm_module_standalone_anchors_to_world():
     assert f.fixed_base is True
     assert "tip" in f.exposes
     assert f.ready_topics == ["/joint_states"]
-    assert any("JointPositionController" in g for g in f.gazebo)
+    assert any(c.kind == "joint-position" for c in f.controllers)  # control plugins are now typed
     assert any(l.name == "world" for l in f.links)                 # world anchor when standalone
     args = [b.arg for b in f.bridges]
     assert "/shoulder_cmd@std_msgs/msg/Float64]gz.msgs.Double" in args
@@ -71,8 +71,8 @@ def test_quadrotor_module():
     assert f.control["velocity_topic"] == "/cmd_vel"
     assert f.ready_topics == ["/odom"]
     assert f.fixed_base is False
-    assert any("VelocityControl" in g for g in f.gazebo)
-    assert any("OdometryPublisher" in g for g in f.gazebo)
+    assert any(c.kind == "velocity" for c in f.controllers)        # control plugins are now typed
+    assert any(c.kind == "odometry-publisher" for c in f.controllers)
     args = [b.arg for b in f.bridges]
     assert "/cmd_vel@geometry_msgs/msg/Twist]gz.msgs.Twist" in args
     assert "/odom@nav_msgs/msg/Odometry[gz.msgs.Odometry" in args

@@ -184,5 +184,6 @@ def render_urdf(model: RobotModel) -> str:
             f'<robot name="{model.name}" xmlns:xacro="http://ros.org/wiki/xacro">'
             + "".join(render_body(b) for b in model.bodies)
             + "".join(render_joint(j) for j in model.joints)
+            + render_controllers(model.controllers)
             + "".join(model.gazebo)
             + "\n</robot>\n")

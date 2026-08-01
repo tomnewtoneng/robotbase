@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 from robotbase.robotspec.ir import Bridge, Fragment, body_xyz
-from robotbase.robotspec.semantic import Inertial, Joint, RigidBody
+from robotbase.robotspec.semantic import Controller, Inertial, Joint, RigidBody
 
 
 class UnknownArchetype(ValueError):
@@ -40,16 +40,13 @@ def differential_drive(params: dict, mount: dict | None) -> Fragment:
     f.joints.append(Joint("caster_joint", "fixed", "base_link", "caster",
                           xyz=f"{bx/2 - wr} 0 {-bz/2}"))
 
+    f.controllers.append(Controller("diff-drive", {
+        "left_joint": "left_wheel_joint", "right_joint": "right_wheel_joint",
+        "wheel_separation": ws, "wheel_radius": wr, "topic": "cmd_vel",
+        "odom_topic": "odom", "tf_topic": "tf", "frame_id": "odom",
+        "child_frame_id": "base_footprint", "odom_publish_frequency": 30}))
+    f.controllers.append(Controller("joint-state-publisher", {"topic": "joint_states"}))
     f.gazebo.append(
-        '\n  <gazebo>'
-        '\n    <plugin filename="gz-sim-diff-drive-system" name="gz::sim::systems::DiffDrive">'
-        '\n      <left_joint>left_wheel_joint</left_joint><right_joint>right_wheel_joint</right_joint>'
-        f'\n      <wheel_separation>{ws}</wheel_separation><wheel_radius>{wr}</wheel_radius>'
-        '\n      <topic>cmd_vel</topic><odom_topic>odom</odom_topic><tf_topic>tf</tf_topic>'
-        '\n      <frame_id>odom</frame_id><child_frame_id>base_footprint</child_frame_id>'
-        '\n      <odom_publish_frequency>30</odom_publish_frequency></plugin>'
-        '\n    <plugin filename="gz-sim-joint-state-publisher-system" name="gz::sim::systems::JointStatePublisher">'
-        '\n      <topic>joint_states</topic></plugin></gazebo>'
         '\n  <gazebo reference="left_wheel"><mu1>1.0</mu1><mu2>1.0</mu2></gazebo>'
         '\n  <gazebo reference="right_wheel"><mu1>1.0</mu1><mu2>1.0</mu2></gazebo>'
         '\n  <gazebo reference="caster"><mu1>0.0</mu1><mu2>0.0</mu2></gazebo>')
@@ -102,16 +99,13 @@ def arm(params: dict, mount: dict | None) -> Fragment:
     f.links.append(RigidBody("tip"))
     f.joints.append(Joint("tip_joint", "fixed", "forearm", "tip", xyz=f"0 0 {LINK_LEN}"))
 
-    f.gazebo.append(
-        '\n  <gazebo>'
-        '\n    <plugin filename="gz-sim-joint-position-controller-system" name="gz::sim::systems::JointPositionController">'
-        '\n      <joint_name>shoulder_joint</joint_name><topic>shoulder_cmd</topic>'
-        '\n      <p_gain>80</p_gain><i_gain>2.0</i_gain><d_gain>8.0</d_gain></plugin>'
-        '\n    <plugin filename="gz-sim-joint-position-controller-system" name="gz::sim::systems::JointPositionController">'
-        '\n      <joint_name>elbow_joint</joint_name><topic>elbow_cmd</topic>'
-        '\n      <p_gain>60</p_gain><i_gain>2.0</i_gain><d_gain>6.0</d_gain></plugin>'
-        '\n    <plugin filename="gz-sim-joint-state-publisher-system" name="gz::sim::systems::JointStatePublisher">'
-        '\n      <topic>joint_states</topic></plugin></gazebo>')
+    f.controllers.append(Controller("joint-position",
+        {"joint_name": "shoulder_joint", "topic": "shoulder_cmd", "p": 80, "i": 2.0, "d": 8.0},
+        joint="shoulder_joint"))
+    f.controllers.append(Controller("joint-position",
+        {"joint_name": "elbow_joint", "topic": "elbow_cmd", "p": 60, "i": 2.0, "d": 6.0},
+        joint="elbow_joint"))
+    f.controllers.append(Controller("joint-state-publisher", {"topic": "joint_states"}))
 
     f.bridges += [
         Bridge("/shoulder_cmd@std_msgs/msg/Float64]gz.msgs.Double"),
@@ -144,14 +138,10 @@ def quadrotor(params: dict, mount: dict | None) -> Fragment:
     rotor("rotor_bl", -ARM, ARM, "0.2 0.2 0.2 1")
     rotor("rotor_br", -ARM, -ARM, "0.2 0.2 0.2 1")
 
-    f.gazebo.append(
-        '\n  <gazebo>'
-        '\n    <plugin filename="gz-sim-velocity-control-system" name="gz::sim::systems::VelocityControl">'
-        '\n      <topic>cmd_vel</topic></plugin>'
-        '\n    <plugin filename="gz-sim-odometry-publisher-system" name="gz::sim::systems::OdometryPublisher">'
-        '\n      <odom_frame>odom</odom_frame><robot_base_frame>base_link</robot_base_frame>'
-        '\n      <dimensions>3</dimensions><odom_topic>odom</odom_topic><tf_topic>tf</tf_topic>'
-        '\n      <odom_publish_frequency>30</odom_publish_frequency></plugin></gazebo>')
+    f.controllers.append(Controller("velocity", {"topic": "cmd_vel"}))
+    f.controllers.append(Controller("odometry-publisher", {
+        "odom_frame": "odom", "robot_base_frame": "base_link", "dimensions": 3,
+        "odom_topic": "odom", "tf_topic": "tf", "odom_publish_frequency": 30}))
 
     f.bridges += [
         Bridge("/cmd_vel@geometry_msgs/msg/Twist]gz.msgs.Twist"),
