@@ -50,12 +50,19 @@ def test_body_and_drive_params_flow_into_the_urdf():
     assert "<wheel_radius>0.07</wheel_radius>" in urdf
 
 
-def test_render_launch_is_valid_python_with_the_wiring():
-    launch = render_launch(compile_robot(_diff_spec()))
-    assert 'arguments=["-name", "warehouse_bot"' in launch
-    assert "/scan@sensor_msgs/msg/LaserScan" in launch
-    assert "/bumper" in launch                       # the contact remap target
+def test_render_launch_is_valid_python_and_data_driven():
+    launch = render_launch("warehouse_bot")
+    assert 'get_package_share_directory("warehouse_bot_description")' in launch
+    assert "bridges.json" in launch                  # bridges compiled from sensors, read at launch
     compile(launch, "<launch>", "exec")              # syntactically valid
+
+
+def test_sensor_wiring_is_compiled_onto_the_robot():
+    # the launch is data-driven; the actual sensor wiring lives on the compiled robot's bridges
+    c = compile_robot(_diff_spec())
+    args = [b.arg for b in c.bridges]
+    assert any("/scan@sensor_msgs/msg/LaserScan" in a for a in args)
+    assert any(b.remap and b.remap[1] == "/bumper" for b in c.bridges)   # the contact remap target
 
 
 def test_unknown_archetype_and_sensor_raise():

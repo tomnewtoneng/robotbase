@@ -231,8 +231,19 @@ def _compile_specs(dest: str, snake: str) -> None:
             world_name = WorldSpec.from_yaml(_wy).name
         with open(os.path.join(urdf_dir, "launch_config.json"), "w", encoding="utf-8") as fh:
             json.dump({"robot_name": compiled.name, "world_name": world_name,
-                       "spawn_z": compiled.spawn_z}, fh, indent=2)
+                       "spawn_z": compiled.spawn_z,
+                       "fixed_base": bool(compiled.manifest.get("fixed_base"))}, fh, indent=2)
         _sync_manifest(dest, compiled, world_name)
+
+    # Generate the launch file so the whole runtime is compiler-owned (P2): one data-driven launch
+    # that reads bridges.json/launch_config.json, regenerated on every create + recompile so it can
+    # never drift from the specs (the arm/drone launches had drifted — stale hardcoded bridges +
+    # spawn name). render_launch is archetype-neutral; all variation lives in the compiled config.
+    launch_dir = os.path.join(dest, "src", f"{snake}_bringup", "launch")
+    if os.path.isdir(launch_dir):
+        from robotbase.robotspec.project import render_launch
+        with open(os.path.join(launch_dir, "simulation.launch.py"), "w", encoding="utf-8") as fh:
+            fh.write(render_launch(snake))
 
     world_yaml = os.path.join(dest, "world.yaml")
     world_dir = os.path.join(dest, "src", f"{snake}_description", "worlds")

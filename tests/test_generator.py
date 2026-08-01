@@ -52,3 +52,20 @@ def test_create_rejects_existing(tmp_path):
     create_project("obstacle-bot", str(tmp_path / "out"), template)
     with pytest.raises(FileExistsError):
         create_project("obstacle-bot", str(tmp_path / "out"), template)
+
+
+def test_created_project_generates_a_data_driven_launch(tmp_path):
+    # a real template compiles specs on create; the launch is generated (P2), package-scoped,
+    # data-driven, and the compiled launch_config carries the spawn name + fixed_base flag.
+    import ast
+    import json
+    from robotbase.generator import template_dir
+
+    dest = create_project("coolbot", str(tmp_path / "out"), template_dir("differential-drive"))
+    launch = os.path.join(dest, "src", "coolbot_bringup", "launch", "simulation.launch.py")
+    src = open(launch, encoding="utf-8").read()
+    ast.parse(src)                                                       # valid Python
+    assert 'get_package_share_directory("coolbot_description")' in src   # package-scoped, not template
+    assert "bridges.json" in src and "launch_config.json" in src        # data-driven
+    cfg = json.load(open(os.path.join(dest, "src", "coolbot_description", "urdf", "launch_config.json")))
+    assert cfg["robot_name"] == "coolbot" and "fixed_base" in cfg and "spawn_z" in cfg
