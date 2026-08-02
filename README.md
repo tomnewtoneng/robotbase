@@ -1,4 +1,4 @@
-![robotbase — describe your robot, world, and scenarios in YAML; compile to a running headless ROS 2 + Gazebo sim; get pass/fail evidence.](https://raw.githubusercontent.com/tomnewtoneng/robotbase/main/assets/robotbase-header.png)
+![robotbase — describe your robot, world, and scenarios in YAML; compile to a running headless ROS 2 + Gazebo sim; get pass/fail evidence.](assets/robotbase-header.png)
 
 **Declarative robotics.** Describe a robot, its sensors, its world, and the behaviours you want to
 verify in YAML — Robotbase compiles that into a running, **headless** ROS 2 + Gazebo simulation and
