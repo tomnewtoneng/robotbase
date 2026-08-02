@@ -37,3 +37,8 @@ robotbase/templates/*/src/*/launch/*.launch.py
 docs/
 /PROOF.md
 /CONTRIBUTING.md
+
+# Local-only — kept out of the public repo.
+/spike/                              # throwaway early-exploration spike
+/_rbench_run_v2.py                   # scratch RobotBench batch runner (local; used for n=N runs)
+robotbase/robotbench/results/*.json  # n=1 trial evidence — held back until a full n=3 run
