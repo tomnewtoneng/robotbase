@@ -33,18 +33,47 @@ edit robot.yaml / world.yaml / a scenario  →  robotbase up  →  robotbase tes
 **Prerequisites:** Docker, Python 3.12, and Linux (on Windows: WSL2 + Docker Desktop).
 
 ```bash
-git clone https://github.com/tomnewtoneng/robotbase.git
-cd robotbase && python3 -m venv .venv && source .venv/bin/activate && pip install -e .
+pip install robotbase
 
-robotbase create my-bot --template differential-drive   # or: camera-bot | arm | drone
+robotbase create my-bot        # scaffold a project (differential-drive by default)
 cd my-bot
-robotbase up                    # start the container + build (first run builds the image)
-robotbase test drive-forward    # runs a scenario, prints a structured pass/fail result
+robotbase up                   # start the container + build (first run builds the image)
+robotbase test drive-forward   # run a scenario; prints a structured pass/fail result
 ```
 
 Every run is an objective result (metrics + assertions) plus a recorded **MCAP episode**
 (Foxglove/Rerun-openable). Every action is a verb with a structured result, so a human and a coding
-agent drive it the same way — see the knowledge layer below.
+agent drive it the same way.
+
+### Build your own robot and world
+
+The scaffold is only a starting point — the robot, its sensors, the world, and the tests are all
+yours to edit. Author declaratively and let the tool keep you honest:
+
+```bash
+robotbase schema      # the full robot.yaml / world.yaml / scenario authoring reference
+# …edit robot.yaml and world.yaml…
+robotbase validate    # static physics checks (mass, inertia, joint limits) before you launch
+robotbase explain     # which links / joints / topics each line of your spec produced
+robotbase describe    # structured ground truth for the robot, world, and scenarios
+robotbase up          # recompile the specs, (re)build, and run
+```
+
+Define what "working" means as scenarios — each is a `simulation/scenarios/*.yaml` whose
+`assertions:` block *is* the test:
+
+```bash
+robotbase scenario add reach-the-shelf
+robotbase test reach-the-shelf
+```
+
+### Start from a template or an existing URDF
+
+```bash
+robotbase templates                                # list the built-in templates
+robotbase create my-arm --template arm             # differential-drive | camera-bot | arm | drone
+robotbase create my-bot --from-urdf my_robot.urdf  # import an existing URDF verbatim
+```
 
 ## The knowledge layer (built for agents)
 
