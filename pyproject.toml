@@ -3,14 +3,14 @@ name = "robotbase"
 version = "0.1.0"
 description = "The batteries-included developer-experience layer for agent-driven robotics."
 readme = "README.md"
-license = { text = "MIT" }
+license = "MIT"
+license-files = ["LICENSE"]
 requires-python = ">=3.12"
 authors = [{ name = "Tom Newton", email = "tominator172@gmail.com" }]
 keywords = ["robotics", "ros2", "gazebo", "simulation", "mcp", "agents", "declarative", "testing"]
 classifiers = [
     "Development Status :: 3 - Alpha",
     "Intended Audience :: Developers",
-    "License :: OSI Approved :: MIT License",
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3.12",
     "Operating System :: POSIX :: Linux",
@@ -39,7 +39,7 @@ Repository = "https://github.com/tomnewtoneng/robotbase"
 Issues = "https://github.com/tomnewtoneng/robotbase/issues"
 
 [build-system]
-requires = ["setuptools>=68"]
+requires = ["setuptools>=77"]
 build-backend = "setuptools.build_meta"
 
 [tool.setuptools]
