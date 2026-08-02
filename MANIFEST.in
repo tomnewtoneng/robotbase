@@ -1,0 +1,17 @@
+# Ship the project templates verbatim (source-only). graft preserves dotfiles
+# such as .mcp.json, which a setuptools package-data glob would silently drop.
+graft robotbase/templates
+
+include LICENSE
+include README.md
+
+# Never ship compiled/generated or scratch artifacts, even if a local build or a
+# `robotbase create`/test run happens to have produced them in the tree.
+global-exclude __pycache__/*
+global-exclude *.py[cod]
+global-exclude *.mcap
+recursive-exclude robotbase/robotbench/results *
+recursive-exclude robotbase/templates *.urdf.xacro *.imported.urdf bridges.json launch_config.json
+recursive-exclude robotbase/templates *.sdf *.launch.py
+prune dist
+prune build
