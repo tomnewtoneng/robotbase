@@ -6,11 +6,21 @@ gives you machine-readable evidence. Local-first and open-core: no cloud, no acc
 
 ## What it is
 
-Robotbase is the *layer over the simulator*, not a simulator. You write two small YAML files —
-`robot.yaml` (the robot + its sensors) and `world.yaml` (the world) — plus scenarios that declare
-what "working" means. Robotbase compiles them into a complete ROS 2 + Gazebo project (URDF, world
-SDF, launch, ROS↔gz bridges, control config) and runs it headless in Docker. You never hand-write
-the XML — the way you never click through a cloud console with Terraform.
+Robotbase is the *layer over the simulator*, not a simulator. It's all YAML: `robot.yaml` (the
+robot + its sensors), `world.yaml` (the world), and one or more **scenario** files under
+`simulation/scenarios/*.yaml`. A scenario is the test — its `assertions:` block declares what
+"working" means:
+
+```yaml
+# simulation/scenarios/drive-forward.yaml
+assertions:
+  - {type: robot_moved_minimum_distance, minimum_distance_metres: 1.0}
+  - {type: required_topic_messages, topic: /scan, minimum_count: 5}
+```
+
+Robotbase compiles all of it into a complete ROS 2 + Gazebo project (URDF, world SDF, launch,
+ROS↔gz bridges, control config) and runs it headless in Docker. You never hand-write the XML —
+the way you never click through a cloud console with Terraform.
 
 ## How it works
 
