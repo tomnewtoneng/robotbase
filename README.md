@@ -33,7 +33,7 @@ edit robot.yaml / world.yaml / a scenario  →  robotbase up  →  robotbase tes
 **Prerequisites:** Docker, Python 3.12, and Linux (on Windows: WSL2 + Docker Desktop).
 
 ```bash
-pip install robotbase
+pip install robotbase-kit
 
 robotbase create my-bot        # scaffold a project (differential-drive by default)
 cd my-bot
@@ -92,7 +92,7 @@ there are no external docs to keep in sync.
 - **Every project is agent-ready.** `robotbase create` drops an `AGENTS.md` (project-specific
   instructions) and a `.mcp.json` into the new project.
 
-**Setup for the MCP server: none** beyond `pip install robotbase` — it ships in the core install. An
+**Setup for the MCP server: none** beyond `pip install robotbase-kit` — it ships in the core install. An
 MCP-aware agent (e.g. Claude Code) opened in a project picks up the bundled `.mcp.json`
 automatically. To run it by hand:
 
