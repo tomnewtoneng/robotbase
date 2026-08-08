@@ -314,6 +314,24 @@ class Runtime:
                 detached=True,
                 timeout=20,
             )
+        elif t == "run_policy":
+            # Drive the robot with a brought Python policy (policy.py:Policy) instead of a ROS
+            # node. Same use_sim_time discipline as run_node. The obs/action interface is derived
+            # from the manifest (single source of truth, shared with `describe`).
+            from robotbase.describe import describe
+            iface = describe(self.project_dir)["policy_interface"]
+            runner = self._ensure_policy_runner()
+            self._ros(
+                f"python3 {runner} "
+                f"--interface {shlex.quote(json.dumps(iface))} "
+                f"--module {shlex.quote(action.module or 'policy')} "
+                f"--class {shlex.quote(action.class_name or 'Policy')} "
+                f"--rate {action.rate_hz or iface['control_rate_hz']} "
+                "--ros-args -p use_sim_time:=true "
+                "> /workspace/.robotbase/policy.log 2>&1",
+                detached=True,
+                timeout=20,
+            )
         # unknown/other action types are ignored (forward-compatible).
 
     def _wait_for_topic(self, topic: str, timeout_seconds: float) -> None:
@@ -351,6 +369,17 @@ class Runtime:
         with open(os.path.join(dst_dir, "episode_reader.py"), "w") as f:
             f.write(src)
         return "/workspace/.robotbase/episode_reader.py"
+
+    def _ensure_policy_runner(self) -> str:
+        # Materialize the packaged container-side policy runner into the mounted .robotbase so
+        # it can run in the container (which has rclpy + message types but not the robotbase
+        # package). Returns its container path.
+        src = ir.files("robotbase.container").joinpath("policy_runner.py").read_text()
+        dst_dir = os.path.join(self.project_dir, ".robotbase")
+        os.makedirs(dst_dir, exist_ok=True)
+        with open(os.path.join(dst_dir, "policy_runner.py"), "w") as f:
+            f.write(src)
+        return "/workspace/.robotbase/policy_runner.py"
 
     def _resolve_run(self, run_id: str | None) -> tuple[str, str]:
         runs = os.path.join(self.project_dir, ".robotbase", "runs")
