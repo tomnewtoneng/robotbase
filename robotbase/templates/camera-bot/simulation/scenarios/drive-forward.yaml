@@ -1,6 +1,8 @@
 version: 1
 name: drive-forward
-description: Robot drives at least one metre forward with odometry available.
+description: >
+  Drive forward at least one metre with odometry and the LiDAR available. The starter
+  controller drives straight forward; replace it to add your own (e.g. vision-based) behaviour.
 timeout_seconds: 20
 setup:
   reset_world: true

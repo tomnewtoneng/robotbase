@@ -11,32 +11,32 @@ vision-based behaviours. View `/image` in Foxglove with an Image panel.
 ## Quickstart
 
 ```bash
-robotbase up                                   # start the container + build the workspace
-robotbase test --list                          # see the scenarios
-robotbase test stop-before-obstacle --gui      # run one and watch it
+robotbase up                     # compile the specs, build, and boot the sim
+robotbase test drive-forward     # runs the scenario; prints a structured pass/fail result
 ```
 
-The starter controller drives forward and **ignores the LiDAR**, so
-`stop-before-obstacle` fails. Your job is to make it pass.
+Out of the box this is a **minimal working robot**: the starter controller drives forward and
+passes `drive-forward`. It's a starting point — replace the behaviour with your own, using the
+camera (`/image`) for vision-based tasks.
 
 ## Where things are
 
-- `src/warehouse_bot/warehouse_bot/controller.py` — **the controller you edit.**
-- `src/warehouse_bot_description/` — the robot (URDF) and the Gazebo world.
-- `simulation/scenarios/` — the behaviours to satisfy (YAML). Add one with
-  `robotbase scenario add <name>`.
-- `robotbase.yaml` — the project manifest.
-- `AGENTS.md` — instructions for a coding agent (it can fix the controller for you via MCP).
+- `robot.yaml` / `world.yaml` — the robot (+ sensors) and the world, declaratively. Edit these,
+  then `robotbase up` recompiles them.
+- `src/warehouse_bot/warehouse_bot/controller.py` — **the controller you edit** (the one
+  imperative piece — everything else is YAML).
+- `simulation/scenarios/` — the behaviours to verify (YAML). A scenario's `assertions:` block
+  *is* the test. Add one with `robotbase scenario add <name>`.
+- `AGENTS.md` — instructions for a coding agent (it can edit the controller for you via MCP).
 
 ## The loop
 
-1. `robotbase test <scenario>` — runs it and prints a structured result (exit 0 = pass).
-2. Read the failed assertions and metrics.
-3. Edit the controller — or point a coding agent at this directory (it reads `.mcp.json`)
-   and ask it to make the scenario pass.
+1. `robotbase test <scenario>` — runs it, prints a structured result (exit 0 = pass).
+2. Read the metrics / failed assertions.
+3. Edit `robot.yaml`, `world.yaml`, a scenario, or the controller — or ask a coding agent.
 4. Rerun until it passes. Add `--gui` to watch in Foxglove (`ws://localhost:8765`).
 
-## Commands
+## Want a challenge?
 
-Run `robotbase help` for the full list. Common ones: `up`, `test`, `launch --gui`,
-`scenario add`, `status`, `stop`, `down`.
+See the repo's `examples/challenges/` for projects with unsolved scenarios (stop before an
+obstacle, reach a goal, navigate around a wall) to solve — by hand or with an agent.
