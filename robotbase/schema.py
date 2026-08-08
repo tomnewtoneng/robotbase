@@ -40,6 +40,9 @@ class ActionSpec(BaseModel):
     duration_seconds: float | None = None
     package: str | None = None
     executable: str | None = None
+    module: str | None = None       # run_policy: python module holding the Policy class (default "policy")
+    class_name: str | None = None   # run_policy: class name (default "Policy")
+    rate_hz: float | None = None    # run_policy: control-loop rate (default from policy_interface)
 
 class AssertionSpec(BaseModel):
     type: str
