@@ -87,3 +87,21 @@ def test_camera_bot_compiles_camera_and_depth():
         world = open(os.path.join(dest, "src", "cam_bot_description", "worlds", "warehouse.sdf"),
                      encoding="utf-8").read()
         assert "gz-sim-sensors-system" in world
+
+
+def test_default_scaffolds_are_minimal_and_carry_no_challenges():
+    import tempfile
+    from robotbase.describe import describe
+    expected = {
+        "differential-drive": {"drive-forward"},
+        "camera-bot": {"drive-forward"},
+        "arm": {"reach-configuration"},
+        "drone": {"take-off"},
+    }
+    challenges = {"stop-before-obstacle", "reach-goal", "turn-around", "reach-position"}
+    for tmpl, want in expected.items():
+        with tempfile.TemporaryDirectory() as tmp:
+            d = describe(create_project("b", tmp, template_dir(tmpl)))
+            names = {s["name"] for s in d["scenarios"]}
+            assert names == want, (tmpl, names)
+            assert not (names & challenges), (tmpl, names)

@@ -6,10 +6,15 @@ gives you machine-readable evidence. Local-first and open-core: no cloud, no acc
 
 ## What it is
 
-Robotbase is the *layer over the simulator*, not a simulator. It's all YAML: `robot.yaml` (the
-robot + its sensors), `world.yaml` (the world), and one or more **scenario** files under
-`simulation/scenarios/*.yaml`. A scenario is the test — its `assertions:` block declares what
-"working" means:
+Robotbase is the *layer over ROS 2*, not a replacement for it — think Terraform over cloud APIs.
+What your YAML compiles down to is a **real, standard ROS 2 graph** (nodes, topics, TF,
+`ros2_control`) running on top of Gazebo; Robotbase just means you stop hand-writing the URDF, launch
+files, and bridges. Because the runtime is genuine ROS 2, a passing scenario means something, and you
+can drop in your own ROS 2 code — or, later, a real robot — underneath the same specs.
+
+It's all YAML: `robot.yaml` (the robot + its sensors), `world.yaml` (the world), and one or more
+**scenario** files under `simulation/scenarios/*.yaml`. A scenario is the test — its `assertions:`
+block declares what "working" means:
 
 ```yaml
 # simulation/scenarios/drive-forward.yaml
@@ -74,6 +79,10 @@ robotbase templates                                # list the built-in templates
 robotbase create my-arm --template arm             # differential-drive | camera-bot | arm | drone
 robotbase create my-bot --from-urdf my_robot.urdf  # import an existing URDF verbatim
 ```
+
+Each `create` gives you a minimal, working robot that passes one smoke-test scenario — a starting
+point to build on. Want worked, unsolved challenges to practise on (or to test a coding agent)? See
+[`examples/challenges/`](examples/challenges/).
 
 ## The knowledge layer (built for agents)
 
