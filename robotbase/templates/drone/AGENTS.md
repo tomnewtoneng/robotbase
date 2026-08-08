@@ -43,6 +43,10 @@ Rewrite it to fly to your own target: read `/odom`, compute the 3D position erro
 and command a proportional `/cmd_vel` toward it — easing the velocity toward zero as you arrive
 so it hovers at the target.
 
+You can also drive a scenario with a **Python policy** instead of the ROS controller — run
+`robotbase policy new`, then set the scenario's action to `{type: run_policy, module: policy}`.
+See `robotbase describe` → `policy_interface` for this robot's obs/action keys.
+
 You do **not** need to rebuild after editing the controller (symlink-installed); just re-run.
 
 ## Requirements — do not claim success without evidence

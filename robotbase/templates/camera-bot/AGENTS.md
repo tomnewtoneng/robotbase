@@ -56,6 +56,10 @@ live in the repo's `examples/challenges/`). Read that scenario's assertions to s
 what "pass" means (e.g. `robot_reached_pose` wants a final position near a target;
 `no_contact`/`no_collision` want you not to hit anything).
 
+You can also drive a scenario with a **Python policy** instead of the ROS controller — run
+`robotbase policy new`, then set the scenario's action to `{type: run_policy, module: policy}`.
+See `robotbase describe` → `policy_interface` for this robot's obs/action keys.
+
 - Robot type: differential drive
 - Key topics: `/cmd_vel` (velocity command out, `geometry_msgs/Twist`: `linear.x` forward,
   `angular.z` turn), `/scan` (LiDAR, `sensor_msgs/LaserScan`), `/image` (forward camera,

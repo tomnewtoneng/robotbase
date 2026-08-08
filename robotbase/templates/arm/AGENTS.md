@@ -45,6 +45,11 @@ configuration (shoulder = 1.0, elbow = -1.4) and holds it — enough to pass `re
 Rewrite it to command the target configuration your task asks for, and keep publishing so the
 controllers hold the pose while it settles.
 
+You can also drive a scenario with a **Python policy** instead of the ROS controller — run
+`robotbase policy new`, then set the scenario's action to `{type: run_policy, module: policy}`.
+See `robotbase describe` → `policy_interface` for this robot's obs/action keys (arm: joint-name →
+radians).
+
 You do **not** need to rebuild after editing the controller (symlink-installed); just run the
 scenario again.
 

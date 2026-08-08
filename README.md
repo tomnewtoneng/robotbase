@@ -138,8 +138,9 @@ are good at:
 **Alpha, proven end-to-end.** The full local loop works — create → author the specs → build →
 run → read the evidence — across four robot templates (differential-drive, camera-bot, arm, drone),
 a growing scenario/assertion/metric vocabulary, MCAP episode recording + query, auto-diagnosis, a
-domain-randomized eval layer, and a proven sim-agnostic runner (Gazebo + an in-process MuJoCo
-backend). Local-first, MIT-licensed.
+domain-randomized eval layer, bring-your-own-policy evaluation (drive a scenario with a Python
+policy via `run_policy`), and a proven sim-agnostic runner (Gazebo + an in-process MuJoCo backend).
+Local-first, MIT-licensed.
 
 ## License
 
