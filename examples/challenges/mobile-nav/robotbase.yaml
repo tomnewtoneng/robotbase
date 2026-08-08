@@ -1,0 +1,65 @@
+version: 1
+
+project:
+  name: mobile-nav
+
+runtime:
+  ros_distribution: jazzy
+  simulator: gazebo-harmonic
+  architecture: amd64
+
+workspace:
+  path: /workspace
+  source_directory: src
+  build_command: colcon build --symlink-install
+  install_dependencies: true
+
+robot:
+  template: differential-drive
+  name: mobile_nav
+  namespace: ""
+
+sensors:
+  lidar:
+    enabled: true
+    topic: /scan
+  contact:
+    enabled: true
+    topic: /bumper
+  imu:
+    enabled: true
+    topic: /imu
+  odometry:
+    enabled: true
+    topic: /odom
+
+control:
+  velocity_topic: /cmd_vel
+
+launch:
+  package: mobile_nav_bringup
+  file: simulation.launch.py
+
+simulation:
+  world: src/mobile_nav_description/worlds/warehouse.sdf
+  world_name: warehouse
+  headless: true
+  reset_service: /world/warehouse/control
+
+recording:
+  enabled: true      # record every scenario run to a portable .robotbase/runs/<id>/episode.mcap
+  topics: []         # [] = all topics; or an allow-list
+  exclude: []        # deny-list, e.g. [/image] to skip heavy camera frames
+
+scenarios:
+  directory: simulation/scenarios
+
+agent:
+  mcp:
+    enabled: true
+    port: 4381
+
+visualisation:
+  foxglove:
+    enabled: false
+    port: 8765

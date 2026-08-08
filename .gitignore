@@ -32,6 +32,15 @@ robotbase/templates/*/src/*/urdf/launch_config.json
 robotbase/templates/*/src/*/worlds/*.sdf
 robotbase/templates/*/src/*/launch/*.launch.py
 
+# Example projects commit source only (same policy as templates): the compiler
+# regenerates URDF/SDF/launch/bridges from the specs on `robotbase up`.
+examples/challenges/*/src/*/urdf/*.urdf.xacro
+examples/challenges/*/src/*/urdf/*.imported.urdf
+examples/challenges/*/src/*/urdf/bridges.json
+examples/challenges/*/src/*/urdf/launch_config.json
+examples/challenges/*/src/*/worlds/*.sdf
+examples/challenges/*/src/*/launch/*.launch.py
+
 # Internal docs (strategy / vision / roadmap / design / results) are kept local — not published.
 # Only README.md is public; a GitHub-specific doc can be crafted later.
 docs/
