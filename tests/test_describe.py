@@ -16,9 +16,9 @@ def test_describe_differential_drive(tmp_path):
     # arena bounds come from the walls, not the (much larger) ground plane
     assert d["world"]["bounds"] == {"x": [-4.05, 4.05], "y": [-4.05, 4.05]}
     names = {s["name"] for s in d["scenarios"]}
-    assert {"drive-forward", "stop-before-obstacle", "reach-goal", "turn-around"} <= names
-    turn = next(s for s in d["scenarios"] if s["name"] == "turn-around")
-    assert "minimum_path_length" in turn["assertions"]
+    assert names == {"drive-forward"}   # minimal all-green scaffold; challenges live in examples/
+    fwd = next(s for s in d["scenarios"] if s["name"] == "drive-forward")
+    assert "robot_moved_minimum_distance" in fwd["assertions"]
     assert "diff-drive" in {c["kind"] for c in d["robot"]["controllers"]}   # control config is surfaced
 
 

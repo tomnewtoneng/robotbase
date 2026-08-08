@@ -6,8 +6,9 @@ to change — the robot and its sensors (`robot.yaml`), the world (`world.yaml`)
 and the test scenarios — plus the control logic you implement. You edit, compile, and run, verifying
 by the structured result, never by inspection.
 
-This project ships a working differential-drive robot with a LiDAR, a set of scenarios, and a
-**starter controller you implement** for the behaviour you want. Run `robotbase describe` for ground
+This project ships a working differential-drive robot with a LiDAR, one **smoke-test scenario**
+(`drive-forward`), and a **minimal working controller** that passes it. Everything here is yours to
+change. Run `robotbase describe` for ground
 truth and `robotbase schema` for the full authoring format (robot / world / **scenario**). When a
 task is about a specific scenario, **read its YAML first** — it declares exactly what it checks; don't
 assume the task from file names.
@@ -48,9 +49,10 @@ Your control *algorithm* lives in `controller.py` (below) — that's always your
 controller's *config* is declarative: `robot.yaml`'s `control: {base: {odom_publish_frequency, ...}}`
 tunes it, and wheel geometry stays in `drive:` (you rarely need this).
 
-The starter controller (`src/warehouse_bot/warehouse_bot/controller.py`) just
-drives straight forward and ignores its sensors — so it fails every scenario. Rewrite it to
-satisfy whichever scenario you're working on. Read that scenario's assertions to see exactly
+The starter controller (`src/warehouse_bot/warehouse_bot/controller.py`) drives straight
+forward — enough to pass `drive-forward`. It ignores the sensors; rewrite it to add real
+behaviour, reading the assertions of whatever scenario you're solving (worked control challenges
+live in the repo's `examples/challenges/`). Read that scenario's assertions to see exactly
 what "pass" means (e.g. `robot_reached_pose` wants a final position near a target;
 `no_contact`/`no_collision` want you not to hit anything).
 
