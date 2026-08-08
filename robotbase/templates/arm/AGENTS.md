@@ -6,7 +6,9 @@ change — the arm and its sensors (`robot.yaml`), the world (`world.yaml`), the
 (the joint controllers' PID gains under `control:`), and the test scenarios — plus the control logic
 you implement. You edit, compile, and run, verifying by the structured result, never by inspection.
 
-This project ships a working arm, a scenario, and a **starter controller you implement**. Run
+This project ships a working arm, one **smoke-test scenario** (`reach-configuration`), and a
+**minimal working controller** that commands a fixed configuration and passes it. Everything here
+is yours to change. Run
 `robotbase describe` for ground truth (joints, limits, controller gains) and `robotbase schema` for
 the full authoring format (robot / world / **scenario**). When a task is about a specific scenario,
 **read its YAML first** for the target and tolerance.
@@ -38,10 +40,10 @@ Command each joint's target angle (radians) by publishing `std_msgs/Float64` on
 Read the current angles from `/joint_states` (`sensor_msgs/JointState`; the `name`/`position`
 arrays include `shoulder_joint` and `elbow_joint`).
 
-The starter controller (`src/warehouse_bot/warehouse_bot/controller.py`) sets up the
-publishers but **never commands a target**, so the arm droops/holds the wrong pose and fails.
-Rewrite it to command the target configuration the scenario asks for, and keep publishing so
-the controllers hold the pose while it settles.
+The starter controller (`src/warehouse_bot/warehouse_bot/controller.py`) commands a fixed
+configuration (shoulder = 1.0, elbow = -1.4) and holds it — enough to pass `reach-configuration`.
+Rewrite it to command the target configuration your task asks for, and keep publishing so the
+controllers hold the pose while it settles.
 
 You do **not** need to rebuild after editing the controller (symlink-installed); just run the
 scenario again.

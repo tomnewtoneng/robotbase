@@ -11,13 +11,13 @@ the mobile templates, exercising joint-space control instead of driving.
 ## Quickstart
 
 ```bash
-robotbase up                                # start the container + build the workspace
-robotbase test --list                       # see the scenarios
-robotbase test reach-configuration --gui    # run one and watch it
+robotbase up                                # compile the specs, build, and boot the sim
+robotbase test reach-configuration          # runs the scenario; prints a structured result
 ```
 
-The starter controller never commands the joints, so `reach-configuration` fails (the arm
-just holds/droops). Your job is to make it pass.
+Out of the box this is a **minimal working arm**: the starter controller commands a fixed joint
+configuration and holds it, passing `reach-configuration`. It's a starting point — replace it to
+reach your own targets (read `/joint_states`, publish on `/shoulder_cmd` / `/elbow_cmd`).
 
 ## Where things are
 

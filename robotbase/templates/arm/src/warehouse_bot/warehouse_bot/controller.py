@@ -4,13 +4,14 @@ from std_msgs.msg import Float64
 
 
 class Controller(Node):
-    """Starter arm controller — deliberately incomplete.
+    """A minimal working controller: it commands the 2-joint arm to a fixed configuration and
+    holds it (shoulder = 1.0 rad, elbow = -1.4 rad), which passes the bundled
+    `reach-configuration` scenario.
 
-    It sets up the joint-command publishers but never commands a target, so the arm just
-    droops under gravity and fails any reach scenario. Rewrite it to command the joints to
-    the target configuration the scenario asks for: publish the target angle (radians) on
-    `/shoulder_cmd` and `/elbow_cmd` (`std_msgs/Float64`), and keep publishing so the
-    position controllers hold the pose. Read the current angles on `/joint_states`.
+    This is a starting point, not a finished behaviour. Replace it with your own logic: read the
+    current angles on `/joint_states` and command the joint targets your task needs on
+    `/shoulder_cmd` and `/elbow_cmd` (`std_msgs/Float64`), publishing continuously so the
+    position controllers hold the pose.
     """
 
     def __init__(self):
@@ -20,8 +21,8 @@ class Controller(Node):
         self.create_timer(0.1, self._tick)
 
     def _tick(self):
-        # Starter bug: no target is ever commanded, so the arm never moves to the goal.
-        pass
+        self.shoulder.publish(Float64(data=1.0))
+        self.elbow.publish(Float64(data=-1.4))
 
 
 def main():
