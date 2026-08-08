@@ -72,6 +72,13 @@ robotbase scenario add reach-the-shelf
 robotbase test reach-the-shelf
 ```
 
+### Bring your own policy
+
+Instead of a ROS controller, you can drive a scenario with a plain Python policy — ideal for
+evaluating a trained one. Write a `Policy` with `act(obs) -> action` (`robotbase policy new`
+scaffolds it), point a scenario at it with `{type: run_policy, module: policy}`, and get the same
+objective evidence. `robotbase describe` reports the exact observation/action keys for your robot.
+
 ### Start from a template or an existing URDF
 
 ```bash

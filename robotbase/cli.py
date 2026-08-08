@@ -156,6 +156,9 @@ def _build_parser() -> argparse.ArgumentParser:
     scen.add_argument("action", choices=["add", "list"])
     scen.add_argument("name", nargs="?")
 
+    pol = sub.add_parser("policy", help="author policies (new)")
+    pol.add_argument("action", choices=["new"])
+
     clean = sub.add_parser("clean", help="delete old recorded runs")
     clean.add_argument("--keep", type=int, default=20, help="how many recent runs to keep")
 
@@ -475,6 +478,17 @@ def main() -> None:
             f.write(_scenario_scaffold(args.name, controller_pkg))
         print(f"Created {path}")
         _hint(f"Edit it (see docs/SCENARIO-FORMAT.md), then:  robotbase test {args.name} --gui")
+
+    elif args.cmd == "policy":
+        from robotbase.policy_scaffold import write_policy_starter
+        try:
+            path = write_policy_starter(project)
+        except FileExistsError as e:
+            print(f"policy already exists: {e}")
+            sys.exit(2)
+        print(f"Created {path}")
+        _hint("Point a scenario at it — set its action to {type: run_policy, module: policy} — "
+              "then:  robotbase test <scenario>")
 
     elif args.cmd == "test":
         run_dir = os.path.join(project, ".robotbase", "runs")

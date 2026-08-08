@@ -94,9 +94,20 @@ Nested shapes:
     - {{type: wait, duration_seconds: N}}
     - {{type: wait_for_topic, topic: /scan, timeout_seconds: N}}   # block until a topic is live
     - {{type: run_node, package: <pkg>, executable: controller}}   # run your controller node
+    - {{type: run_policy, module: policy}}   # drive with a Python policy instead of a ROS node
   assertions[]:  each {{type, ...params}} — the checks that define pass/fail:
 {chr(10).join(f"    {t}: {doc}" for t, doc in ASSERTION_DOCS.items())}
   randomize:  optional jitter for `--trials` robustness — robot_pose/obstacles: {{x, y, yaw}}.
+
+## Driving with a Python policy (run_policy)
+
+Instead of a ROS controller node you can drive a scenario with a **brought Python policy** — good
+for evaluating a trained policy. Create `policy.py` (or `robotbase policy new`) exposing a `Policy`
+class with `act(obs) -> action` (and an optional `reset()`), then use `{{type: run_policy, module:
+policy}}` as the scenario action. `obs` is a decoded dict of the robot's sensors and the action is a
+decoded dict for its command interface; the exact keys for THIS robot are reported by
+`robotbase describe` under `policy_interface` (velocity robots: linear_x/y/z + angular_z; arm:
+joint-name -> radians). The same assertions/metrics/episode are produced as with a ROS node.
 
 ## Common mistakes the compiler will reject (read the error — it names the field)
 
