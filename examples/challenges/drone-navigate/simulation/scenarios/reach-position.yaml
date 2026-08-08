@@ -1,0 +1,21 @@
+version: 1
+name: reach-position
+description: >
+  Fly the drone to the target position (2, 0, 2) in the odometry frame and hover there.
+  Command a 3D velocity on /cmd_vel (linear x/y/z) using the pose from /odom — command z>0 to
+  climb and ease the velocity toward zero as you arrive. The starter controller commands
+  nothing, so the drone never leaves the ground.
+timeout_seconds: 40
+setup:
+  reset_world: true
+  robot: {pose: {x: 0.0, y: 0.0, yaw: 0.0}}
+actions:
+  - {type: wait_for_topic, topic: /odom, timeout_seconds: 5}
+  - {type: run_node, package: drone_navigate, executable: controller}
+  - {type: wait, duration_seconds: 18}
+assertions:
+  - type: robot_reached_pose
+    target_x: 2.0
+    target_y: 0.0
+    target_z: 2.0
+    position_tolerance_metres: 0.4

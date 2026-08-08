@@ -1,0 +1,45 @@
+{
+  "configById": {
+    "3D!main": {
+      "layers": {
+        "grid": { "layerId": "foxglove.Grid", "visible": true }
+      },
+      "cameraState": {
+        "distance": 8,
+        "perspective": true,
+        "phi": 55,
+        "target": [0, 0, 1],
+        "targetOffset": [0, 0, 0],
+        "targetOrientation": [0, 0, 0, 1],
+        "thetaOffset": 45,
+        "fovy": 45,
+        "near": 0.5,
+        "far": 5000
+      },
+      "followMode": "follow-pose",
+      "followTf": "odom",
+      "scene": {},
+      "transforms": {},
+      "topics": {
+        "/tf": { "visible": true },
+        "/robot_description": { "visible": true }
+      }
+    },
+    "Plot!alt": {
+      "paths": [
+        { "value": "/odom.pose.pose.position.z", "enabled": true, "timestampMethod": "receiveTime" }
+      ],
+      "showLegend": true,
+      "xAxisVal": "timestamp"
+    }
+  },
+  "globalVariables": {},
+  "userNodes": {},
+  "playbackConfig": { "speed": 1 },
+  "layout": {
+    "first": "3D!main",
+    "second": "Plot!alt",
+    "direction": "row",
+    "splitPercentage": 65
+  }
+}
