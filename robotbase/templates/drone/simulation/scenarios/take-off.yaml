@@ -1,0 +1,19 @@
+version: 1
+name: take-off
+description: >
+  Take off and hover about 1.5 m above the start point. The minimal starter controller flies to
+  (0, 0, 1.5) and holds; replace it to fly wherever your task needs.
+timeout_seconds: 30
+setup:
+  reset_world: true
+  robot: {pose: {x: 0.0, y: 0.0, yaw: 0.0}}
+actions:
+  - {type: wait_for_topic, topic: /odom, timeout_seconds: 5}
+  - {type: run_node, package: warehouse_bot, executable: controller}
+  - {type: wait, duration_seconds: 12}
+assertions:
+  - type: robot_reached_pose
+    target_x: 0.0
+    target_y: 0.0
+    target_z: 1.5
+    position_tolerance_metres: 0.5

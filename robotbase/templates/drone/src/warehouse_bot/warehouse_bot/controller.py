@@ -5,14 +5,19 @@ from nav_msgs.msg import Odometry
 
 
 class Controller(Node):
-    """Starter drone controller — deliberately incomplete.
+    """A minimal working controller: it takes off and hovers about 1.5 m above the start,
+    which passes the bundled `take-off` scenario. It's a simple proportional controller on the
+    pose from `/odom` — command velocity toward the target, easing to zero as it arrives.
 
-    It sets up the /cmd_vel publisher and subscribes to /odom, but never commands a velocity,
-    so the drone just sits on the ground and fails any reach scenario. Rewrite it to fly to
-    the target: read the current pose from /odom and publish a 3D velocity on /cmd_vel
-    (`geometry_msgs/Twist`: `linear.x/y/z`) toward the goal — command `linear.z > 0` to climb
-    — easing toward zero as you arrive so the drone hovers at the target.
+    This is a starting point, not a finished behaviour. Replace it with your own logic: read the
+    pose from `/odom` and command a 3-D velocity on `/cmd_vel` (`geometry_msgs/Twist`:
+    `linear.x/y/z`) toward whatever target your task needs. See `examples/challenges/` for a
+    3-D navigation challenge.
     """
+
+    TARGET = (0.0, 0.0, 1.5)
+    KP = 0.9
+    VMAX = 1.0
 
     def __init__(self):
         super().__init__("controller")
@@ -25,8 +30,16 @@ class Controller(Node):
         self.pose = msg.pose.pose.position
 
     def _tick(self):
-        # Starter bug: no velocity is ever commanded, so the drone never takes off.
-        self.pub.publish(Twist())
+        cmd = Twist()
+        if self.pose is not None:
+            tx, ty, tz = self.TARGET
+            cmd.linear.x = self._clamp(self.KP * (tx - self.pose.x))
+            cmd.linear.y = self._clamp(self.KP * (ty - self.pose.y))
+            cmd.linear.z = self._clamp(self.KP * (tz - self.pose.z))
+        self.pub.publish(cmd)
+
+    def _clamp(self, v: float) -> float:
+        return max(-self.VMAX, min(self.VMAX, v))
 
 
 def main():

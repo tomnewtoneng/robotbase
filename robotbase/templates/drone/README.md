@@ -11,13 +11,14 @@ different (aerial) robot class from the ground robots and the arm. Fly it with a
 ## Quickstart
 
 ```bash
-robotbase up                                # start the container + build the workspace
-robotbase test --list                       # see the scenarios
-robotbase test reach-position --gui         # run one and watch it
+robotbase up                                # compile the specs, build, and boot the sim
+robotbase test take-off                     # runs the scenario; prints a structured result
 ```
 
-The starter controller never commands a velocity, so `reach-position` fails (the drone sits
-on the ground). Your job is to make it fly to the target and hover.
+Out of the box this is a **minimal working drone**: the starter controller flies to (0, 0, 1.5)
+and hovers, passing `take-off`. It's a starting point — replace it to fly to your own target
+(read `/odom`, command 3-D `/cmd_vel`). A 3-D navigation challenge lives in the repo's
+`examples/challenges/drone-navigate/`.
 
 ## Where things are
 

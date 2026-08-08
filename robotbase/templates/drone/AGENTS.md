@@ -6,7 +6,8 @@ headless in Docker. You build and verify robots *declaratively*: everything here
 test scenarios — plus the control logic you implement. You edit, compile, and run, verifying by the
 structured result, never by inspection.
 
-This project ships a working drone, a scenario, and a **starter controller you implement**. Run
+This project ships a working drone, one **smoke-test scenario** (`take-off`), and a **minimal
+working controller** that takes off and hovers, passing it. Everything here is yours to change. Run
 `robotbase describe` for ground truth and `robotbase schema` for the full authoring format (robot /
 world / **scenario**). When a task is about a specific scenario, **read its YAML first** for its
 target and tolerance.
@@ -26,7 +27,7 @@ the Robotbase tools — the `robotbase` CLI below, or the equivalent MCP tools.
 
 Available scenarios:
 
-- `reach-position` — fly to a target 3D position and hover there.
+- `take-off` — take off and hover about 1.5 m above the start point.
 
 ## The drone
 
@@ -36,10 +37,11 @@ it. Command `linear.z > 0` to climb, `linear.z = 0` to hover. Read the current p
 **altitude, `z`**) from `/odom` (`nav_msgs/Odometry`), and attitude from `/imu`. The odom
 frame starts at the drone's launch pose (≈ 0).
 
-The starter controller (`src/warehouse_bot/warehouse_bot/controller.py`) never commands a
-velocity, so the drone never leaves the ground and fails. Rewrite it to fly to the target:
-read `/odom`, compute the 3D position error to the goal, and command a proportional `/cmd_vel`
-toward it — easing the velocity toward zero as you arrive so it hovers at the target.
+The starter controller (`src/warehouse_bot/warehouse_bot/controller.py`) is a simple
+proportional controller that flies to (0, 0, 1.5) and hovers — enough to pass `take-off`.
+Rewrite it to fly to your own target: read `/odom`, compute the 3D position error to the goal,
+and command a proportional `/cmd_vel` toward it — easing the velocity toward zero as you arrive
+so it hovers at the target.
 
 You do **not** need to rebuild after editing the controller (symlink-installed); just re-run.
 
