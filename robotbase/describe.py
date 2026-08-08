@@ -12,6 +12,8 @@ import xml.etree.ElementTree as ET
 
 import yaml
 
+from robotbase.policy_interface import policy_interface
+
 
 def _local(tag: str) -> str:
     return tag.rsplit("}", 1)[-1]  # strip any XML namespace
@@ -32,6 +34,7 @@ def describe(project_dir: str) -> dict:
         "robot": _robot(project_dir, m),
         "sensors": m.get("sensors", {}),
         "command_joints": m.get("joints", {}),  # arm: joint -> command topic
+        "policy_interface": policy_interface(m),  # obs/action contract for run_policy
         "ready_topics": (m.get("runtime") or {}).get("ready_topics", ["/scan", "/odom"]),
         "world": _world(project_dir, m),
         "scenarios": _scenarios(project_dir, m),
