@@ -81,3 +81,28 @@ def test_available_false_without_key(monkeypatch):
     monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
     ok, reason = ChatSession("/tmp/x").available()
     assert ok is False and "ANTHROPIC_API_KEY" in reason
+
+
+def test_chat_available_route_without_key(tmp_path, monkeypatch):
+    monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
+    from fastapi.testclient import TestClient
+    from robotbase.generator import create_project, template_dir
+    from robotbase.studio.server import create_app
+    project = create_project("cbot", str(tmp_path), template_dir("differential-drive"))
+    c = TestClient(create_app(project))
+    j = c.get("/api/chat/available").json()
+    assert j["available"] is False and "ANTHROPIC_API_KEY" in j["reason"]
+
+
+def test_chat_route_streams_events(tmp_path):
+    # inject a fake-query ChatSession so no key/network is needed; the stream is finite per turn
+    from fastapi.testclient import TestClient
+    from robotbase.generator import create_project, template_dir
+    from robotbase.studio.server import create_app
+    from robotbase.studio.service import StudioService
+    project = create_project("cbot2", str(tmp_path), template_dir("differential-drive"))
+    svc = StudioService(project)
+    svc.chat = ChatSession(project, query_fn=_fake_query)
+    c = TestClient(create_app(project, service=svc))
+    body = c.post("/api/chat", json={"message": "run it"}).text
+    assert '"type": "assistant"' in body and '"type": "tool"' in body and '"type": "done"' in body

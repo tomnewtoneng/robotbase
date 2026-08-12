@@ -96,6 +96,19 @@ def create_app(project_dir: str, service: StudioService | None = None) -> FastAP
                 await asyncio.sleep(0.1)
         return StreamingResponse(gen(), media_type="text/event-stream")
 
+    @app.get("/api/chat/available")
+    def chat_available():
+        ok, reason = svc.chat.available()
+        return {"available": ok, "reason": reason}
+
+    @app.post("/api/chat")
+    async def chat(request: Request):
+        body = await request.json()
+        async def gen():
+            async for ev in svc.chat.run(body.get("message", "")):
+                yield f"data: {json.dumps(ev)}\n\n"
+        return StreamingResponse(gen(), media_type="text/event-stream")
+
     return app
 
 

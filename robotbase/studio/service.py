@@ -21,6 +21,8 @@ class StudioService:
         self.jobs = JobManager()
         self._telemetry_on = False       # supervisor active between up and down
         self._telemetry_path = os.path.join(project_dir, ".robotbase", "telemetry.jsonl")
+        from robotbase.studio.chat import ChatSession
+        self.chat = ChatSession(project_dir)
 
     # ---- reads ----
     def project(self) -> dict:
