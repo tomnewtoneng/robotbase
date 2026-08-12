@@ -2,6 +2,10 @@
 # such as .mcp.json, which a setuptools package-data glob would silently drop.
 graft robotbase/templates
 
+# Studio web assets (server-rendered templates + vendored htmx/CSS — no build step).
+graft robotbase/studio/templates
+graft robotbase/studio/static
+
 include LICENSE
 include README.md
 

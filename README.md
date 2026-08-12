@@ -87,6 +87,12 @@ persisted as a shareable `report.json` + `report.md`. It evaluates a ROS control
 policy identically. When a scenario isn't randomized it says so instead of printing a meaningless
 interval.
 
+### Studio (a local control panel)
+
+`pip install robotbase-kit[studio]` then `robotbase studio` opens a localhost web app: see your
+robot, world, and scenarios; run a scenario or an eval and watch it live; open the 3D in Foxglove;
+and read the structured results and eval reports — all a thin client over the same CLI/runtime.
+
 ### Start from a template or an existing URDF
 
 ```bash
