@@ -7,13 +7,14 @@
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'><path d='M8 1l7 7-7 7-7-7z' fill='%232a51d6'/></svg>">
   <link rel="stylesheet" href="/static/studio.css">
   <script src="/static/htmx.min.js" defer></script>
+  <script src="/static/three.min.js" defer></script>
 </head>
 <body>
   <header class="bar">
     <span class="wordmark">◇ ROBOTBASE&nbsp;STUDIO <span class="dim">/ {{ project.project }}</span></span>
     <span class="spacer"></span>
     <span id="pill" class="pill"><span class="dot"></span>sim …</span>
-    <button id="btn-foxglove" class="ghost">Live 3D ↗</button>
+    <button id="btn-3d" class="ghost">3D</button>
     <button id="btn-up">Up</button>
     <button id="btn-down" class="ghost">Down</button>
   </header>
@@ -167,7 +168,6 @@
       el.onclick = () => { clearOn(); el.classList.add("on"); renderScenario(el.dataset.name); });
     $("#btn-up").onclick = () => jpost("/api/up");
     $("#btn-down").onclick = () => jpost("/api/down");
-    $("#btn-foxglove").onclick = async () => { const f = await jget("/api/foxglove-url"); window.open(f.url, "_blank"); };
 
     async function refreshStatus() {
       const s = await jget("/api/status"); const pill = $("#pill"); const up = s.running === true;
@@ -194,6 +194,91 @@
       }
       lastStatus = j ? j.status : "idle";
     };
+
+    // ---- 3D viewer (self-contained; scene from describe, robot pose from /telemetry) ----
+    let V = null;
+    const cssVar = (n) => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+    const rosToThree = (x, y, z) => new THREE.Vector3(x, z, -y);   // ROS z-up -> three y-up
+    const baseLink = () => ((PROJECT.robot && PROJECT.robot.links) || []).find(l => l.name === "base_link")
+      || { shape: "box", size: [0.35, 0.3, 0.15] };
+    const bodyHalfH = () => { const b = baseLink(); return (b.size ? b.size[2] : (b.length || 0.15)) / 2; };
+
+    function buildViewer(host) {
+      const w = host.clientWidth || 800, h = host.clientHeight || 560;
+      const scene = new THREE.Scene();
+      scene.background = new THREE.Color(cssVar("--paper") || "#eceff3");
+      const camera = new THREE.PerspectiveCamera(55, w / h, 0.05, 200);
+      const renderer = new THREE.WebGLRenderer({ antialias: true });
+      renderer.setSize(w, h); renderer.setPixelRatio(window.devicePixelRatio || 1);
+      host.innerHTML = ""; host.appendChild(renderer.domElement);
+      scene.add(new THREE.HemisphereLight(0xffffff, 0x555566, 1.0));
+      const dir = new THREE.DirectionalLight(0xffffff, 0.5); dir.position.set(4, 8, 4); scene.add(dir);
+
+      const b = (PROJECT.world && PROJECT.world.bounds) || { x: [-4, 4], y: [-4, 4] };
+      const span = Math.max(b.x[1] - b.x[0], b.y[1] - b.y[0]);
+      scene.add(new THREE.GridHelper(span, Math.max(4, Math.round(span)), 0x8a97ab, 0xccd4de));
+
+      const lineCol = new THREE.Color(cssVar("--line") || "#dbe1e8");
+      for (const m of (PROJECT.world && PROJECT.world.models) || []) {
+        if (!m.box_size) continue;
+        const [dx, dy, dz] = m.box_size, p = m.pose || [0, 0, 0], goal = /goal/.test(m.name || "");
+        const mesh = new THREE.Mesh(new THREE.BoxGeometry(dx, dz, dy),
+          new THREE.MeshStandardMaterial({ color: goal ? cssVar("--signal") : lineCol, transparent: !goal, opacity: goal ? 1 : .8 }));
+        mesh.position.copy(rosToThree(p[0], p[1], p[2] || 0));
+        scene.add(mesh);
+      }
+
+      const base = baseLink();
+      let geo;
+      if (base.shape === "cylinder") geo = new THREE.CylinderGeometry(base.radius, base.radius, base.length || 0.15, 20);
+      else if (base.shape === "sphere") geo = new THREE.SphereGeometry(base.radius, 20, 16);
+      else { const s = base.size || [0.35, 0.3, 0.15]; geo = new THREE.BoxGeometry(s[0], s[2], s[1]); }
+      const robot = new THREE.Mesh(geo, new THREE.MeshStandardMaterial({ color: cssVar("--signal") || "#2a51d6" }));
+      robot.position.set(0, bodyHalfH(), 0); scene.add(robot);
+      const nose = new THREE.Mesh(new THREE.ConeGeometry(0.05, 0.16, 12),
+        new THREE.MeshStandardMaterial({ color: cssVar("--live") || "#e07b00" }));
+      nose.rotation.z = -Math.PI / 2; nose.position.set(0.22, 0, 0); robot.add(nose);
+
+      const orbit = { az: 0.9, el: 0.7, r: Math.max(4, span * 1.1) };
+      const place = () => { camera.position.set(
+        orbit.r * Math.cos(orbit.el) * Math.cos(orbit.az), orbit.r * Math.sin(orbit.el),
+        orbit.r * Math.cos(orbit.el) * Math.sin(orbit.az)); camera.lookAt(0, 0.2, 0); };
+      place();
+      let drag = null;
+      renderer.domElement.onpointerdown = (e) => drag = { x: e.clientX, y: e.clientY };
+      window.addEventListener("pointerup", () => drag = null);
+      renderer.domElement.onpointermove = (e) => { if (!drag) return;
+        orbit.az += (e.clientX - drag.x) * 0.01;
+        orbit.el = Math.max(0.12, Math.min(1.4, orbit.el + (e.clientY - drag.y) * 0.01));
+        drag = { x: e.clientX, y: e.clientY }; place(); };
+      renderer.domElement.onwheel = (e) => { e.preventDefault();
+        orbit.r = Math.max(1.5, Math.min(80, orbit.r * (1 + Math.sign(e.deltaY) * 0.1))); place(); };
+
+      V = { renderer, scene, camera, robot, raf: 0, es: null };
+      const frame = () => { renderer.render(scene, camera); V.raf = requestAnimationFrame(frame); };
+      frame();
+
+      V.es = new EventSource("/telemetry");
+      V.es.onmessage = (ev) => { const p = JSON.parse(ev.data);
+        if (p && "x" in p) { const v = rosToThree(p.x, p.y, p.z || 0); v.y += bodyHalfH();
+          robot.position.copy(v); robot.rotation.y = -p.yaw; } };
+    }
+    function openViewer() {
+      $("#detail").style.display = "none";
+      let host = document.getElementById("viewer");
+      if (!host) { host = document.createElement("div"); host.id = "viewer"; host.className = "viewer";
+        document.querySelector(".grid").appendChild(host); }
+      host.style.display = "block";
+      if (!V) buildViewer(host);
+    }
+    function closeViewer() {
+      const host = document.getElementById("viewer"); if (host) host.style.display = "none";
+      $("#detail").style.display = "";
+      if (V) { cancelAnimationFrame(V.raf); if (V.es) V.es.close(); V = null; }
+    }
+    let show3d = false;
+    $("#btn-3d").onclick = () => { show3d = !show3d; show3d ? openViewer() : closeViewer();
+      $("#btn-3d").classList.toggle("ghost", !show3d); };
 
     refreshStatus(); refreshRuns(); refreshEvals();
     setInterval(refreshStatus, 3000);
