@@ -73,6 +73,28 @@ def test_bridge_list_adds_cmd_vel_for_a_cmd_vel_driven_robot():
     assert "/cmd_vel" in [b["arg"].split("@")[0] for b in out]
 
 
+def test_contact_bridge_scoped_to_actual_world_name(tmp_path):
+    # Regression: the contact sensor's /world/<name>/.../bumper/contact bridge must use the world's
+    # REAL name. When the world is renamed (e.g. world.yaml name: maze), a bridge still scoped to
+    # "warehouse" never receives contacts, so /bumper is silent and no_contact passes vacuously — a
+    # silent false PASS. The robot compiler must be given the actual world name.
+    import json
+    import re
+    from robotbase.generator import recompile_project, template_dir
+
+    dest = create_project("bumpbot", str(tmp_path / "out"), template_dir("differential-drive"))
+    wy = os.path.join(dest, "world.yaml")
+    text = open(wy, encoding="utf-8").read()
+    open(wy, "w", encoding="utf-8").write(re.sub(r"(?m)^name:.*", "name: maze", text, count=1))
+    recompile_project(dest)
+
+    bridges = json.load(open(os.path.join(dest, "src", "bumpbot_description", "urdf", "bridges.json")))
+    contact = [b for b in bridges if "bumper/contact" in b["arg"]]
+    assert contact, "expected a contact-sensor bridge"
+    assert "/world/maze/" in contact[0]["arg"], contact[0]["arg"]
+    assert "/world/warehouse/" not in contact[0]["arg"]
+
+
 def test_created_project_generates_a_data_driven_launch(tmp_path):
     # a real template compiles specs on create; the launch is generated (P2), package-scoped,
     # data-driven, and the compiled launch_config carries the spawn name + fixed_base flag.

@@ -218,7 +218,16 @@ def _compile_specs(dest: str, snake: str) -> None:
     for p in spec.parts:                       # resolve project-relative import paths
         if p.use == "custom" and p.urdf and not os.path.isabs(p.urdf):
             p.urdf = os.path.join(dest, p.urdf)
-    compiled = compile_robot(spec)
+    # Resolve the world name up front and compile the robot AGAINST it: the robot's world-scoped
+    # topics (the contact sensor's /world/<name>/.../bumper/contact bridge) must match the actual
+    # world, or gz publishes on /world/maze/... while the bridge listens on /world/warehouse/... —
+    # /bumper stays silent and no_contact passes vacuously (a silent false PASS).
+    world_name = "warehouse"
+    _wy = os.path.join(dest, "world.yaml")
+    if os.path.exists(_wy):
+        from robotbase.worldspec.schema import WorldSpec
+        world_name = WorldSpec.from_yaml(_wy).name
+    compiled = compile_robot(spec, world_name)
 
     urdf_dir = os.path.join(dest, "src", f"{snake}_description", "urdf")
     if os.path.isdir(urdf_dir):
@@ -232,12 +241,7 @@ def _compile_specs(dest: str, snake: str) -> None:
             json.dump(_bridge_list(compiled.bridges, compiled.manifest.get("control")), fh, indent=2)
         # Compile the launch config from the specs so the launch is NOT coupled to the project
         # name: the model spawns under the robot.yaml `name` (matching the sensor bridges' scoped
-        # topics + the interface contract), and the launch reads the world name from world.yaml.
-        world_name = "warehouse"
-        _wy = os.path.join(dest, "world.yaml")
-        if os.path.exists(_wy):
-            from robotbase.worldspec.schema import WorldSpec
-            world_name = WorldSpec.from_yaml(_wy).name
+        # topics + the interface contract), and the launch reads the world name (resolved above).
         with open(os.path.join(urdf_dir, "launch_config.json"), "w", encoding="utf-8") as fh:
             json.dump({"robot_name": compiled.name, "world_name": world_name,
                        "spawn_z": compiled.spawn_z,
