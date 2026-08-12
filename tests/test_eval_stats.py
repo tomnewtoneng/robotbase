@@ -27,6 +27,14 @@ def test_is_randomized_false_when_all_zero():
     assert is_randomized(RandomizeSpec()) is False
 
 
+def test_is_randomized_fixed_base_ignores_robot_pose():
+    # a fixed-base robot's pose jitter is a no-op (runtime ignores set_robot_pose); only
+    # obstacle jitter makes trials actually vary. This is the arm's reach-configuration case:
+    # it declares robot_pose jitter for schema conformance but the trials are identical.
+    assert is_randomized(RandomizeSpec(robot_pose=PoseJitter(x=0.2)), fixed_base=True) is False
+    assert is_randomized(RandomizeSpec(obstacles=PoseJitter(x=0.2)), fixed_base=True) is True
+
+
 def test_aggregate_metrics_numeric_only():
     rows = [
         {"distance_travelled_metres": 2.0, "collision_count": 0, "topic_message_counts": {"/scan": 5}},

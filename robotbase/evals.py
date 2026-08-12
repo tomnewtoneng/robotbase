@@ -118,7 +118,7 @@ def run_eval(scenario: Scenario, runtime: Any, run_dir: str,
     from robotbase.results import new_eval_id
     from robotbase.scenario_runner import run_scenario
 
-    randomized = is_randomized(scenario.randomize)
+    randomized = is_randomized(scenario.randomize, getattr(runtime, "fixed_base", False))
     base = random.Random(seed)
     per_trial: list[dict] = []
     for i in range(max(1, trials)):

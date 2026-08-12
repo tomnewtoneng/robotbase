@@ -17,11 +17,15 @@ def wilson_ci(passed: int, n: int, z: float = 1.96) -> tuple[float, float]:
     return (max(0.0, round(center - half, 4)), min(1.0, round(center + half, 4)))
 
 
-def is_randomized(randomize) -> bool:
-    """True iff the scenario's randomize block actually jitters something — otherwise all trials
-    are identical and a confidence interval would be meaningless."""
+def is_randomized(randomize, fixed_base: bool = False) -> bool:
+    """True iff the scenario's randomize block actually varies the trials — otherwise all trials
+    are identical and a confidence interval would be meaningless. A fixed-base robot's *pose*
+    jitter is a no-op (the runtime ignores set_robot_pose), so it doesn't count; obstacle jitter
+    always does. This is the honesty guard — key it off real variation, not just the declaration."""
     jp, jo = randomize.robot_pose, randomize.obstacles
-    return any(v != 0 for v in (jp.x, jp.y, jp.yaw, jo.x, jo.y, jo.yaw))
+    pose_varies = (not fixed_base) and any(v != 0 for v in (jp.x, jp.y, jp.yaw))
+    obstacles_vary = any(v != 0 for v in (jo.x, jo.y, jo.yaw))
+    return pose_varies or obstacles_vary
 
 
 def aggregate_metrics(metrics_list: list[dict]) -> dict:
