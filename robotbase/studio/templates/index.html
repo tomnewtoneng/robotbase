@@ -1,0 +1,137 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Robotbase Studio — {{ project.project }}</title>
+  <link rel="stylesheet" href="/static/studio.css">
+  <script src="/static/htmx.min.js" defer></script>
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">◆ Robotbase Studio · <b>{{ project.project }}</b></div>
+    <div class="status"><span id="pill" class="pill idle">sim: …</span></div>
+    <div class="actions">
+      <button id="btn-foxglove" class="ghost">Open live 3D ↗</button>
+      <button id="btn-up">Up</button>
+      <button id="btn-down" class="ghost">Down</button>
+    </div>
+  </header>
+
+  <main class="layout">
+    <aside class="sidebar">
+      <section>
+        <h2>Robot</h2>
+        <div class="tag">{{ project.robot.template }}</div>
+        <ul class="sensors">
+          {% for name, cfg in (project.sensors or {}).items() %}<li>{{ name }}</li>{% endfor %}
+        </ul>
+      </section>
+      <section>
+        <h2>Scenarios</h2>
+        <ul id="scenarios" class="list">
+          {% for s in project.scenarios %}
+          <li><button class="scenario" data-name="{{ s.name }}">{{ s.name }}</button></li>
+          {% endfor %}
+        </ul>
+      </section>
+      <section>
+        <h2>Eval history</h2>
+        <ul id="evals" class="list"><li class="muted">none yet</li></ul>
+      </section>
+    </aside>
+
+    <section class="detail" id="detail">
+      <p class="muted">Select a scenario to run or evaluate.</p>
+    </section>
+  </main>
+
+  <div id="job" class="job hidden"></div>
+
+  <script>
+    const SCENARIOS = {{ project.scenarios | tojson }};
+    const $ = (s, r=document) => r.querySelector(s);
+
+    async function jpost(url, body) {
+      const r = await fetch(url, {method: "POST", headers: {"Content-Type": "application/json"},
+                                  body: JSON.stringify(body || {})});
+      return r.json();
+    }
+    async function jget(url) { return (await fetch(url)).json(); }
+
+    function selectScenario(name) {
+      const s = SCENARIOS.find(x => x.name === name) || {name, assertions: []};
+      $("#detail").innerHTML = `
+        <h1>${s.name}</h1>
+        <p class="muted">${s.description || ""}</p>
+        <div class="assertions">${(s.assertions || []).map(a => `<code>${a}</code>`).join(" ")}</div>
+        <div class="controls">
+          <button id="run">▶ Run</button>
+          <span class="evalgroup">
+            <button id="eval">▶ Eval</button> ×
+            <input id="trials" type="number" value="10" min="1" style="width:4rem">
+          </span>
+        </div>
+        <div id="result" class="result"></div>`;
+      $("#run").onclick = () => jpost("/api/run", {scenario: s.name});
+      $("#eval").onclick = () => jpost("/api/eval",
+        {scenario: s.name, trials: parseInt($("#trials").value || "10")});
+    }
+
+    document.querySelectorAll(".scenario").forEach(b =>
+      b.onclick = () => { document.querySelectorAll(".scenario").forEach(x => x.classList.remove("on"));
+                          b.classList.add("on"); selectScenario(b.dataset.name); });
+
+    $("#btn-up").onclick = () => jpost("/api/up");
+    $("#btn-down").onclick = () => jpost("/api/down");
+    $("#btn-foxglove").onclick = async () => {
+      const fx = await jget("/api/foxglove-url"); window.open(fx.url, "_blank");
+    };
+
+    async function refreshStatus() {
+      const s = await jget("/api/status");
+      const pill = $("#pill");
+      const up = s.running === true;
+      pill.textContent = "sim: " + (s.error ? "?" : up ? "up" : "down");
+      pill.className = "pill " + (up ? "up" : "down");
+    }
+    async function refreshEvals() {
+      const evs = await jget("/api/evals");
+      $("#evals").innerHTML = evs.length
+        ? evs.map(e => `<li><b>${e.scenario || "suite"}</b> — ${Math.round((e.success_rate||0)*100)}%</li>`).join("")
+        : '<li class="muted">none yet</li>';
+    }
+
+    function renderJob(j) {
+      const box = $("#job");
+      if (!j || j.status === "idle") { box.classList.add("hidden"); return; }
+      box.classList.remove("hidden");
+      let msg = `<b>${j.kind}</b> ${j.label || ""} — <span class="jobstatus ${j.status}">${j.status}</span>`;
+      if (j.status === "error") msg += `<div class="err">${j.error || ""}</div>`;
+      box.innerHTML = msg;
+      if (j.status === "done" || j.status === "error") {
+        const res = $("#result");
+        if (res && j.result) {
+          if ("success_rate" in j.result) {
+            const ci = j.result.ci95 ? `CI [${Math.round(j.result.ci95[0]*100)}%, ${Math.round(j.result.ci95[1]*100)}%]`
+                                     : "deterministic (no CI)";
+            res.innerHTML = `<div class="ok">Eval: ${Math.round(j.result.success_rate*100)}% ` +
+                            `(${j.result.passed}/${j.result.n}) · ${ci}</div>`;
+          } else if ("passed" in j.result) {
+            res.innerHTML = `<div class="${j.result.passed ? "ok" : "fail"}">` +
+                            `${j.result.passed ? "✓ PASSED" : "✗ FAILED"}</div>`;
+          }
+        }
+        refreshEvals();
+      }
+    }
+
+    // live job stream
+    const es = new EventSource("/events");
+    es.onmessage = (e) => renderJob(JSON.parse(e.data));
+
+    refreshStatus(); refreshEvals();
+    setInterval(refreshStatus, 3000);
+  </script>
+</body>
+</html>

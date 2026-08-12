@@ -26,8 +26,7 @@ def create_app(project_dir: str, service: StudioService | None = None) -> FastAP
 
     @app.get("/", response_class=HTMLResponse)
     def index(request: Request):
-        return templates.TemplateResponse("index.html",
-                                          {"request": request, "project": svc.project()})
+        return templates.TemplateResponse(request, "index.html", {"project": svc.project()})
 
     @app.get("/api/project")
     def api_project():

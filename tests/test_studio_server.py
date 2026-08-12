@@ -34,6 +34,12 @@ def test_foxglove_url_endpoint(client):
     assert "8765" in c.get("/api/foxglove-url").json()["url"]
 
 
+def test_index_page_renders_project(client):
+    c, _ = client
+    html = c.get("/").text
+    assert "srvbot" in html and "drive-forward" in html and "/static/htmx.min.js" in html
+
+
 def test_run_endpoint_uses_injected_fake_and_locks(tmp_path):
     # inject a fake runtime so no Docker is needed; assert the job starts and a 2nd is busy
     import threading
