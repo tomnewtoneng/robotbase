@@ -1,7 +1,11 @@
 """Self-contained telemetry node — runs INSIDE the ROS container (no `robotbase` import there).
-Subscribes to /odom and writes the latest pose atomically to the mounted
-/workspace/.robotbase/telemetry.jsonl (~10 Hz), so Studio (host) can read it without a port.
-Launched by runtime.start_telemetry via:  python3 /workspace/.robotbase/telemetry.py --ros-args -p use_sim_time:=true
+Subscribes to /odom and writes the latest pose to the mounted /workspace/.robotbase/telemetry.jsonl
+on a **wall-clock** 10 Hz timer (a heartbeat), so Studio (host) can (a) render the pose live and
+(b) detect the node's liveness by the file's freshness — Robotbase restarts the container on every
+scenario reset, so Studio's supervisor relaunches this node when the file goes stale.
+
+Launched by runtime.start_telemetry:  python3 /workspace/.robotbase/telemetry.py
+(No use_sim_time: the write timer must be wall-clock so it keeps ticking when sim time is paused.)
 """
 from __future__ import annotations
 
@@ -24,23 +28,23 @@ def main():
 
     rclpy.init()
     node = Node("studio_telemetry")
-    state = {"last": 0.0}
+    latest = {"t": time.time()}
 
     def on_odom(msg):
-        now = time.monotonic()
-        if now - state["last"] < 0.1:      # throttle ~10 Hz
-            return
-        state["last"] = now
         p = msg.pose.pose.position
         o = msg.pose.pose.orientation
-        line = json.dumps({"t": now, "x": p.x, "y": p.y, "z": p.z,
-                           "yaw": yaw_from_quat(o.x, o.y, o.z, o.w)})
+        latest.update({"t": time.time(), "x": p.x, "y": p.y, "z": p.z,
+                       "yaw": yaw_from_quat(o.x, o.y, o.z, o.w)})
+
+    def write():
+        latest["t"] = time.time()          # heartbeat even when /odom is quiet
         tmp = OUT + ".tmp"
         with open(tmp, "w") as f:
-            f.write(line)
+            f.write(json.dumps(latest))
         os.replace(tmp, OUT)               # atomic — no partial reads on the host
 
     node.create_subscription(Odometry, "/odom", on_odom, 10)
+    node.create_timer(0.1, write)          # 10 Hz wall-clock heartbeat + latest pose
     rclpy.spin(node)
 
 

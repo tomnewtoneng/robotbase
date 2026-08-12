@@ -393,8 +393,13 @@ class Runtime:
 
     def start_telemetry(self) -> None:
         node = self._ensure_telemetry()
-        self._ros(f"pkill -f telemetry.py; python3 {node} --ros-args -p use_sim_time:=true "
-                  "> /workspace/.robotbase/telemetry.log 2>&1", detached=True, timeout=20)
+        # No use_sim_time: the heartbeat write timer must be wall-clock so it keeps ticking when
+        # sim time is paused/absent (Studio uses the file's freshness to detect liveness).
+        # No pre-launch pkill here: this shell's own command line contains "telemetry.py", so a
+        # `pkill -f telemetry.py` would kill this launcher before python3 starts. The container
+        # restart on reset already clears the old node; stop_telemetry handles explicit teardown.
+        self._ros(f"python3 {node} > /workspace/.robotbase/telemetry.log 2>&1",
+                  detached=True, timeout=20)
 
     def stop_telemetry(self) -> None:
         self._ros("pkill -f telemetry.py; true", timeout=15)

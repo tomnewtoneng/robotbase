@@ -6,6 +6,8 @@ from __future__ import annotations
 import glob
 import json
 import os
+import threading
+import time
 
 from robotbase.describe import describe
 from robotbase.runtime import Runtime
@@ -17,6 +19,8 @@ class StudioService:
         self.project_dir = project_dir
         self._runtime_factory = runtime_factory
         self.jobs = JobManager()
+        self._telemetry_on = False       # supervisor active between up and down
+        self._telemetry_path = os.path.join(project_dir, ".robotbase", "telemetry.jsonl")
 
     # ---- reads ----
     def project(self) -> dict:
@@ -77,6 +81,24 @@ class StudioService:
     def job_snapshot(self) -> dict:
         return self.jobs.snapshot()
 
+    # ---- telemetry supervisor ----
+    # Robotbase restarts the sim container on every scenario reset, which kills the in-container
+    # telemetry node. This daemon keeps it alive: while active, if the pose file goes stale (the
+    # node heartbeats at 10 Hz), relaunch it. The staleness check is a cheap host-side file stat.
+    def _supervise_telemetry(self, rt) -> None:
+        while self._telemetry_on:
+            time.sleep(2.0)                  # let start_up's launch write a first heartbeat
+            try:
+                mtime = os.path.getmtime(self._telemetry_path)
+                stale = (time.time() - mtime) > 3.0
+            except OSError:
+                stale = True
+            if stale and self._telemetry_on:
+                try:
+                    rt.start_telemetry()     # relaunch after a container restart killed it
+                except Exception:  # noqa: BLE001 — best-effort; keep supervising
+                    pass
+
     # ---- jobs (single-lock, background) ----
     def start_up(self) -> Job:
         def _job() -> dict:
@@ -84,6 +106,9 @@ class StudioService:
             out = rt.up()
             try:
                 rt.start_telemetry()
+                if not self._telemetry_on:
+                    self._telemetry_on = True
+                    threading.Thread(target=self._supervise_telemetry, args=(rt,), daemon=True).start()
             except Exception:  # noqa: BLE001 — telemetry is best-effort; up still succeeds
                 pass
             return out
@@ -91,10 +116,15 @@ class StudioService:
 
     def start_down(self) -> Job:
         def _job() -> dict:
+            self._telemetry_on = False       # stop the supervisor
             rt = self._runtime_factory(self.project_dir)
             try:
                 rt.stop_telemetry()
             except Exception:  # noqa: BLE001
+                pass
+            try:
+                os.remove(self._telemetry_path)   # so the viewer shows the robot at home when down
+            except OSError:
                 pass
             return rt.down()
         return self.jobs.start("down", "down", _job)
