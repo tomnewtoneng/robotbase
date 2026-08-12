@@ -42,6 +42,7 @@ Run & inspect:
   launch [--gui]                 start the simulation (--gui to watch in Foxglove)
   test [NAME] [--gui] [--list]   run a scenario, or --list them
   test --all [--trials N]        run every scenario as a suite (robustness + regressions)
+  eval NAME [--trials N]         statistically evaluate a scenario (success-rate + 95% CI)
   bench [--list] [--agent NAME]  score the controller on the RobotBench task set
   robotbench run|report          run the RobotBench validation harness / render results
   status                         report simulation status
@@ -151,6 +152,12 @@ def _build_parser() -> argparse.ArgumentParser:
                       help="run N randomized trials (domain randomization) and report robustness")
     test.add_argument("--seed", type=int, default=0, help="RNG seed for --trials")
     test.add_argument("--gui", nargs="?", const="foxglove", default="none")
+
+    ev = sub.add_parser("eval", help="statistically evaluate a scenario over N randomized trials")
+    ev.add_argument("scenario", nargs="?")
+    ev.add_argument("--all", action="store_true", help="evaluate every scenario as a suite")
+    ev.add_argument("--trials", type=int, default=10, help="number of randomized trials")
+    ev.add_argument("--seed", type=int, default=0, help="base RNG seed (reproducible)")
 
     scen = sub.add_parser("scenario", help="author scenarios (add | list)")
     scen.add_argument("action", choices=["add", "list"])
@@ -546,6 +553,34 @@ def main() -> None:
                 "Or let a coding agent fix it."
             )
         sys.exit(0 if result.passed else 1)
+
+    elif args.cmd == "eval":
+        from robotbase.evals import run_eval, run_eval_suite
+        from robotbase.eval_stats import render_markdown
+        run_dir = os.path.join(project, ".robotbase", "runs")
+
+        if args.all:
+            specs = [Scenario.from_yaml(scenarios[n]) for n in sorted(scenarios)]
+            if not specs:
+                print("(no scenarios to evaluate)")
+                sys.exit(2)
+            report = run_eval_suite(specs, rt, run_dir, args.trials, args.seed)
+        else:
+            if not args.scenario or args.scenario not in scenarios:
+                print(f"unknown scenario {args.scenario!r}; available: {sorted(scenarios)}")
+                sys.exit(2)
+            scenario = Scenario.from_yaml(scenarios[args.scenario])
+            report = run_eval(scenario, rt, run_dir, args.trials, args.seed)
+
+        eval_dir = os.path.join(project, ".robotbase", "evals", report["eval_id"])
+        os.makedirs(eval_dir, exist_ok=True)
+        with open(os.path.join(eval_dir, "report.json"), "w") as f:
+            json.dump(report, f, indent=2)
+        md = render_markdown(report)
+        with open(os.path.join(eval_dir, "report.md"), "w") as f:
+            f.write(md)
+        print(md)
+        _hint(f"Eval report saved: .robotbase/evals/{report['eval_id']}/  (report.json + report.md)")
 
     elif args.cmd == "bench":
         from robotbase.bench import scorecard
