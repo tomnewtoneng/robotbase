@@ -127,6 +127,7 @@ input[type=number]{ font-family:var(--mono); background:var(--paper); color:var(
 .working { color:var(--live); }
 .chat-input { display:flex; gap:.4rem; padding:.6rem; border-top:1px solid var(--line); }
 .chat-input textarea { flex:1; resize:none; font:inherit; background:var(--paper); color:var(--ink); border:1px solid var(--line); border-radius:6px; padding:.4rem; }
+.chat-input textarea:disabled, .chat-input button:disabled { opacity:.45; cursor:not-allowed; }
 .chat-note { font-size:.68rem; padding:0 .6rem .5rem; }
 .chat-unavail { color:var(--muted); font-size:.85rem; padding:1rem; }
 @media (max-width:900px){ .grid.with-chat { grid-template-columns:1fr; } }
