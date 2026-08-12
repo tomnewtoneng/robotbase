@@ -6,7 +6,7 @@ import asyncio
 import json
 import os
 
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import HTMLResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
@@ -40,6 +40,17 @@ def create_app(project_dir: str, service: StudioService | None = None) -> FastAP
     def api_run(run_id: str):
         return svc.get_run(run_id)
 
+    @app.delete("/api/runs")
+    def api_clear_runs():
+        return svc.clear_runs()
+
+    @app.delete("/api/runs/{run_id}")
+    def api_delete_run(run_id: str):
+        try:
+            return svc.delete_run(run_id)
+        except ValueError as exc:
+            raise HTTPException(status_code=404, detail=str(exc))
+
     @app.get("/api/evals")
     def api_evals():
         return svc.list_evals()
@@ -48,9 +59,53 @@ def create_app(project_dir: str, service: StudioService | None = None) -> FastAP
     def api_eval(eval_id: str):
         return svc.get_eval(eval_id)
 
+    @app.delete("/api/evals")
+    def api_clear_evals():
+        return svc.clear_evals()
+
+    @app.delete("/api/evals/{eval_id}")
+    def api_delete_eval(eval_id: str):
+        try:
+            return svc.delete_eval(eval_id)
+        except ValueError as exc:
+            raise HTTPException(status_code=404, detail=str(exc))
+
+    @app.post("/api/job/stop")
+    def api_job_stop():
+        return svc.stop_job()
+
+    @app.get("/api/files")
+    def api_files():
+        return svc.list_files()
+
+    @app.get("/api/files/content")
+    def api_file_content(path: str):
+        try:
+            return svc.read_file(path)
+        except FileNotFoundError:
+            raise HTTPException(status_code=404, detail="file not found")
+        except ValueError as exc:
+            raise HTTPException(status_code=400, detail=str(exc))
+
+    @app.post("/api/files/save")
+    async def api_file_save(request: Request):
+        body = await request.json()
+        try:
+            return svc.write_file(body.get("path"), body.get("content"))
+        except FileNotFoundError:
+            raise HTTPException(status_code=404, detail="file not found")
+        except ValueError as exc:
+            raise HTTPException(status_code=400, detail=str(exc))
+
+
     @app.get("/api/status")
     def api_status():
         return svc.status()
+
+    @app.post("/api/telemetry/ensure")
+    def api_telemetry_ensure():
+        # Called when the 3D viewer opens, so live motion works for a sim the agent launched.
+        return svc.ensure_telemetry()
 
     @app.get("/api/foxglove-url")
     def api_foxglove():
@@ -96,19 +151,6 @@ def create_app(project_dir: str, service: StudioService | None = None) -> FastAP
                 await asyncio.sleep(0.1)
         return StreamingResponse(gen(), media_type="text/event-stream")
 
-    @app.get("/api/chat/available")
-    def chat_available():
-        ok, reason = svc.chat.available()
-        return {"available": ok, "reason": reason}
-
-    @app.post("/api/chat")
-    async def chat(request: Request):
-        body = await request.json()
-        async def gen():
-            async for ev in svc.chat.run(body.get("message", "")):
-                yield f"data: {json.dumps(ev)}\n\n"
-        return StreamingResponse(gen(), media_type="text/event-stream")
-
     return app
 
 
@@ -118,6 +160,9 @@ def _job_dict(job) -> dict:
 
 
 def run_server(project_dir: str, port: int = 8080, open_browser: bool = True) -> None:
+    # Source specs are authoritative. Reconcile generated URDF/SDF before the first page render.
+    from robotbase.generator import recompile_project
+    recompile_project(project_dir)
     import uvicorn
     if open_browser:
         import threading

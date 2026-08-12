@@ -300,7 +300,9 @@ class Runtime:
     def run_action(self, action) -> None:
         t = action.type
         if t == "wait":
-            time.sleep(action.duration_seconds or 1.0)
+            # Cancellable: run_scenario sets self.stop_event so Studio's Stop can break a long wait.
+            from robotbase.scenario_runner import interruptible_sleep
+            interruptible_sleep(action.duration_seconds or 1.0, getattr(self, "stop_event", None))
         elif t == "wait_for_topic":
             self._wait_for_topic(action.topic, action.timeout_seconds or 5.0)
         elif t == "run_node":

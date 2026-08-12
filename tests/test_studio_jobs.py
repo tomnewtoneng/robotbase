@@ -46,3 +46,23 @@ def test_snapshot_is_json_safe():
     snap = jm.snapshot()
     json.dumps(snap)   # must not raise
     assert snap["status"] == "done" and snap["kind"] == "eval"
+
+
+def test_request_stop_signals_job_and_ends_stopped():
+    from robotbase.scenario_runner import RunStopped
+    jm = JobManager()
+
+    def waits_for_stop(stop):
+        if not stop.wait(2.0):
+            return {"ok": True}          # never stopped → would be "done"
+        raise RunStopped()
+
+    job = jm.start("run", "long", waits_for_stop)
+    assert jm.request_stop()["stopped"] is True
+    _wait(job)
+    assert job.status == "stopped"
+
+
+def test_request_stop_when_idle_is_noop():
+    jm = JobManager()
+    assert jm.request_stop()["stopped"] is False

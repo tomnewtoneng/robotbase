@@ -97,7 +97,7 @@ def compare_suites(previous: dict, current: dict) -> dict:
 
 
 def run_trials(scenario: Scenario, runtime: Any, run_dir: str,
-               trials: int = 1, seed: int = 0) -> dict:
+               trials: int = 1, seed: int = 0, stop_event=None) -> dict:
     """Run *scenario* *trials* times — trial 0 is the nominal (unperturbed) setup, the rest
     sample within `scenario.randomize` — and report robustness. Uses the shared run_scenario,
     so it works against any backend."""
@@ -111,19 +111,19 @@ def run_trials(scenario: Scenario, runtime: Any, run_dir: str,
         else:
             trial = scenario.model_copy(
                 update={"setup": perturb_setup(scenario.setup, scenario.randomize, rng)})
-        flags.append(run_scenario(trial, runtime, run_dir).passed)
+        flags.append(run_scenario(trial, runtime, run_dir, stop_event).passed)
     return trial_report(scenario.name, flags)
 
 
 def run_suite(scenarios: list[Scenario], runtime: Any, run_dir: str,
-              trials: int = 1, seed: int = 0) -> dict:
+              trials: int = 1, seed: int = 0, stop_event=None) -> dict:
     """Run every scenario (each with `trials` randomized trials) and aggregate."""
-    reports = [run_trials(s, runtime, run_dir, trials, seed) for s in scenarios]
+    reports = [run_trials(s, runtime, run_dir, trials, seed, stop_event) for s in scenarios]
     return suite_report(reports)
 
 
 def run_eval(scenario: Scenario, runtime: Any, run_dir: str,
-             trials: int = 10, seed: int = 0, progress=None) -> dict:
+             trials: int = 10, seed: int = 0, progress=None, stop_event=None) -> dict:
     """Statistically evaluate *scenario* over *trials* randomized trials. Every trial is a sample
     (unlike run_trials, no nominal trial 0), each with a deterministic per-trial seed derived from
     *seed*. Captures the full ScenarioResult per trial and returns the persisted-report dict."""
@@ -138,7 +138,7 @@ def run_eval(scenario: Scenario, runtime: Any, run_dir: str,
         tseed = base.randrange(2 ** 32)
         trial = scenario.model_copy(update={
             "setup": perturb_setup(scenario.setup, scenario.randomize, random.Random(tseed))})
-        result = run_scenario(trial, runtime, run_dir)
+        result = run_scenario(trial, runtime, run_dir, stop_event)
         fields = set(result.metrics.model_fields_set)
         metrics = result.metrics.model_dump(include=fields) if fields else result.metrics.model_dump()
         per_trial.append({"index": i, "seed": tseed, "run_id": result.run_id,
@@ -156,12 +156,12 @@ def run_eval(scenario: Scenario, runtime: Any, run_dir: str,
 
 
 def run_eval_suite(scenarios: list[Scenario], runtime: Any, run_dir: str,
-                   trials: int = 10, seed: int = 0, progress=None) -> dict:
+                   trials: int = 10, seed: int = 0, progress=None, stop_event=None) -> dict:
     """Statistically evaluate every scenario and aggregate into one suite report."""
     from robotbase.eval_stats import suite_eval_report
     from robotbase.results import new_eval_id
 
-    reports = [run_eval(s, runtime, run_dir, trials, seed, progress) for s in scenarios]
+    reports = [run_eval(s, runtime, run_dir, trials, seed, progress, stop_event) for s in scenarios]
     return {
         "eval_id": new_eval_id(),
         "created_at": datetime.now(timezone.utc).isoformat(),

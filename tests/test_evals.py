@@ -71,6 +71,32 @@ def test_compare_suites_flags_regressions_and_improvements():
     assert diff["improvements"] == []
 
 
+def test_run_eval_stops_between_trials(tmp_path):
+    import threading
+    import pytest
+    from robotbase.evals import run_eval
+    from robotbase.scenario_runner import RunStopped
+
+    stop = threading.Event()
+    calls = {"n": 0}
+
+    class StoppingRuntime(_FakeRuntime):
+        def run_action(self, action):
+            calls["n"] += 1
+            stop.set()          # cancel after the first trial's action runs
+
+    scenario = Scenario(
+        version=1, name="drive", setup=_setup(),
+        actions=[ActionSpec(type="wait", duration_seconds=0.01)],
+        assertions=[AssertionSpec(type="robot_moved_minimum_distance", minimum_distance_metres=1.0)],
+        randomize=RandomizeSpec(robot_pose=PoseJitter(x=0.2)),
+    )
+    with pytest.raises(RunStopped):
+        run_eval(scenario, StoppingRuntime(Metrics(distance_travelled_metres=2.0)),
+                 str(tmp_path), trials=5, seed=0, stop_event=stop)
+    assert calls["n"] <= 2      # stopped early, not all 5 trials
+
+
 class _FakeRuntime:
     def __init__(self, metrics):
         self._m = metrics

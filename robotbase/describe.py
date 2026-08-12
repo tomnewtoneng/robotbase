@@ -193,7 +193,9 @@ def _world(project_dir: str, m: dict) -> dict:
                         size = _floats(child.text)
                         break
                 break
-        entry = {"name": model.get("name"), "static": static, "pose": [round(p, 3) for p in pose[:3]]}
+        entry = {"name": model.get("name"), "static": static,
+                 "pose": [round(p, 3) for p in pose[:3]],
+                 "yaw": round(pose[5], 3) if len(pose) > 5 else 0.0}
         if size:
             entry["box_size"] = size
             if static:  # arena extent from static box models (walls) — yaw-aware AABB, since the

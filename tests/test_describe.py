@@ -34,3 +34,12 @@ def test_describe_arm(tmp_path):
     # the compiled joint-position controllers + their tunable gains are surfaced as ground truth
     ctrl = {c["joint"]: c["params"] for c in d["robot"]["controllers"] if c["kind"] == "joint-position"}
     assert ctrl["shoulder_joint"]["p_gain"] == "80" and ctrl["elbow_joint"]["p_gain"] == "60"
+
+
+def test_world_description_preserves_wall_yaw(tmp_path):
+    from robotbase.generator import create_project, template_dir
+    project = create_project("yaw-world", str(tmp_path), template_dir("differential-drive"))
+    world = describe(project)["world"]
+    walls = {m["name"]: m for m in world["models"] if m["name"].startswith("wall_")}
+    assert walls["wall_0"]["yaw"] == 0.0
+    assert abs(walls["wall_2"]["yaw"] - 1.571) < 0.001

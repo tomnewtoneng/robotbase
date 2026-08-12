@@ -16,10 +16,41 @@ from robotbase.results import ScenarioResult, new_run_id
 from robotbase.schema import Scenario
 
 
-def run_scenario(scenario: Scenario, runtime, run_dir: str) -> ScenarioResult:
+class RunStopped(Exception):
+    """Raised when a run/eval is cancelled (Studio's Stop button). No result is written — a stopped
+    run is not a failed run, so it must not pollute the run/eval history."""
+
+
+def interruptible_sleep(seconds: float, stop_event=None, poll: float = 0.1) -> None:
+    """Sleep for *seconds*, but wake immediately and raise RunStopped if *stop_event* is set. This
+    is what makes a long `wait` action (or a slow sim) cancellable — a plain time.sleep is not."""
+    if stop_event is None:
+        time.sleep(seconds)
+        return
+    end = time.monotonic() + seconds
+    while True:
+        if stop_event.is_set():
+            raise RunStopped()
+        remaining = end - time.monotonic()
+        if remaining <= 0:
+            return
+        time.sleep(min(poll, remaining))
+
+
+def run_scenario(scenario: Scenario, runtime, run_dir: str, stop_event=None) -> ScenarioResult:
     started = time.time()
     started_at = datetime.now(timezone.utc).isoformat()
 
+    # Let the runtime honour cancellation inside its own blocking calls (e.g. a long `wait`), without
+    # widening the duck-typed runtime interface — fakes simply ignore the attribute.
+    if stop_event is not None:
+        setattr(runtime, "stop_event", stop_event)
+
+    def _check_stop():
+        if stop_event is not None and stop_event.is_set():
+            raise RunStopped()
+
+    _check_stop()
     if scenario.setup.reset_world:
         runtime.reset()
     runtime.set_robot_pose(scenario.setup.robot.pose)
@@ -28,11 +59,12 @@ def run_scenario(scenario: Scenario, runtime, run_dir: str) -> ScenarioResult:
 
     # Enforce the whole-scenario budget: stop before any action once the deadline passes, so a
     # scenario whose actions overrun `timeout_seconds` is cut off and fails instead of running
-    # unbounded. (A single blocking runtime call isn't interrupted here — that is the runtime's
-    # responsibility — but multi-action / long-scenario overruns are bounded at action granularity.)
+    # unbounded. Cancellation is checked at the same action granularity, and inside blocking runtime
+    # calls via the stop_event set above.
     deadline = time.monotonic() + scenario.timeout_seconds
     timed_out = False
     for action in scenario.actions:
+        _check_stop()
         if time.monotonic() >= deadline:
             timed_out = True
             break

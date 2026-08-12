@@ -1,8 +1,11 @@
+import threading
 import time
+
+import pytest
 
 from robotbase.schema import Scenario, SetupSpec, ActionSpec, AssertionSpec
 from robotbase.results import Metrics
-from robotbase.scenario_runner import run_scenario
+from robotbase.scenario_runner import RunStopped, interruptible_sleep, run_scenario
 
 
 class FakeRuntime:
@@ -88,3 +91,28 @@ def test_runner_enforces_scenario_timeout(tmp_path):
     assert result.timed_out is True
     assert result.passed is False                                   # a timeout fails the scenario
     assert len([c for c in rt.calls if c.startswith("action:")]) < 3  # stopped early
+
+
+def test_interruptible_sleep_wakes_on_stop():
+    stop = threading.Event()
+    threading.Timer(0.05, stop.set).start()
+    start = time.monotonic()
+    with pytest.raises(RunStopped):
+        interruptible_sleep(5.0, stop)
+    assert time.monotonic() - start < 1.0   # woke early, didn't sleep the full 5s
+
+
+def test_interruptible_sleep_without_event_completes():
+    start = time.monotonic()
+    interruptible_sleep(0.05, None)
+    assert time.monotonic() - start >= 0.05
+
+
+def test_run_scenario_stops_and_writes_no_result(tmp_path):
+    m = Metrics(collision_count=0, minimum_obstacle_distance_metres=0.4,
+                topic_message_counts={"/scan": 20})
+    stop = threading.Event()
+    stop.set()                                    # already cancelled before the first action
+    with pytest.raises(RunStopped):
+        run_scenario(_scenario(), FakeRuntime(m), str(tmp_path), stop_event=stop)
+    assert list(tmp_path.iterdir()) == []          # a stopped run leaves no artifact
