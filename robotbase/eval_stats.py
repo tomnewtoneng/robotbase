@@ -117,3 +117,17 @@ def _suite_card(report: dict) -> str:
 def render_markdown(report: dict) -> str:
     """A paste-able benchmark card — suite if the report has `results`, else a single scenario."""
     return _suite_card(report) if "results" in report else _single_card(report)
+
+
+def write_eval_report(project_dir: str, report: dict) -> str:
+    """Persist an eval report (report.json + report.md) under .robotbase/evals/<eval_id>/.
+    Returns the eval directory. Shared by the CLI `eval` command and Studio."""
+    import json
+    import os
+    eval_dir = os.path.join(project_dir, ".robotbase", "evals", report["eval_id"])
+    os.makedirs(eval_dir, exist_ok=True)
+    with open(os.path.join(eval_dir, "report.json"), "w") as f:
+        json.dump(report, f, indent=2)
+    with open(os.path.join(eval_dir, "report.md"), "w") as f:
+        f.write(render_markdown(report))
+    return eval_dir

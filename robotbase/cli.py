@@ -585,14 +585,9 @@ def main(argv=None) -> None:
             scenario = Scenario.from_yaml(scenarios[args.scenario])
             report = run_eval(scenario, rt, run_dir, args.trials, args.seed)
 
-        eval_dir = os.path.join(project, ".robotbase", "evals", report["eval_id"])
-        os.makedirs(eval_dir, exist_ok=True)
-        with open(os.path.join(eval_dir, "report.json"), "w") as f:
-            json.dump(report, f, indent=2)
-        md = render_markdown(report)
-        with open(os.path.join(eval_dir, "report.md"), "w") as f:
-            f.write(md)
-        print(md)
+        from robotbase.eval_stats import write_eval_report
+        write_eval_report(project, report)
+        print(render_markdown(report))
         _hint(f"Eval report saved: .robotbase/evals/{report['eval_id']}/  (report.json + report.md)")
 
     elif args.cmd == "bench":
