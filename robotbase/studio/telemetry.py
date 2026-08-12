@@ -25,6 +25,7 @@ def main():
     import rclpy
     from nav_msgs.msg import Odometry
     from rclpy.node import Node
+    from sensor_msgs.msg import JointState, LaserScan
 
     rclpy.init()
     node = Node("studio_telemetry")
@@ -36,6 +37,20 @@ def main():
         latest.update({"t": time.time(), "x": p.x, "y": p.y, "z": p.z,
                        "yaw": yaw_from_quat(o.x, o.y, o.z, o.w)})
 
+    def on_joints(msg):
+        latest["joints"] = {n: p for n, p in zip(msg.name, msg.position)}
+
+    def on_scan(msg):
+        n = len(msg.ranges)
+        stride = max(1, (n + 199) // 200)          # cap ~200 rays
+        latest["scan"] = {
+            "ranges": [None if not (msg.range_min <= r <= msg.range_max) else round(r, 3)
+                       for r in msg.ranges[::stride]],
+            "angle_min": msg.angle_min,
+            "angle_increment": msg.angle_increment * stride,
+            "range_max": msg.range_max,
+        }
+
     def write():
         latest["t"] = time.time()          # heartbeat even when /odom is quiet
         tmp = OUT + ".tmp"
@@ -44,7 +59,9 @@ def main():
         os.replace(tmp, OUT)               # atomic — no partial reads on the host
 
     node.create_subscription(Odometry, "/odom", on_odom, 10)
-    node.create_timer(0.1, write)          # 10 Hz wall-clock heartbeat + latest pose
+    node.create_subscription(JointState, "/joint_states", on_joints, 10)
+    node.create_subscription(LaserScan, "/scan", on_scan, 10)
+    node.create_timer(0.1, write)          # 10 Hz wall-clock heartbeat + latest pose/joints/scan
     rclpy.spin(node)
 
 
