@@ -53,6 +53,7 @@ def test_index_page_renders_project(client):
     for section in ("Project", "Scenarios", "Runs", "Evals"):
         assert section in html
     assert "/static/three.min.js" in html and 'id="btn-3d"' in html
+    assert 'id="btn-chat"' in html and 'id="chat-msgs"' in html
 
 
 def test_run_endpoint_uses_injected_fake_and_locks(tmp_path):

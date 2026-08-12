@@ -114,4 +114,21 @@ input[type=number]{ font-family:var(--mono); background:var(--paper); color:var(
 .viewer-tools button { font-size:.72rem; padding:.3rem .6rem; background:transparent; color:var(--ink); border:1px solid var(--line); }
 .viewer-tools button.on { background:var(--signal); color:#fff; border-color:var(--signal); }
 
+/* chat panel */
+.grid.with-chat { grid-template-columns:280px 1fr 360px; }
+.chat { border-left:1px solid var(--line); background:var(--panel); display:flex; flex-direction:column; min-height:0; max-height:calc(100vh - 53px); }
+.chat.hidden { display:none; }
+.chat-msgs { flex:1; overflow-y:auto; padding:1rem; display:flex; flex-direction:column; gap:.5rem; }
+.msg { padding:.5rem .7rem; border-radius:var(--r); font-size:.85rem; max-width:100%; }
+.msg.user { background:var(--paper); align-self:flex-end; }
+.msg.assistant { background:transparent; border:1px solid var(--line); white-space:pre-wrap; }
+.msg.tool { font-family:var(--mono); font-size:.72rem; color:var(--muted); border:1px solid var(--line); border-radius:6px; word-break:break-all; }
+.msg.err { color:var(--fail); font-size:.78rem; }
+.working { color:var(--live); }
+.chat-input { display:flex; gap:.4rem; padding:.6rem; border-top:1px solid var(--line); }
+.chat-input textarea { flex:1; resize:none; font:inherit; background:var(--paper); color:var(--ink); border:1px solid var(--line); border-radius:6px; padding:.4rem; }
+.chat-note { font-size:.68rem; padding:0 .6rem .5rem; }
+.chat-unavail { color:var(--muted); font-size:.85rem; padding:1rem; }
+@media (max-width:900px){ .grid.with-chat { grid-template-columns:1fr; } }
+
 @media (max-width:720px){ .grid{ grid-template-columns:1fr; } .rail{ border-right:0; border-bottom:1px solid var(--line);} }

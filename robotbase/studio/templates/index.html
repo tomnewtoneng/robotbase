@@ -15,6 +15,7 @@
     <span class="spacer"></span>
     <span id="pill" class="pill"><span class="dot"></span>sim …</span>
     <button id="btn-3d" class="ghost">3D</button>
+    <button id="btn-chat" class="ghost">Chat</button>
     <button id="btn-up">Up</button>
     <button id="btn-down" class="ghost">Down</button>
   </header>
@@ -45,6 +46,15 @@
     <section class="detail" id="detail">
       <p class="muted">Select a scenario to run, or a run / eval to inspect the evidence.</p>
     </section>
+
+    <aside class="chat hidden" id="chat">
+      <div class="chat-msgs" id="chat-msgs"></div>
+      <div class="chat-input">
+        <textarea id="chat-text" rows="2" placeholder="Ask the agent to run, inspect, or fix…"></textarea>
+        <button id="chat-send">Send</button>
+      </div>
+      <div class="chat-note muted">The agent drives the sim — avoid running manually while it works.</div>
+    </aside>
   </main>
 
   <div id="job" class="job hidden"></div>
@@ -351,6 +361,55 @@
     let show3d = false;
     $("#btn-3d").onclick = () => { show3d = !show3d; show3d ? openViewer() : closeViewer();
       $("#btn-3d").classList.toggle("ghost", !show3d); };
+
+    // ---- chat panel ----
+    let chatOpen = false, chatBusy = false;
+    function addMsg(cls, html) {
+      const d = document.createElement("div"); d.className = "msg " + cls; d.innerHTML = html;
+      $("#chat-msgs").appendChild(d); $("#chat-msgs").scrollTop = 1e9; return d;
+    }
+    async function openChat() {
+      document.querySelector(".grid").classList.add("with-chat"); $("#chat").classList.remove("hidden");
+      const a = await jget("/api/chat/available");
+      if (!a.available) {
+        $("#chat-msgs").innerHTML = `<div class="chat-unavail">${esc(a.reason)}</div>`;
+        $("#chat-text").disabled = true; $("#chat-send").disabled = true;
+      }
+    }
+    function closeChat() { document.querySelector(".grid").classList.remove("with-chat"); $("#chat").classList.add("hidden"); }
+    $("#btn-chat").onclick = () => { chatOpen = !chatOpen; chatOpen ? openChat() : closeChat();
+      $("#btn-chat").classList.toggle("ghost", !chatOpen); };
+
+    async function sendChat() {
+      const t = $("#chat-text").value.trim(); if (!t || chatBusy) return;
+      $("#chat-text").value = ""; addMsg("user", esc(t));
+      chatBusy = true; $("#chat-send").disabled = true;
+      const bubble = addMsg("assistant", '<span class="working">agent working…</span>');
+      let text = "";
+      try {
+        const r = await fetch("/api/chat", { method: "POST", headers: {"Content-Type":"application/json"}, body: JSON.stringify({message: t}) });
+        const reader = r.body.getReader(), dec = new TextDecoder(); let buf = "";
+        while (true) {
+          const { done, value } = await reader.read(); if (done) break;
+          buf += dec.decode(value, {stream:true});
+          let idx;
+          while ((idx = buf.indexOf("\n\n")) >= 0) {
+            const line = buf.slice(0, idx).replace(/^data: /, ""); buf = buf.slice(idx + 2);
+            if (!line) continue; const ev = JSON.parse(line);
+            if (ev.type === "assistant") { text += (text ? "\n" : "") + ev.text; bubble.innerHTML = esc(text); }
+            else if (ev.type === "tool") { addMsg("tool", `▸ ${esc(ev.name.replace(/^mcp__robotbase__/, ""))} ${esc(JSON.stringify(ev.input))}`); }
+            else if (ev.type === "error") { addMsg("err", esc(ev.message)); }
+            else if (ev.type === "busy") { addMsg("err", "agent is working — wait for the current turn"); }
+            $("#chat-msgs").scrollTop = 1e9;
+          }
+        }
+      } catch (e) { addMsg("err", esc(String(e))); }
+      if (!text) bubble.remove();
+      chatBusy = false; $("#chat-send").disabled = false;
+      refreshRuns(); refreshEvals();   // the agent may have produced runs/evals
+    }
+    $("#chat-send").onclick = sendChat;
+    $("#chat-text").addEventListener("keydown", (e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); sendChat(); } });
 
     refreshStatus(); refreshRuns(); refreshEvals();
     setInterval(refreshStatus, 3000);
