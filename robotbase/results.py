@@ -5,6 +5,9 @@ from pydantic import BaseModel, field_serializer, model_validator
 def new_run_id() -> str:
     return "run_" + uuid.uuid4().hex[:12]
 
+def new_eval_id() -> str:
+    return "eval_" + uuid.uuid4().hex[:12]
+
 class Metrics(BaseModel):
     collision_count: int = 0
     contact_count: int = 0

@@ -77,3 +77,51 @@ def test_run_trials_reports_robustness(tmp_path):
     passing = Metrics(distance_travelled_metres=2.0)
     report = run_trials(scenario, _FakeRuntime(passing), str(tmp_path), trials=3, seed=0)
     assert report == {"scenario": "drive", "trials": 3, "passed": 3, "robustness": 1.0}
+
+
+from robotbase.evals import run_eval, run_eval_suite
+
+
+def test_run_eval_randomized_reports_ci_and_per_trial(tmp_path):
+    scenario = Scenario(
+        version=1, name="drive",
+        actions=[ActionSpec(type="wait", duration_seconds=1)],
+        assertions=[AssertionSpec(type="robot_moved_minimum_distance", minimum_distance_metres=1.0)],
+        randomize=RandomizeSpec(robot_pose=PoseJitter(x=0.2)),
+    )
+    report = run_eval(scenario, _FakeRuntime(Metrics(distance_travelled_metres=2.0)),
+                      str(tmp_path), trials=5, seed=0)
+    assert report["eval_id"].startswith("eval_")
+    assert report["config"] == {"scenario": "drive", "trials": 5, "seed": 0}
+    assert report["n"] == 5 and report["passed"] == 5 and report["success_rate"] == 1.0
+    assert report["randomized"] is True and report["ci95"] is not None
+    assert len(report["per_trial"]) == 5
+    assert all("run_id" in t and "seed" in t for t in report["per_trial"])
+    # deterministic per base seed: same seed -> same per-trial seeds
+    again = run_eval(scenario, _FakeRuntime(Metrics(distance_travelled_metres=2.0)),
+                     str(tmp_path), trials=5, seed=0)
+    assert [t["seed"] for t in report["per_trial"]] == [t["seed"] for t in again["per_trial"]]
+
+
+def test_run_eval_deterministic_marks_no_ci(tmp_path):
+    scenario = Scenario(
+        version=1, name="hold",
+        actions=[ActionSpec(type="wait", duration_seconds=1)],
+        assertions=[AssertionSpec(type="robot_moved_minimum_distance", minimum_distance_metres=1.0)],
+        randomize=RandomizeSpec(),   # no jitter
+    )
+    report = run_eval(scenario, _FakeRuntime(Metrics(distance_travelled_metres=2.0)),
+                      str(tmp_path), trials=3, seed=0)
+    assert report["deterministic"] is True and report["ci95"] is None
+    assert report["n"] == 3 and report["success_rate"] == 1.0
+
+
+def test_run_eval_suite_aggregates(tmp_path):
+    s1 = Scenario(version=1, name="a",
+                  actions=[ActionSpec(type="wait", duration_seconds=1)],
+                  assertions=[AssertionSpec(type="robot_moved_minimum_distance", minimum_distance_metres=1.0)],
+                  randomize=RandomizeSpec(robot_pose=PoseJitter(x=0.2)))
+    report = run_eval_suite([s1], _FakeRuntime(Metrics(distance_travelled_metres=2.0)),
+                            str(tmp_path), trials=2, seed=0)
+    assert report["eval_id"].startswith("eval_")
+    assert report["scenarios"] == 1 and report["results"][0]["scenario"] == "a"
