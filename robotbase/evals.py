@@ -68,6 +68,19 @@ def suite_report(trial_reports: list[dict]) -> dict:
     }
 
 
+
+def ci_suite_report(report: dict, trials: int, seed: int) -> dict:
+    """Add stable, CI-oriented metadata to a suite report without changing its core results."""
+    out = dict(report)
+    out["schema_version"] = 1
+    out["config"] = {"trials": max(1, trials), "seed": seed}
+    out["passed"] = out["fully_passed"] == out["scenarios"]
+    out["failed_scenarios"] = [
+        {key: item[key] for key in ("scenario", "trials", "passed", "robustness")}
+        for item in out["results"] if item["robustness"] < 1.0
+    ]
+    return out
+
 def compare_suites(previous: dict, current: dict) -> dict:
     """Diff two suite reports by per-scenario robustness — the behavioral-regression check."""
     prev = {r["scenario"]: r["robustness"] for r in previous.get("results", [])}
@@ -110,7 +123,7 @@ def run_suite(scenarios: list[Scenario], runtime: Any, run_dir: str,
 
 
 def run_eval(scenario: Scenario, runtime: Any, run_dir: str,
-             trials: int = 10, seed: int = 0) -> dict:
+             trials: int = 10, seed: int = 0, progress=None) -> dict:
     """Statistically evaluate *scenario* over *trials* randomized trials. Every trial is a sample
     (unlike run_trials, no nominal trial 0), each with a deterministic per-trial seed derived from
     *seed*. Captures the full ScenarioResult per trial and returns the persisted-report dict."""
@@ -130,6 +143,10 @@ def run_eval(scenario: Scenario, runtime: Any, run_dir: str,
         metrics = result.metrics.model_dump(include=fields) if fields else result.metrics.model_dump()
         per_trial.append({"index": i, "seed": tseed, "run_id": result.run_id,
                           "passed": result.passed, "metrics": metrics})
+        if progress:
+            progress({"scenario": scenario.name, "trial": i + 1,
+                      "trials": max(1, trials), "passed": result.passed,
+                      "run_id": result.run_id})
     return {
         "eval_id": new_eval_id(),
         "created_at": datetime.now(timezone.utc).isoformat(),
@@ -139,12 +156,12 @@ def run_eval(scenario: Scenario, runtime: Any, run_dir: str,
 
 
 def run_eval_suite(scenarios: list[Scenario], runtime: Any, run_dir: str,
-                   trials: int = 10, seed: int = 0) -> dict:
+                   trials: int = 10, seed: int = 0, progress=None) -> dict:
     """Statistically evaluate every scenario and aggregate into one suite report."""
     from robotbase.eval_stats import suite_eval_report
     from robotbase.results import new_eval_id
 
-    reports = [run_eval(s, runtime, run_dir, trials, seed) for s in scenarios]
+    reports = [run_eval(s, runtime, run_dir, trials, seed, progress) for s in scenarios]
     return {
         "eval_id": new_eval_id(),
         "created_at": datetime.now(timezone.utc).isoformat(),

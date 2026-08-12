@@ -1,6 +1,8 @@
+from robotbase.cli import _build_parser
+
 import random
 
-from robotbase.evals import compare_suites, perturb_setup, run_trials, suite_report, trial_report
+from robotbase.evals import ci_suite_report, compare_suites, perturb_setup, run_trials, suite_report, trial_report
 from robotbase.schema import (
     ObstacleSpec, Pose, PoseJitter, RandomizeSpec, RobotSetup, Scenario, Size, SetupSpec,
     ActionSpec, AssertionSpec,
@@ -47,6 +49,18 @@ def test_trial_and_suite_reports():
     assert suite["mean_robustness"] == 0.75
     assert suite["results"][0]["scenario"] == "b"   # sorted worst-first
 
+
+
+def test_ci_suite_report_has_machine_readable_failure_summary():
+    report = ci_suite_report(suite_report([
+        trial_report("passing", [True, True]),
+        trial_report("flaky", [True, False]),
+    ]), trials=2, seed=7)
+    assert report["schema_version"] == 1
+    assert report["config"] == {"trials": 2, "seed": 7}
+    assert report["passed"] is False
+    assert report["failed_scenarios"] == [
+        {"scenario": "flaky", "trials": 2, "passed": 1, "robustness": 0.5}]
 
 def test_compare_suites_flags_regressions_and_improvements():
     prev = suite_report([trial_report("a", [True, True]), trial_report("b", [True, True])])
@@ -115,6 +129,26 @@ def test_run_eval_deterministic_marks_no_ci(tmp_path):
     assert report["deterministic"] is True and report["ci95"] is None
     assert report["n"] == 3 and report["success_rate"] == 1.0
 
+
+
+
+def test_eval_cli_accepts_json_output():
+    args = _build_parser().parse_args(["eval", "drive-forward", "--json"])
+    assert args.cmd == "eval" and args.scenario == "drive-forward" and args.json is True
+
+def test_run_eval_reports_each_completed_trial(tmp_path):
+    scenario = Scenario(
+        version=1, name="progress",
+        actions=[ActionSpec(type="wait", duration_seconds=1)],
+        assertions=[AssertionSpec(type="robot_moved_minimum_distance", minimum_distance_metres=1.0)],
+        randomize=RandomizeSpec(robot_pose=PoseJitter(x=0.2)),
+    )
+    events = []
+    run_eval(scenario, _FakeRuntime(Metrics(distance_travelled_metres=2.0)), str(tmp_path),
+             trials=2, seed=0, progress=events.append)
+    assert [(event["trial"], event["trials"], event["passed"]) for event in events] == [
+        (1, 2, True), (2, 2, True)]
+    assert all(event["scenario"] == "progress" and event["run_id"] for event in events)
 
 def test_run_eval_suite_aggregates(tmp_path):
     s1 = Scenario(version=1, name="a",

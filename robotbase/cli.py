@@ -160,6 +160,7 @@ def _build_parser() -> argparse.ArgumentParser:
     ev.add_argument("--all", action="store_true", help="evaluate every scenario as a suite")
     ev.add_argument("--trials", type=int, default=10, help="number of randomized trials")
     ev.add_argument("--seed", type=int, default=0, help="base RNG seed (reproducible)")
+    ev.add_argument("--json", action="store_true", help="emit the complete machine-readable eval report")
 
     scen = sub.add_parser("scenario", help="author scenarios (add | list)")
     scen.add_argument("action", choices=["add", "list"])
@@ -538,10 +539,11 @@ def main(argv=None) -> None:
         run_dir = os.path.join(project, ".robotbase", "runs")
 
         if args.all:  # suite: every scenario (each with --trials randomized trials)
-            from robotbase.evals import compare_suites, run_suite
+            from robotbase.evals import ci_suite_report, compare_suites, run_suite
 
             specs = [Scenario.from_yaml(scenarios[n]) for n in sorted(scenarios)]
             report = run_suite(specs, rt, run_dir, args.trials, args.seed)
+            report = ci_suite_report(report, args.trials, args.seed)
             # Behavioral regression tracking: diff against the previous suite run.
             hist = os.path.join(project, ".robotbase", "last-suite.json")
             changes = None
@@ -594,6 +596,11 @@ def main(argv=None) -> None:
     elif args.cmd == "eval":
         from robotbase.evals import run_eval, run_eval_suite
         from robotbase.eval_stats import render_markdown
+        def progress(event: dict) -> None:
+            outcome = "passed" if event["passed"] else "failed"
+            _hint("Eval {scenario}: trial {trial}/{trials} {outcome} ({run_id}).".format(
+                outcome=outcome, **event))
+
         run_dir = os.path.join(project, ".robotbase", "runs")
 
         if args.all:
@@ -601,17 +608,17 @@ def main(argv=None) -> None:
             if not specs:
                 print("(no scenarios to evaluate)")
                 sys.exit(2)
-            report = run_eval_suite(specs, rt, run_dir, args.trials, args.seed)
+            report = run_eval_suite(specs, rt, run_dir, args.trials, args.seed, progress)
         else:
             if not args.scenario or args.scenario not in scenarios:
                 print(f"unknown scenario {args.scenario!r}; available: {sorted(scenarios)}")
                 sys.exit(2)
             scenario = Scenario.from_yaml(scenarios[args.scenario])
-            report = run_eval(scenario, rt, run_dir, args.trials, args.seed)
+            report = run_eval(scenario, rt, run_dir, args.trials, args.seed, progress)
 
         from robotbase.eval_stats import write_eval_report
         write_eval_report(project, report)
-        print(render_markdown(report))
+        print(json.dumps(report, indent=2) if args.json else render_markdown(report))
         _hint(f"Eval report saved: .robotbase/evals/{report['eval_id']}/  (report.json + report.md)")
 
     elif args.cmd == "bench":
