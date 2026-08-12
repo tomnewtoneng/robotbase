@@ -218,6 +218,10 @@ def _build_parser() -> argparse.ArgumentParser:
 
 def main(argv=None) -> None:
     argv = sys.argv[1:] if argv is None else argv
+    if argv and argv[0] in ("--version", "-V"):
+        from robotbase import __version__
+        print(f"robotbase {__version__}")
+        return
     if not argv or argv[0] in ("-h", "--help", "help"):
         print(HELP)
         return
@@ -372,7 +376,8 @@ def main(argv=None) -> None:
         result = rt.up()
         print(json.dumps(result, indent=2))
         if result.get("build", {}).get("passed"):
-            _hint("Ready. Run a scenario:  robotbase test --gui   (list: robotbase test --list)")
+            _hint("Container up and workspace built (the sim launches when you run a scenario). "
+                  "Run one:  robotbase test <name>   (list: robotbase test --list)")
         else:
             _hint("Container up, but the build failed — check the errors above.")
 

@@ -35,7 +35,9 @@ edit robot.yaml / world.yaml / a scenario  →  robotbase up  →  robotbase tes
                        └────────── read the structured result / episode ──────────┘
 ```
 
-**Prerequisites:** Docker, Python 3.12, and Linux (on Windows: WSL2 + Docker Desktop).
+**Prerequisites:** Linux with Docker and Python **3.12** (Python 3.11 and below can't install it).
+**On Windows or macOS, use WSL2 Ubuntu 24.04 + Docker Desktop** — that's the supported path. The
+runtime is ROS 2 Jazzy + Gazebo Harmonic in Docker.
 
 ```bash
 pip install robotbase-kit

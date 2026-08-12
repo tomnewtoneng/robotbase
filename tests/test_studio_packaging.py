@@ -2,6 +2,13 @@ import subprocess
 import sys
 
 
+def test_version_flag(capsys):
+    import robotbase.cli as cli
+    from robotbase import __version__
+    cli.main(["--version"])
+    assert __version__ in capsys.readouterr().out
+
+
 def test_core_import_does_not_pull_fastapi():
     # importing the core (cli) must not import fastapi — studio deps stay optional
     code = "import robotbase.cli, sys; assert 'fastapi' not in sys.modules, 'core imported fastapi'"
