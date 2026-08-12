@@ -34,6 +34,16 @@ def test_foxglove_url_endpoint(client):
     assert "8765" in c.get("/api/foxglove-url").json()["url"]
 
 
+def test_run_detail_endpoint_includes_events(client):
+    c, project = client
+    rd = os.path.join(project, ".robotbase", "runs", "run_x")
+    os.makedirs(rd)
+    open(os.path.join(rd, "result.json"), "w").write('{"run_id":"run_x","passed":true,"metrics":{}}')
+    open(os.path.join(rd, "episode.json"), "w").write('{"events":[{"type":"e","timestamp":1.0}],"scenario_spec":{}}')
+    j = c.get("/api/runs/run_x").json()
+    assert j["passed"] is True and j["events"][0]["type"] == "e"
+
+
 def test_index_page_renders_project(client):
     c, _ = client
     html = c.get("/").text

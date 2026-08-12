@@ -40,8 +40,19 @@ class StudioService:
     def list_runs(self) -> list[dict]:
         return self._read_reports("runs", "result.json")
 
+    def _read_json(self, *parts: str) -> dict:
+        path = os.path.join(self.project_dir, ".robotbase", *parts)
+        try:
+            return json.load(open(path))
+        except (OSError, json.JSONDecodeError):
+            return {}
+
     def get_run(self, run_id: str) -> dict:
-        return json.load(open(os.path.join(self.project_dir, ".robotbase", "runs", run_id, "result.json")))
+        result = self._read_json("runs", run_id, "result.json")
+        sidecar = self._read_json("runs", run_id, "episode.json")
+        return {**result,
+                "events": sidecar.get("events", []),
+                "scenario_spec": sidecar.get("scenario_spec", {})}
 
     def list_evals(self) -> list[dict]:
         return self._read_reports("evals", "report.json")

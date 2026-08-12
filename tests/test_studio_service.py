@@ -43,3 +43,29 @@ def test_foxglove_deeplink_shape(project):
     svc = StudioService(project)
     fx = svc.foxglove()
     assert "localhost:8765" in fx["url"] and "layout" in fx["hint"].lower()
+
+
+def test_get_run_merges_episode_sidecar(project):
+    svc = StudioService(project)
+    rd = os.path.join(project, ".robotbase", "runs", "run_1")
+    os.makedirs(rd)
+    open(os.path.join(rd, "result.json"), "w").write(
+        '{"run_id":"run_1","scenario":"drive-forward","passed":false,'
+        '"metrics":{"distance_travelled_metres":0.1},'
+        '"assertions":[{"type":"robot_moved_minimum_distance","passed":false,"expected":1.0,"actual":0.1}]}')
+    open(os.path.join(rd, "episode.json"), "w").write(
+        '{"events":[{"type":"closest_approach","timestamp":6.9,"detail":"0.08 m"}],'
+        '"scenario_spec":{"name":"drive-forward","actions":[]}}')
+    run = svc.get_run("run_1")
+    assert run["passed"] is False and run["assertions"][0]["passed"] is False
+    assert run["events"][0]["type"] == "closest_approach"
+    assert run["scenario_spec"]["name"] == "drive-forward"
+
+
+def test_get_run_without_sidecar_tolerates(project):
+    svc = StudioService(project)
+    rd = os.path.join(project, ".robotbase", "runs", "run_2")
+    os.makedirs(rd)
+    open(os.path.join(rd, "result.json"), "w").write('{"run_id":"run_2","passed":true,"metrics":{}}')
+    run = svc.get_run("run_2")
+    assert run["events"] == [] and run["scenario_spec"] == {}
