@@ -40,3 +40,19 @@ def test_write_project_mcp_json(tmp_path):
 def test_codex_toml_snippet(tmp_path):
     s = ac.codex_toml_snippet(str(tmp_path))
     assert "[mcp_servers.robotbase]" in s and "-m" in s and sys.executable in s
+
+
+def test_cli_agent_configure_writes_mcp_json(tmp_path, monkeypatch, capsys):
+    import robotbase.cli as cli
+    monkeypatch.setenv("ROBOTBASE_PROJECT_DIR", str(tmp_path))
+    cli.main(["agent", "configure"])
+    cfg = json.loads((tmp_path / ".mcp.json").read_text())
+    assert cfg["mcpServers"]["robotbase"]["command"]   # some interpreter path written
+    assert "Wrote" in capsys.readouterr().out
+
+
+def test_cli_agent_configure_codex_prints_toml(tmp_path, monkeypatch, capsys):
+    import robotbase.cli as cli
+    monkeypatch.setenv("ROBOTBASE_PROJECT_DIR", str(tmp_path))
+    cli.main(["agent", "configure", "codex"])
+    assert "[mcp_servers.robotbase]" in capsys.readouterr().out

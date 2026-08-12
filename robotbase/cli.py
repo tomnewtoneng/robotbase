@@ -44,6 +44,7 @@ Run & inspect:
   test --all [--trials N]        run every scenario as a suite (robustness + regressions)
   eval NAME [--trials N]         statistically evaluate a scenario (success-rate + 95% CI)
   studio [--port N]              launch the Studio web control panel (studio extra)
+  agent configure [client]      write the MCP config for a coding agent (claude|cursor|codex)
   bench [--list] [--agent NAME]  score the controller on the RobotBench task set
   robotbench run|report          run the RobotBench validation harness / render results
   status                         report simulation status
@@ -170,6 +171,11 @@ def _build_parser() -> argparse.ArgumentParser:
     st = sub.add_parser("studio", help="launch the Studio web control panel (needs the studio extra)")
     st.add_argument("--port", type=int, default=8080)
     st.add_argument("--no-open", action="store_true", help="don't open a browser")
+
+    ag = sub.add_parser("agent", help="configure a coding agent's MCP connection (agent configure)")
+    ag.add_argument("action", choices=["configure"])
+    ag.add_argument("client", nargs="?", default=None,
+                    help="claude | cursor | windsurf | codex (default: fix the project .mcp.json)")
 
     clean = sub.add_parser("clean", help="delete old recorded runs")
     clean.add_argument("--keep", type=int, default=20, help="how many recent runs to keep")
@@ -509,6 +515,19 @@ def main(argv=None) -> None:
             print("Studio needs the studio extra:  pip install robotbase-kit[studio]")
             sys.exit(1)
         run_server(project, args.port, not args.no_open)
+
+    elif args.cmd == "agent":
+        from robotbase import agent_config as ac
+        client = (args.client or "").lower()
+        if client == "codex":
+            print("# Add this to ~/.codex/config.toml:\n")
+            print(ac.codex_toml_snippet(project))
+        else:
+            path = ac.write_project_mcp_json(project)
+            where = {"claude": "Claude Code", "cursor": "Cursor", "windsurf": "Windsurf"}.get(
+                client, "an MCP-aware agent")
+            print(f"Wrote {path}")
+            _hint(f"{where} opened in this project will pick up the robotbase MCP server automatically.")
 
     elif args.cmd == "test":
         run_dir = os.path.join(project, ".robotbase", "runs")
