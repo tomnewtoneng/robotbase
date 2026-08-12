@@ -100,6 +100,18 @@ def _link_geometry(link_el) -> dict | None:
     return None
 
 
+def _visual_origin(link_el) -> tuple[list[float], list[float]]:
+    """The link's <visual><origin> (xyz, rpy), defaulting to zeros — offsets the mesh within the
+    link frame, needed to place articulated links correctly."""
+    for v in link_el:
+        if _local(v.tag) == "visual":
+            for c in v:
+                if _local(c.tag) == "origin":
+                    return (_floats(c.get("xyz")) or [0.0, 0.0, 0.0],
+                            _floats(c.get("rpy")) or [0.0, 0.0, 0.0])
+    return [0.0, 0.0, 0.0], [0.0, 0.0, 0.0]
+
+
 def _robot(project_dir: str, m: dict) -> dict:
     info = {
         "template": (m.get("robot") or {}).get("template"),
@@ -122,16 +134,27 @@ def _robot(project_dir: str, m: dict) -> dict:
         if tag == "link" and el.get("name"):
             g = _link_geometry(el)
             if g:
-                links.append({"name": el.get("name"), **g})
+                vo_xyz, vo_rpy = _visual_origin(el)
+                links.append({"name": el.get("name"), **g,
+                              "visual_origin_xyz": vo_xyz, "visual_origin_rpy": vo_rpy})
         elif tag == "joint" and el.get("name") and "${" not in el.get("name"):
-            # literal (non-macro) joints, with axis / limits where present
+            # literal (non-macro) joints: the kinematic tree (parent/child/origin/axis/limits)
             j = {"name": el.get("name"), "type": el.get("type")}
             for child in el:
                 ct = _local(child.tag)
-                if ct == "axis" and child.get("xyz"):
+                if ct == "parent" and child.get("link"):
+                    j["parent"] = child.get("link")
+                elif ct == "child" and child.get("link"):
+                    j["child"] = child.get("link")
+                elif ct == "origin":
+                    j["origin_xyz"] = _floats(child.get("xyz")) or [0.0, 0.0, 0.0]
+                    j["origin_rpy"] = _floats(child.get("rpy")) or [0.0, 0.0, 0.0]
+                elif ct == "axis" and child.get("xyz"):
                     j["axis"] = _floats(child.get("xyz"))
                 elif ct == "limit" and child.get("lower") and child.get("upper"):
                     j["limits"] = [float(child.get("lower")), float(child.get("upper"))]
+            j.setdefault("origin_xyz", [0.0, 0.0, 0.0])
+            j.setdefault("origin_rpy", [0.0, 0.0, 0.0])
             joints.append(j)
     if links:
         info["links"] = links
