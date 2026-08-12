@@ -70,6 +70,9 @@ def create_project(name: str, dest_parent: str, template_dir: str, from_urdf: st
     _rewrite_contents(dest, snake, kebab)
     _rename_paths(dest, TEMPLATE_SNAKE, snake)
 
+    from robotbase.agent_config import fix_mcp_interpreter
+    fix_mcp_interpreter(dest)   # bare "python3" fails outside the venv; write the real interpreter
+
     if from_urdf is not None:
         urdf_dir = os.path.join(dest, "src", f"{snake}_description", "urdf")
         os.makedirs(urdf_dir, exist_ok=True)
