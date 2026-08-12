@@ -60,6 +60,9 @@ You can also drive a scenario with a **Python policy** instead of the ROS contro
 `robotbase policy new`, then set the scenario's action to `{type: run_policy, module: policy}`.
 See `robotbase describe` → `policy_interface` for this robot's obs/action keys.
 
+To measure robustness statistically, run `robotbase eval <scenario> --trials N` — a success-rate
+with a confidence interval and a persisted report (a single `robotbase test` is one trial).
+
 - Robot type: differential drive
 - Key topics: `/cmd_vel` (velocity command out, `geometry_msgs/Twist`: `linear.x` forward,
   `angular.z` turn), `/scan` (LiDAR, `sensor_msgs/LaserScan`), `/odom` (pose + velocity,

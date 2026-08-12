@@ -50,6 +50,9 @@ You can also drive a scenario with a **Python policy** instead of the ROS contro
 See `robotbase describe` → `policy_interface` for this robot's obs/action keys (arm: joint-name →
 radians).
 
+To measure robustness statistically, run `robotbase eval <scenario> --trials N` — a success-rate
+with a confidence interval and a persisted report (a single `robotbase test` is one trial).
+
 You do **not** need to rebuild after editing the controller (symlink-installed); just run the
 scenario again.
 

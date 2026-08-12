@@ -79,6 +79,14 @@ evaluating a trained one. Write a `Policy` with `act(obs) -> action` (`robotbase
 scaffolds it), point a scenario at it with `{type: run_policy, module: policy}`, and get the same
 objective evidence. `robotbase describe` reports the exact observation/action keys for your robot.
 
+### Statistical evaluation
+
+`robotbase eval <scenario> --trials N` runs a scenario over N randomized trials and reports a
+**success-rate with a 95% confidence interval** (Wilson score) plus per-metric distributions —
+persisted as a shareable `report.json` + `report.md`. It evaluates a ROS controller or a brought
+policy identically. When a scenario isn't randomized it says so instead of printing a meaningless
+interval.
+
 ### Start from a template or an existing URDF
 
 ```bash
