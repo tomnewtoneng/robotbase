@@ -88,6 +88,14 @@ def create_app(project_dir: str, service: StudioService | None = None) -> FastAP
                 await asyncio.sleep(1.0 if snap.get("status") != "running" else 0.5)
         return StreamingResponse(gen(), media_type="text/event-stream")
 
+    @app.get("/telemetry")
+    async def telemetry():
+        async def gen():
+            while True:
+                yield f"data: {json.dumps(svc.latest_pose())}\n\n"
+                await asyncio.sleep(0.1)
+        return StreamingResponse(gen(), media_type="text/event-stream")
+
     return app
 
 

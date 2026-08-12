@@ -177,7 +177,7 @@ class Runtime:
             "pkill -f 'ros2 launch'; pkill -f 'gz sim'; pkill -f parameter_bridge; "
             "pkill -f robot_state_publisher; pkill -f ros_gz_sim; "
             "pkill -f controller; pkill -f metrics_collector; "
-            "pkill -f foxglove_bridge; true",
+            "pkill -f foxglove_bridge; pkill -f telemetry.py; true",
             timeout=20,
         )
         return {"running": False}
@@ -380,6 +380,24 @@ class Runtime:
         with open(os.path.join(dst_dir, "policy_runner.py"), "w") as f:
             f.write(src)
         return "/workspace/.robotbase/policy_runner.py"
+
+    def _ensure_telemetry(self) -> str:
+        # Materialize the Studio telemetry node into the mounted .robotbase (same pattern as the
+        # policy runner). It writes /odom pose to telemetry.jsonl so Studio can render it live.
+        src = ir.files("robotbase.studio").joinpath("telemetry.py").read_text()
+        dst_dir = os.path.join(self.project_dir, ".robotbase")
+        os.makedirs(dst_dir, exist_ok=True)
+        with open(os.path.join(dst_dir, "telemetry.py"), "w") as f:
+            f.write(src)
+        return "/workspace/.robotbase/telemetry.py"
+
+    def start_telemetry(self) -> None:
+        node = self._ensure_telemetry()
+        self._ros(f"pkill -f telemetry.py; python3 {node} --ros-args -p use_sim_time:=true "
+                  "> /workspace/.robotbase/telemetry.log 2>&1", detached=True, timeout=20)
+
+    def stop_telemetry(self) -> None:
+        self._ros("pkill -f telemetry.py; true", timeout=15)
 
     def _resolve_run(self, run_id: str | None) -> tuple[str, str]:
         runs = os.path.join(self.project_dir, ".robotbase", "runs")

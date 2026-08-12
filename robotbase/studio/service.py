@@ -71,15 +71,33 @@ class StudioService:
                 "hint": "Bring the sim up with the Foxglove bridge, then import foxglove/layout.json "
                         "(Layouts -> Import)."}
 
+    def latest_pose(self) -> dict:
+        return self._read_json("telemetry.jsonl")
+
     def job_snapshot(self) -> dict:
         return self.jobs.snapshot()
 
     # ---- jobs (single-lock, background) ----
     def start_up(self) -> Job:
-        return self.jobs.start("up", "up", lambda: self._runtime_factory(self.project_dir).up())
+        def _job() -> dict:
+            rt = self._runtime_factory(self.project_dir)
+            out = rt.up()
+            try:
+                rt.start_telemetry()
+            except Exception:  # noqa: BLE001 — telemetry is best-effort; up still succeeds
+                pass
+            return out
+        return self.jobs.start("up", "up", _job)
 
     def start_down(self) -> Job:
-        return self.jobs.start("down", "down", lambda: self._runtime_factory(self.project_dir).down())
+        def _job() -> dict:
+            rt = self._runtime_factory(self.project_dir)
+            try:
+                rt.stop_telemetry()
+            except Exception:  # noqa: BLE001
+                pass
+            return rt.down()
+        return self.jobs.start("down", "down", _job)
 
     def start_run(self, scenario: str) -> Job:
         def _job() -> dict:
