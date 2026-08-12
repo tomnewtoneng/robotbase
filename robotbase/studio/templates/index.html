@@ -198,10 +198,11 @@
     // ---- 3D viewer (self-contained; scene from describe, robot pose from /telemetry) ----
     let V = null;
     const cssVar = (n) => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
-    const rosToThree = (x, y, z) => new THREE.Vector3(x, z, -y);   // ROS z-up -> three y-up
-    const baseLink = () => ((PROJECT.robot && PROJECT.robot.links) || []).find(l => l.name === "base_link")
-      || { shape: "box", size: [0.35, 0.3, 0.15] };
-    const bodyHalfH = () => { const b = baseLink(); return (b.size ? b.size[2] : (b.length || 0.15)) / 2; };
+    function linkGeometry(link) {
+      if (link.shape === "cylinder") return new THREE.CylinderGeometry(link.radius, link.radius, link.length || 0.1, 20).rotateX(Math.PI / 2); // three cylinder is Y-long; ROS is Z-long
+      if (link.shape === "sphere") return new THREE.SphereGeometry(link.radius, 20, 16);
+      const s = link.size || [0.2, 0.2, 0.2]; return new THREE.BoxGeometry(s[0], s[1], s[2]);
+    }
 
     function buildViewer(host) {
       const w = host.clientWidth || 800, h = host.clientHeight || 560;
@@ -214,35 +215,87 @@
       scene.add(new THREE.HemisphereLight(0xffffff, 0x555566, 1.0));
       const dir = new THREE.DirectionalLight(0xffffff, 0.5); dir.position.set(4, 8, 4); scene.add(dir);
 
+      // ROS-coordinate world group (z-up -> three y-up); everything inside is native ROS coords.
+      const world = new THREE.Group(); world.rotation.x = -Math.PI / 2; scene.add(world);
+
       const b = (PROJECT.world && PROJECT.world.bounds) || { x: [-4, 4], y: [-4, 4] };
       const span = Math.max(b.x[1] - b.x[0], b.y[1] - b.y[0]);
-      scene.add(new THREE.GridHelper(span, Math.max(4, Math.round(span)), 0x8a97ab, 0xccd4de));
+      const grid = new THREE.GridHelper(span, Math.max(4, Math.round(span)), 0x8a97ab, 0xccd4de);
+      grid.rotation.x = Math.PI / 2; world.add(grid);        // into the ROS XY plane
 
       const lineCol = new THREE.Color(cssVar("--line") || "#dbe1e8");
       for (const m of (PROJECT.world && PROJECT.world.models) || []) {
         if (!m.box_size) continue;
         const [dx, dy, dz] = m.box_size, p = m.pose || [0, 0, 0], goal = /goal/.test(m.name || "");
-        const mesh = new THREE.Mesh(new THREE.BoxGeometry(dx, dz, dy),
+        const mesh = new THREE.Mesh(new THREE.BoxGeometry(dx, dy, dz),
           new THREE.MeshStandardMaterial({ color: goal ? cssVar("--signal") : lineCol, transparent: !goal, opacity: goal ? 1 : .8 }));
-        mesh.position.copy(rosToThree(p[0], p[1], p[2] || 0));
-        scene.add(mesh);
+        mesh.position.set(p[0], p[1], p[2] || 0); world.add(mesh);
       }
 
-      const base = baseLink();
-      let geo;
-      if (base.shape === "cylinder") geo = new THREE.CylinderGeometry(base.radius, base.radius, base.length || 0.15, 20);
-      else if (base.shape === "sphere") geo = new THREE.SphereGeometry(base.radius, 20, 16);
-      else { const s = base.size || [0.35, 0.3, 0.15]; geo = new THREE.BoxGeometry(s[0], s[2], s[1]); }
-      const robot = new THREE.Mesh(geo, new THREE.MeshStandardMaterial({ color: cssVar("--signal") || "#2a51d6" }));
-      robot.position.set(0, bodyHalfH(), 0); scene.add(robot);
-      const nose = new THREE.Mesh(new THREE.ConeGeometry(0.05, 0.16, 12),
-        new THREE.MeshStandardMaterial({ color: cssVar("--live") || "#e07b00" }));
-      nose.rotation.z = -Math.PI / 2; nose.position.set(0.22, 0, 0); robot.add(nose);
+      // ---- articulated robot from the kinematic tree ----
+      const robotRoot = new THREE.Object3D(); world.add(robotRoot);
+      const links = {}; (PROJECT.robot.links || []).forEach(l => links[l.name] = l);
+      const joints = PROJECT.robot.joints || [];
+      const childrenOf = {}; joints.forEach(j => { (childrenOf[j.parent] = childrenOf[j.parent] || []).push(j); });
+      const jointPivot = {};
+      function makeLinkNode(name) {
+        const node = new THREE.Object3D();
+        const l = links[name];
+        if (l) {
+          const mesh = new THREE.Mesh(linkGeometry(l), new THREE.MeshStandardMaterial({ color: cssVar("--signal") }));
+          const vo = l.visual_origin_xyz || [0, 0, 0], vr = l.visual_origin_rpy || [0, 0, 0];
+          mesh.position.set(vo[0], vo[1], vo[2]); mesh.rotation.set(vr[0], vr[1], vr[2]);
+          node.add(mesh);
+        }
+        (childrenOf[name] || []).forEach(j => {
+          const pivot = new THREE.Object3D();
+          const o = j.origin_xyz || [0, 0, 0], r = j.origin_rpy || [0, 0, 0];
+          pivot.position.set(o[0], o[1], o[2]); pivot.rotation.set(r[0], r[1], r[2]);
+          if (j.type === "revolute" || j.type === "continuous")
+            jointPivot[j.name] = { obj: pivot, axis: j.axis || [0, 0, 1], base: [r[0], r[1], r[2]] };
+          pivot.add(makeLinkNode(j.child)); node.add(pivot);
+        });
+        return node;
+      }
+      const childSet = new Set(joints.map(j => j.child));
+      const rootNames = Object.keys(links).filter(n => !childSet.has(n));
+      (childrenOf["world"] || []).forEach(j => { if (!rootNames.includes(j.child)) rootNames.push(j.child); });
+      if (!rootNames.length && Object.keys(links).length) rootNames.push(Object.keys(links)[0]);
+      rootNames.forEach(n => robotRoot.add(makeLinkNode(n)));
+      if (!PROJECT.robot.fixed_base) {
+        const nose = new THREE.Mesh(new THREE.ConeGeometry(0.05, 0.16, 12),
+          new THREE.MeshStandardMaterial({ color: cssVar("--live") || "#e07b00" }));
+        nose.rotation.z = -Math.PI / 2; nose.position.set(0.24, 0, 0.08); robotRoot.add(nose);   // points +X (forward)
+      }
 
+      // ---- lidar point cloud (in the robot frame) ----
+      let scanGeo = null, scanPts = null;
+      const hasLidar = !!((PROJECT.sensors || {}).lidar) || (PROJECT.robot.links || []).some(l => /lidar/.test(l.name));
+      if (hasLidar) {
+        scanGeo = new THREE.BufferGeometry();
+        scanGeo.setAttribute("position", new THREE.BufferAttribute(new Float32Array(240 * 3), 3));
+        scanPts = new THREE.Points(scanGeo, new THREE.PointsMaterial({ color: cssVar("--live"), size: 0.07 }));
+        robotRoot.add(scanPts);
+      }
+      function updateScan(scan) {
+        if (!scanGeo) return;
+        const pos = scanGeo.attributes.position.array; let k = 0;
+        scan.ranges.forEach((r, i) => {
+          if (r == null || k + 3 > pos.length) return;
+          const th = scan.angle_min + i * scan.angle_increment;
+          pos[k++] = r * Math.cos(th); pos[k++] = r * Math.sin(th); pos[k++] = 0.12;
+        });
+        scanGeo.setDrawRange(0, k / 3); scanGeo.attributes.position.needsUpdate = true;
+      }
+
+      // ---- camera (orbit + optional follow) ----
       const orbit = { az: 0.9, el: 0.7, r: Math.max(4, span * 1.1) };
+      const target = new THREE.Vector3(0, 0.2, 0);
+      let follow = false;
       const place = () => { camera.position.set(
-        orbit.r * Math.cos(orbit.el) * Math.cos(orbit.az), orbit.r * Math.sin(orbit.el),
-        orbit.r * Math.cos(orbit.el) * Math.sin(orbit.az)); camera.lookAt(0, 0.2, 0); };
+        target.x + orbit.r * Math.cos(orbit.el) * Math.cos(orbit.az),
+        target.y + orbit.r * Math.sin(orbit.el),
+        target.z + orbit.r * Math.cos(orbit.el) * Math.sin(orbit.az)); camera.lookAt(target); };
       place();
       let drag = null;
       renderer.domElement.onpointerdown = (e) => drag = { x: e.clientX, y: e.clientY };
@@ -254,14 +307,33 @@
       renderer.domElement.onwheel = (e) => { e.preventDefault();
         orbit.r = Math.max(1.5, Math.min(80, orbit.r * (1 + Math.sign(e.deltaY) * 0.1))); place(); };
 
-      V = { renderer, scene, camera, robot, raf: 0, es: null };
-      const frame = () => { renderer.render(scene, camera); V.raf = requestAnimationFrame(frame); };
+      // overlay tools: Follow, Scan
+      const tools = document.createElement("div"); tools.className = "viewer-tools";
+      const fb = document.createElement("button"); fb.textContent = "Follow";
+      fb.onclick = () => { follow = !follow; fb.classList.toggle("on", follow); }; tools.appendChild(fb);
+      if (hasLidar) {
+        const sb = document.createElement("button"); sb.textContent = "Scan"; sb.classList.add("on");
+        sb.onclick = () => { scanPts.visible = !scanPts.visible; sb.classList.toggle("on", scanPts.visible); };
+        tools.appendChild(sb);
+      }
+      host.appendChild(tools);
+
+      V = { renderer, scene, camera, robotRoot, raf: 0, es: null };
+      const rp = new THREE.Vector3();
+      const frame = () => {
+        if (follow) { robotRoot.getWorldPosition(rp); target.lerp(rp, 0.1); place(); }
+        renderer.render(scene, camera); V.raf = requestAnimationFrame(frame);
+      };
       frame();
 
       V.es = new EventSource("/telemetry");
-      V.es.onmessage = (ev) => { const p = JSON.parse(ev.data);
-        if (p && "x" in p) { const v = rosToThree(p.x, p.y, p.z || 0); v.y += bodyHalfH();
-          robot.position.copy(v); robot.rotation.y = -p.yaw; } };
+      V.es.onmessage = (ev) => { const p = JSON.parse(ev.data); if (!p) return;
+        if (!PROJECT.robot.fixed_base && "x" in p) { robotRoot.position.set(p.x, p.y, p.z || 0); robotRoot.rotation.z = p.yaw || 0; }
+        if (p.joints) for (const [n, a] of Object.entries(p.joints)) {
+          const jp = jointPivot[n]; if (jp) { const ax = jp.axis, bs = jp.base;
+            jp.obj.rotation.set(bs[0] + ax[0]*a, bs[1] + ax[1]*a, bs[2] + ax[2]*a); } }
+        if (p.scan) updateScan(p.scan);
+      };
     }
     function openViewer() {
       $("#detail").style.display = "none";
