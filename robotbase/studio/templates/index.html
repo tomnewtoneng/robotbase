@@ -77,9 +77,10 @@
 
     // ---- run / episode inspection ----
     const OBJ = (v) => v && typeof v === "object";
+    const num = (x) => (typeof x === "number") ? (Math.abs(x) < 1e-4 ? "0" : (+x.toFixed(4)).toString()) : esc(x);
     function metricCards(m) {
       return Object.entries(m || {}).filter(([k,v]) => !OBJ(v) && typeof v !== "boolean")
-        .map(([k,v]) => `<div class="metric"><div class="k">${esc(k.replace(/_/g," "))}</div><div class="v">${typeof v==="number"?(+v).toFixed(3).replace(/\.?0+$/,""):esc(v)}</div></div>`).join("");
+        .map(([k,v]) => `<div class="metric"><div class="k">${esc(k.replace(/_/g," "))}</div><div class="v">${num(v)}</div></div>`).join("");
     }
     function topicsLine(m) {
       const t = (m || {}).topic_message_counts; if (!OBJ(t)) return "";
@@ -119,7 +120,7 @@
     }
     function metricTable(m) {
       const rows = Object.entries(m || {}).map(([k,s]) =>
-        `<tr><td>${esc(k.replace(/_/g," "))}</td><td>${s.mean}</td><td>${s.std===null?"—":s.std}</td><td>${s.min}</td><td>${s.max}</td></tr>`).join("");
+        `<tr><td>${esc(k.replace(/_/g," "))}</td><td>${num(s.mean)}</td><td>${s.std===null?"—":num(s.std)}</td><td>${num(s.min)}</td><td>${num(s.max)}</td></tr>`).join("");
       return rows ? `<div class="eyebrow" style="margin-top:1rem">Metric distributions</div>
         <table class="table"><tr><th>metric</th><th>mean</th><th>std</th><th>min</th><th>max</th></tr>${rows}</table>` : "";
     }
