@@ -4,134 +4,197 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Robotbase Studio — {{ project.project }}</title>
-  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'><path d='M8 1l7 7-7 7-7-7z' fill='%234c8dff'/></svg>">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'><path d='M8 1l7 7-7 7-7-7z' fill='%232a51d6'/></svg>">
   <link rel="stylesheet" href="/static/studio.css">
   <script src="/static/htmx.min.js" defer></script>
 </head>
 <body>
-  <header class="topbar">
-    <div class="brand">◆ Robotbase Studio · <b>{{ project.project }}</b></div>
-    <div class="status"><span id="pill" class="pill idle">sim: …</span></div>
-    <div class="actions">
-      <button id="btn-foxglove" class="ghost">Open live 3D ↗</button>
-      <button id="btn-up">Up</button>
-      <button id="btn-down" class="ghost">Down</button>
-    </div>
+  <header class="bar">
+    <span class="wordmark">◇ ROBOTBASE&nbsp;STUDIO <span class="dim">/ {{ project.project }}</span></span>
+    <span class="spacer"></span>
+    <span id="pill" class="pill"><span class="dot"></span>sim …</span>
+    <button id="btn-foxglove" class="ghost">Live 3D ↗</button>
+    <button id="btn-up">Up</button>
+    <button id="btn-down" class="ghost">Down</button>
   </header>
 
-  <main class="layout">
-    <aside class="sidebar">
+  <main class="grid">
+    <aside class="rail">
       <section>
-        <h2>Robot</h2>
-        <div class="tag">{{ project.robot.template }}</div>
-        <ul class="sensors">
-          {% for name, cfg in (project.sensors or {}).items() %}<li>{{ name }}</li>{% endfor %}
-        </ul>
+        <div class="head"><span class="eyebrow">Project</span></div>
+        <div class="klass">{{ project.robot.template }}</div>
+        <div>{% for name, cfg in (project.sensors or {}).items() %}<span class="chip">{{ name }}</span>{% endfor %}</div>
       </section>
       <section>
-        <h2>Scenarios</h2>
-        <ul id="scenarios" class="list">
-          {% for s in project.scenarios %}
-          <li><button class="scenario" data-name="{{ s.name }}">{{ s.name }}</button></li>
-          {% endfor %}
-        </ul>
+        <div class="head"><span class="eyebrow">Scenarios</span><span class="count">{{ project.scenarios | length }}</span></div>
+        {% for s in project.scenarios %}
+        <div class="row scenario" data-name="{{ s.name }}" tabindex="0"><span class="name">{{ s.name }}</span></div>
+        {% endfor %}
       </section>
       <section>
-        <h2>Eval history</h2>
-        <ul id="evals" class="list"><li class="muted">none yet</li></ul>
+        <div class="head"><span class="eyebrow">Runs</span><span class="count" id="runs-count">0</span></div>
+        <div id="runs"><div class="empty">none yet</div></div>
+      </section>
+      <section>
+        <div class="head"><span class="eyebrow">Evals</span><span class="count" id="evals-count">0</span></div>
+        <div id="evals"><div class="empty">none yet</div></div>
       </section>
     </aside>
 
     <section class="detail" id="detail">
-      <p class="muted">Select a scenario to run or evaluate.</p>
+      <p class="muted">Select a scenario to run, or a run / eval to inspect the evidence.</p>
     </section>
   </main>
 
   <div id="job" class="job hidden"></div>
 
   <script>
-    const SCENARIOS = {{ project.scenarios | tojson }};
+    const PROJECT = {{ project | tojson }};
     const $ = (s, r=document) => r.querySelector(s);
+    const pct = (x) => Math.round((x || 0) * 100) + "%";
+    const esc = (s) => String(s).replace(/[&<>]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;"}[c]));
+    const jget = async (u) => (await fetch(u)).json();
+    const jpost = async (u, b) => (await fetch(u, {method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify(b||{})})).json();
 
-    async function jpost(url, body) {
-      const r = await fetch(url, {method: "POST", headers: {"Content-Type": "application/json"},
-                                  body: JSON.stringify(body || {})});
-      return r.json();
-    }
-    async function jget(url) { return (await fetch(url)).json(); }
+    function clearOn() { document.querySelectorAll(".row.on").forEach(r => r.classList.remove("on")); }
 
-    function selectScenario(name) {
-      const s = SCENARIOS.find(x => x.name === name) || {name, assertions: []};
+    // ---- scenario detail ----
+    function renderScenario(name) {
+      const s = PROJECT.scenarios.find(x => x.name === name) || {name, assertions: [], description: ""};
+      const checks = (s.assertions || []).map(a => `<li><span class="muted">•</span> ${esc(a)}</li>`).join("");
       $("#detail").innerHTML = `
-        <h1>${s.name}</h1>
-        <p class="muted">${s.description || ""}</p>
-        <div class="assertions">${(s.assertions || []).map(a => `<code>${a}</code>`).join(" ")}</div>
+        <h1>${esc(s.name)} <span class="klass">${esc(PROJECT.robot.template)}</span></h1>
+        <p class="desc">${esc(s.description || "")}</p>
+        <div class="eyebrow">What "working" means</div>
+        <ul class="checklist">${checks || '<li class="muted">no assertions</li>'}</ul>
         <div class="controls">
           <button id="run">▶ Run</button>
-          <span class="evalgroup">
-            <button id="eval">▶ Eval</button> ×
-            <input id="trials" type="number" value="10" min="1" style="width:4rem">
-          </span>
-        </div>
-        <div id="result" class="result"></div>`;
+          <span class="evalgrp"><button id="eval">▶ Eval</button> × <input id="trials" type="number" value="10" min="1"></span>
+        </div>`;
       $("#run").onclick = () => jpost("/api/run", {scenario: s.name});
-      $("#eval").onclick = () => jpost("/api/eval",
-        {scenario: s.name, trials: parseInt($("#trials").value || "10")});
+      $("#eval").onclick = () => jpost("/api/eval", {scenario: s.name, trials: parseInt($("#trials").value || "10")});
     }
 
-    document.querySelectorAll(".scenario").forEach(b =>
-      b.onclick = () => { document.querySelectorAll(".scenario").forEach(x => x.classList.remove("on"));
-                          b.classList.add("on"); selectScenario(b.dataset.name); });
+    // ---- run / episode inspection ----
+    const OBJ = (v) => v && typeof v === "object";
+    function metricCards(m) {
+      return Object.entries(m || {}).filter(([k,v]) => !OBJ(v) && typeof v !== "boolean")
+        .map(([k,v]) => `<div class="metric"><div class="k">${esc(k.replace(/_/g," "))}</div><div class="v">${typeof v==="number"?(+v).toFixed(3).replace(/\.?0+$/,""):esc(v)}</div></div>`).join("");
+    }
+    function topicsLine(m) {
+      const t = (m || {}).topic_message_counts; if (!OBJ(t)) return "";
+      return `<div class="muted mono" style="font-size:.75rem;margin:.3rem 0">${Object.entries(t).map(([k,v])=>`${esc(k)} ${v}`).join(" · ")}</div>`;
+    }
+    async function renderRun(id) {
+      const r = await jget("/api/runs/" + id);
+      const dur = r.duration_seconds ? ` <span class="sub">${(+r.duration_seconds).toFixed(1)} s</span>` : "";
+      const asserts = (r.assertions || []).map(a =>
+        `<li><span class="${a.passed?"pass":"fail"}">${a.passed?"✓":"✗"}</span> ${esc(a.type)}${a.passed?"":`<span class="ex">expected ${esc(a.expected)} · actual ${esc(a.actual)}</span>`}</li>`).join("");
+      const evs = r.events || [];
+      let timeline = "";
+      if (evs.length) {
+        const total = r.duration_seconds || Math.max(...evs.map(e=>e.timestamp||0), 1);
+        timeline = `<div class="eyebrow">Episode</div><div class="timeline">${
+          evs.map(e=>`<span class="ev" style="left:${Math.min(98,(e.timestamp/total)*100)}%" data-label="${esc(e.detail||e.type)} @ ${(e.timestamp||0).toFixed(1)}s"></span>`).join("")
+        }<span class="axis"><span>0s</span><span>${total.toFixed(1)}s</span></span></div>`;
+      } else if (r.passed) {
+        timeline = `<div class="muted" style="margin-top:.8rem">Episode recorded — no incidents.</div>`;
+      }
+      $("#detail").innerHTML = `
+        <h1>${esc(r.scenario || id)}</h1>
+        <div class="headline ${r.passed?"pass":"fail"}">${r.passed?"✓ PASSED":"✗ FAILED"}${dur}</div>
+        <div class="eyebrow" style="margin-top:1rem">Metrics</div>
+        <div class="mgrid">${metricCards(r.metrics)}</div>${topicsLine(r.metrics)}
+        <div class="eyebrow">Assertions</div><ul class="checklist">${asserts||'<li class="muted">none</li>'}</ul>
+        ${timeline}`;
+    }
 
-    $("#btn-up").onclick = () => jpost("/api/up");
-    $("#btn-down").onclick = () => jpost("/api/down");
-    $("#btn-foxglove").onclick = async () => {
-      const fx = await jget("/api/foxglove-url"); window.open(fx.url, "_blank");
-    };
+    // ---- eval report detail (CI bracket is the signature) ----
+    function ciBracket(rate, ci) {
+      if (!ci) return `<div class="muted mono" style="margin:.6rem 0">Deterministic scenario — not a sampled rate, no confidence interval.</div>`;
+      const lo = ci[0]*100, hi = ci[1]*100;
+      return `<div class="ci"><div class="label">Success rate ${pct(rate)} · 95% CI (Wilson) [${lo.toFixed(0)}%, ${hi.toFixed(0)}%]</div>
+        <div class="track"><span class="span" style="left:${lo}%;width:${hi-lo}%"></span><span class="tick" style="left:${rate*100}%"></span></div>
+        <div class="scale"><span>0%</span><span>50%</span><span>100%</span></div></div>`;
+    }
+    function metricTable(m) {
+      const rows = Object.entries(m || {}).map(([k,s]) =>
+        `<tr><td>${esc(k.replace(/_/g," "))}</td><td>${s.mean}</td><td>${s.std===null?"—":s.std}</td><td>${s.min}</td><td>${s.max}</td></tr>`).join("");
+      return rows ? `<div class="eyebrow" style="margin-top:1rem">Metric distributions</div>
+        <table class="table"><tr><th>metric</th><th>mean</th><th>std</th><th>min</th><th>max</th></tr>${rows}</table>` : "";
+    }
+    async function renderEval(id) {
+      const e = await jget("/api/evals/" + id);
+      if (e.results) {  // suite
+        const rows = e.results.map(r=>`<tr><td>${esc(r.scenario)}</td><td>${pct(r.success_rate)}</td><td>${r.deterministic?"deterministic":`[${(r.ci95[0]*100).toFixed(0)}%, ${(r.ci95[1]*100).toFixed(0)}%]`}</td><td>${r.n}</td></tr>`).join("");
+        $("#detail").innerHTML = `<h1>eval · suite</h1><div class="headline">Mean success ${pct(e.mean_success_rate)}</div>
+          <table class="table" style="margin-top:1rem"><tr><th>scenario</th><th>success</th><th>95% CI</th><th>n</th></tr>${rows}</table>`;
+        return;
+      }
+      const trials = (e.per_trial || []).map(t=>`<span class="tr ${t.passed?"pass":"fail"}">#${t.index} ${t.passed?"✓":"✗"}</span>`).join("");
+      $("#detail").innerHTML = `
+        <h1>${esc(e.scenario)} <span class="klass">eval</span></h1>
+        <div class="headline ${e.success_rate>=1?"pass":(e.success_rate>0?"":"fail")}">${pct(e.success_rate)} <span class="sub">${e.passed}/${e.n} trials</span></div>
+        ${ciBracket(e.success_rate, e.ci95)}
+        ${metricTable(e.metrics)}
+        <div class="eyebrow" style="margin-top:1rem">Per-trial</div><div class="trials">${trials}</div>`;
+    }
 
-    async function refreshStatus() {
-      const s = await jget("/api/status");
-      const pill = $("#pill");
-      const up = s.running === true;
-      pill.textContent = "sim: " + (s.error ? "?" : up ? "up" : "down");
-      pill.className = "pill " + (up ? "up" : "down");
+    // ---- rail population ----
+    async function refreshRuns() {
+      const runs = await jget("/api/runs");
+      $("#runs-count").textContent = runs.length;
+      $("#runs").innerHTML = runs.length ? runs.slice(0,12).map(r=>{
+        const d = (r.metrics && r.metrics.distance_travelled_metres);
+        return `<div class="row runrow" data-id="${r.run_id}" tabindex="0"><span class="mark ${r.passed?"pass":"fail"}">${r.passed?"✓":"✗"}</span><span class="name">${esc(r.scenario||r.run_id)}</span>${d?`<span class="t">${(+d).toFixed(2)}m</span>`:""}</div>`;
+      }).join("") : '<div class="empty">none yet</div>';
+      document.querySelectorAll(".runrow").forEach(el => el.onclick = () => { clearOn(); el.classList.add("on"); renderRun(el.dataset.id); });
     }
     async function refreshEvals() {
       const evs = await jget("/api/evals");
-      $("#evals").innerHTML = evs.length
-        ? evs.map(e => `<li><b>${e.scenario || "suite"}</b> — ${Math.round((e.success_rate||0)*100)}%</li>`).join("")
-        : '<li class="muted">none yet</li>';
+      $("#evals-count").textContent = evs.length;
+      $("#evals").innerHTML = evs.length ? evs.slice(0,12).map(e=>{
+        const id = e.eval_id; const label = e.scenario || "suite";
+        const rate = "success_rate" in e ? pct(e.success_rate) : pct(e.mean_success_rate);
+        return `<div class="row evalrow" data-id="${id}" tabindex="0"><span class="name">${esc(label)}</span><span class="t">${rate}</span></div>`;
+      }).join("") : '<div class="empty">none yet</div>';
+      document.querySelectorAll(".evalrow").forEach(el => el.onclick = () => { clearOn(); el.classList.add("on"); renderEval(el.dataset.id); });
     }
 
-    function renderJob(j) {
-      const box = $("#job");
-      if (!j || j.status === "idle") { box.classList.add("hidden"); return; }
-      box.classList.remove("hidden");
-      let msg = `<b>${j.kind}</b> ${j.label || ""} — <span class="jobstatus ${j.status}">${j.status}</span>`;
-      if (j.status === "error") msg += `<div class="err">${j.error || ""}</div>`;
-      box.innerHTML = msg;
-      if (j.status === "done" || j.status === "error") {
-        const res = $("#result");
-        if (res && j.result) {
-          if ("success_rate" in j.result) {
-            const ci = j.result.ci95 ? `CI [${Math.round(j.result.ci95[0]*100)}%, ${Math.round(j.result.ci95[1]*100)}%]`
-                                     : "deterministic (no CI)";
-            res.innerHTML = `<div class="ok">Eval: ${Math.round(j.result.success_rate*100)}% ` +
-                            `(${j.result.passed}/${j.result.n}) · ${ci}</div>`;
-          } else if ("passed" in j.result) {
-            res.innerHTML = `<div class="${j.result.passed ? "ok" : "fail"}">` +
-                            `${j.result.passed ? "✓ PASSED" : "✗ FAILED"}</div>`;
-          }
-        }
-        refreshEvals();
-      }
+    // ---- selection + top bar ----
+    document.querySelectorAll(".row.scenario").forEach(el =>
+      el.onclick = () => { clearOn(); el.classList.add("on"); renderScenario(el.dataset.name); });
+    $("#btn-up").onclick = () => jpost("/api/up");
+    $("#btn-down").onclick = () => jpost("/api/down");
+    $("#btn-foxglove").onclick = async () => { const f = await jget("/api/foxglove-url"); window.open(f.url, "_blank"); };
+
+    async function refreshStatus() {
+      const s = await jget("/api/status"); const pill = $("#pill"); const up = s.running === true;
+      pill.innerHTML = `<span class="dot"></span>sim ${s.error?"?":up?"up":"idle"}`;
+      pill.className = "pill" + (up ? " up" : "");
     }
 
-    // live job stream
+    // ---- live job stream ----
+    let lastStatus = "idle";
     const es = new EventSource("/events");
-    es.onmessage = (e) => renderJob(JSON.parse(e.data));
+    es.onmessage = (ev) => {
+      const j = JSON.parse(ev.data); const box = $("#job");
+      if (!j || j.status === "idle") { box.classList.add("hidden"); }
+      else {
+        box.classList.remove("hidden");
+        box.innerHTML = `${esc(j.kind)} ${esc(j.label||"")} <span class="s ${j.status}">${j.status}</span>` + (j.error?`<div class="s error">${esc(j.error)}</div>`:"");
+      }
+      if (j && (j.status === "done" || j.status === "error") && lastStatus === "running") {
+        refreshRuns(); refreshEvals(); refreshStatus();
+        if (j.status === "done" && j.result) {
+          if ("success_rate" in j.result || "results" in j.result) { if (j.result.eval_id) renderEval(j.result.eval_id); }
+          else if (j.result.run_id) renderRun(j.result.run_id);
+        }
+      }
+      lastStatus = j ? j.status : "idle";
+    };
 
-    refreshStatus(); refreshEvals();
+    refreshStatus(); refreshRuns(); refreshEvals();
     setInterval(refreshStatus, 3000);
   </script>
 </body>

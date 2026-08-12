@@ -47,7 +47,11 @@ def test_run_detail_endpoint_includes_events(client):
 def test_index_page_renders_project(client):
     c, _ = client
     html = c.get("/").text
-    assert "srvbot" in html and "drive-forward" in html and "/static/htmx.min.js" in html
+    assert "srvbot" in html and "drive-forward" in html
+    assert "/static/studio.css" in html and "/static/htmx.min.js" in html
+    assert "ROBOTBASE" in html
+    for section in ("Project", "Scenarios", "Runs", "Evals"):
+        assert section in html
 
 
 def test_run_endpoint_uses_injected_fake_and_locks(tmp_path):
