@@ -43,6 +43,7 @@ Run & inspect:
   test [NAME] [--gui] [--list]   run a scenario, or --list them
   test --all [--trials N]        run every scenario as a suite (robustness + regressions)
   eval NAME [--trials N]         statistically evaluate a scenario (success-rate + 95% CI)
+  studio [--port N]              launch the Studio web control panel (studio extra)
   bench [--list] [--agent NAME]  score the controller on the RobotBench task set
   robotbench run|report          run the RobotBench validation harness / render results
   status                         report simulation status
@@ -166,6 +167,10 @@ def _build_parser() -> argparse.ArgumentParser:
     pol = sub.add_parser("policy", help="author policies (new)")
     pol.add_argument("action", choices=["new"])
 
+    st = sub.add_parser("studio", help="launch the Studio web control panel (needs the studio extra)")
+    st.add_argument("--port", type=int, default=8080)
+    st.add_argument("--no-open", action="store_true", help="don't open a browser")
+
     clean = sub.add_parser("clean", help="delete old recorded runs")
     clean.add_argument("--keep", type=int, default=20, help="how many recent runs to keep")
 
@@ -205,13 +210,13 @@ def _build_parser() -> argparse.ArgumentParser:
     return parser
 
 
-def main() -> None:
-    argv = sys.argv[1:]
+def main(argv=None) -> None:
+    argv = sys.argv[1:] if argv is None else argv
     if not argv or argv[0] in ("-h", "--help", "help"):
         print(HELP)
         return
 
-    args = _build_parser().parse_args()
+    args = _build_parser().parse_args(argv)
     if not args.cmd:
         print(HELP)
         return
@@ -496,6 +501,14 @@ def main() -> None:
         print(f"Created {path}")
         _hint("Point a scenario at it — set its action to {type: run_policy, module: policy} — "
               "then:  robotbase test <scenario>")
+
+    elif args.cmd == "studio":
+        try:
+            from robotbase.studio import run_server
+        except ImportError:
+            print("Studio needs the studio extra:  pip install robotbase-kit[studio]")
+            sys.exit(1)
+        run_server(project, args.port, not args.no_open)
 
     elif args.cmd == "test":
         run_dir = os.path.join(project, ".robotbase", "runs")
