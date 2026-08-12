@@ -33,15 +33,12 @@ List scenarios:
 
     robotbase test --list
 
-Available scenarios (each `.yaml` in `simulation/scenarios/` defines its own setup and
-**assertions** — read the one you're solving):
+This project ships one scenario (`robotbase test --list` to confirm):
 
 - `drive-forward` — drive forward a minimum distance.
-- `stop-before-obstacle` — a box is spawned ahead; stop before hitting it (uses `/scan`).
-- `reach-goal` — drive to a target **pose** (off to one side) and stop there; needs
-  `/odom` heading control, not obstacle avoidance.
-- `turn-around` — a wall blocks the direct path to a goal beyond it; go around it
-  (combine `/scan` avoidance with `/odom` goal-seeking) without colliding.
+
+Add your own with `robotbase scenario add <name>`. Worked, harder challenges (stop before an
+obstacle, reach a goal pose, navigate around a wall) live in the repo's `examples/challenges/`.
 
 ## The controller
 
