@@ -14,8 +14,9 @@ target and tolerance.
 
 ## Environment
 
-The simulation runs inside a Docker container. You do **not** operate Gazebo directly. Use
-the Robotbase tools — the `robotbase` CLI below, or the equivalent MCP tools.
+The simulation runs inside a Docker container. You do **not** operate Gazebo directly.
+Drive everything through the `robotbase` CLI (below) to build, run scenarios, and read structured
+results.
 
 ## Commands (run from this directory)
 

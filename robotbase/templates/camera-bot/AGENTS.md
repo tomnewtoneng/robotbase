@@ -16,8 +16,8 @@ full authoring format (robot / world / **scenario**). When a task is about a spe
 ## Environment
 
 The simulation runs inside a Docker container. You do **not** operate Gazebo directly.
-Use the Robotbase tools — the `robotbase` CLI below, or the equivalent `robotbase` MCP
-tools — to build, run scenarios, and read structured results.
+Drive everything through the `robotbase` CLI (below) to build, run scenarios, and read structured
+results.
 
 ## Commands (run from this directory)
 

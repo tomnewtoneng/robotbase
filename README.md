@@ -130,27 +130,22 @@ point to build on. Want worked, unsolved challenges to practise on (or to test a
 ## The knowledge layer (built for agents)
 
 Robotbase is meant to be *operated by a coding agent*, so the tool teaches the agent how to use it —
-there are no external docs to keep in sync.
+there are no external docs to keep in sync. It's **CLI-first**: every action is a `robotbase` verb
+with a structured (JSON) result, so a shell-capable agent drives it directly — no MCP needed. The
+[Claude Code plugin](#use-with-claude-code-or-any-coding-agent) gives your agent the whole workflow
+in one command.
 
-- **One surface, CLI + MCP.** The full `robotbase` CLI is mirrored by a **19-tool MCP server**
-  (`describe`, `explain`, `validate`, `build`, `test`, `diagnose`, `episode …`). A human types the
-  commands; an agent calls the tools — same verbs, same structured results.
-- **A built-in authoring reference.** `robotbase schema` (and the `authoring_schema` MCP tool)
-  returns the full `robot.yaml` / `world.yaml` / scenario format — every field, the sensor/archetype
-  vocabulary, the **assertion types**, and the common mistakes — as prose or JSON Schema. It's
-  generated from the code, so it can't drift from what the compiler actually accepts.
+- **A built-in authoring reference.** `robotbase schema` returns the full `robot.yaml` / `world.yaml`
+  / scenario format — every field, the sensor/archetype vocabulary, the **assertion types**, and the
+  common mistakes — as prose or JSON Schema. It's generated from the code, so it can't drift from
+  what the compiler actually accepts.
 - **Ground truth, not files to parse.** `describe` / `explain` / `validate` and the `episode` query
   verbs hand back structured facts about the compiled robot, world, topics, and recorded runs.
 - **Every project is agent-ready.** `robotbase create` drops an `AGENTS.md` (project-specific
-  instructions) and a `.mcp.json` into the new project.
+  instructions) into the new project.
 
-**Setup for the MCP server: none** beyond `pip install robotbase-kit` — it ships in the core install. An
-MCP-aware agent (e.g. Claude Code) opened in a project picks up the bundled `.mcp.json`
-automatically. To run it by hand:
-
-```bash
-ROBOTBASE_PROJECT_DIR=. python -m robotbase.mcp_server   # stdio; ROBOTBASE_GUI=foxglove to watch runs
-```
+An **MCP server** ships too, for MCP-only agents (`ROBOTBASE_PROJECT_DIR=. python -m
+robotbase.mcp_server`) — it mirrors the CLI verbs — but the CLI is the primary, recommended surface.
 
 ## Why it exists
 
