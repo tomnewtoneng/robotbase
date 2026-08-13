@@ -563,9 +563,16 @@ def main(argv=None) -> None:
             sys.exit(0 if report["fully_passed"] == report["scenarios"] else 1)
 
         if args.list or not args.scenario:
-            print("\n".join(sorted(scenarios)) or "(no scenarios yet)")
-            _hint("Run one:  robotbase test <name>    All:  robotbase test --all    "
-                  "Add one:  robotbase scenario add <name>")
+            names = sorted(scenarios)
+            # Keep stdout script-clean (bare names), but tell the human the count so a single
+            # short name isn't mistaken for empty output when the stderr hint prints alongside it.
+            if names:
+                print("\n".join(names))
+                _hint(f"{len(names)} scenario(s) above.  Run one:  robotbase test <name>    "
+                      "All:  robotbase test --all    Add one:  robotbase scenario add <name>")
+            else:
+                print("(no scenarios yet)")
+                _hint("No scenarios yet.  Add one:  robotbase scenario add <name>")
             return
         if args.scenario not in scenarios:
             print(f"unknown scenario {args.scenario!r}; available: {sorted(scenarios)}")

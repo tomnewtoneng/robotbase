@@ -23,3 +23,13 @@ def test_spawn_ignores_non_collidable_goal_marker():
     spec = WorldSpec(name="w", spawn=[3.2, 3.2],
                      goals=[{"name": "marker", "at": [3.2, 3.2], "radius": 0.2}])
     assert validate_spawn(spec) == []   # a goal marker has no collision — not an obstacle
+
+
+def test_zero_length_wall_rejected(tmp_path):
+    # A degenerate wall (from == to) used to compile silently to a 0-length box; reject it clearly.
+    import pytest
+    from robotbase.worldspec.schema import WorldSpecError
+    p = tmp_path / "world.yaml"
+    p.write_text("version: 1\nname: w\nwalls:\n  - {from: [1, 1], to: [1, 1], height: 1}\n")
+    with pytest.raises(WorldSpecError, match="zero length"):
+        WorldSpec.from_yaml(str(p))

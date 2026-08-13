@@ -42,6 +42,9 @@ class Wall(BaseModel):
     def _check(self):
         _check_len(self.from_, 2, "wall from [x, y]")
         _check_len(self.to, 2, "wall to [x, y]")
+        if self.from_ == self.to:
+            raise ValueError(f"wall has zero length: from and to are the same point {self.from_} "
+                             "— give it two distinct endpoints")
         return self
 
 
