@@ -12,8 +12,8 @@ setup(
     ],
     install_requires=["setuptools"],
     zip_safe=True,
-    maintainer="Tom",
-    maintainer_email="tominator172@gmail.com",
+    maintainer="Robotbase",
+    maintainer_email="robotbase@users.noreply.github.com",
     description="Warehouse bot controller (starter).",
     license="MIT",
     entry_points={

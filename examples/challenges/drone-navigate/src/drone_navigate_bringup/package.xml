@@ -3,7 +3,7 @@
   <name>drone_navigate_bringup</name>
   <version>0.1.0</version>
   <description>Launch files for the warehouse bot simulation.</description>
-  <maintainer email="tominator172@gmail.com">Tom</maintainer>
+  <maintainer email="robotbase@users.noreply.github.com">Robotbase</maintainer>
   <license>MIT</license>
   <buildtool_depend>ament_cmake</buildtool_depend>
   <exec_depend>drone_navigate</exec_depend>

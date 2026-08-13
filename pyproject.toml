@@ -1,12 +1,12 @@
 [project]
 name = "robotbase-kit"
-version = "0.3.0"
+version = "0.3.1"
 description = "The batteries-included developer-experience layer for agent-driven robotics."
 readme = "README.md"
 license = "MIT"
 license-files = ["LICENSE"]
 requires-python = ">=3.12"
-authors = [{ name = "Tom Newton", email = "tominator172@gmail.com" }]
+authors = [{ name = "Robotbase" }]
 keywords = ["robotics", "ros2", "gazebo", "simulation", "mcp", "agents", "declarative", "testing"]
 classifiers = [
     "Development Status :: 3 - Alpha",
@@ -35,9 +35,9 @@ studio = ["fastapi>=0.110", "uvicorn>=0.27", "jinja2>=3.1"]  # robotbase studio 
 robotbase = "robotbase.cli:main"
 
 [project.urls]
-Homepage = "https://github.com/tomnewtoneng/robotbase"
-Repository = "https://github.com/tomnewtoneng/robotbase"
-Issues = "https://github.com/tomnewtoneng/robotbase/issues"
+Homepage = "https://github.com/getrobotbase/robotbase"
+Repository = "https://github.com/getrobotbase/robotbase"
+Issues = "https://github.com/getrobotbase/robotbase/issues"
 
 [build-system]
 requires = ["setuptools>=77"]

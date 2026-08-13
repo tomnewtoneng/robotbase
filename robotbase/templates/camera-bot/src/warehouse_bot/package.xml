@@ -3,7 +3,7 @@
   <name>warehouse_bot</name>
   <version>0.1.0</version>
   <description>Warehouse bot controller (starter).</description>
-  <maintainer email="tominator172@gmail.com">Tom</maintainer>
+  <maintainer email="robotbase@users.noreply.github.com">Robotbase</maintainer>
   <license>MIT</license>
   <depend>rclpy</depend>
   <depend>geometry_msgs</depend>

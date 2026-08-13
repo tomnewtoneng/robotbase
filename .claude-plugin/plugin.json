@@ -1,13 +1,12 @@
 {
   "name": "robotbase",
   "description": "Give your coding agent a robot to build and test — ROS 2 + Gazebo simulations driven entirely from the robotbase CLI. Bundles the robotbase skill so your agent knows the declarative build/test loop (specs + a controller you write + scenarios that pass/fail on real assertions), from an empty session through a passing run. Requires Docker and `pip install robotbase-kit` (or uvx).",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "author": {
-    "name": "Tom Newton",
-    "email": "tominator172@gmail.com"
+    "name": "Robotbase"
   },
-  "homepage": "https://github.com/tomnewtoneng/robotbase",
-  "repository": "https://github.com/tomnewtoneng/robotbase",
+  "homepage": "https://github.com/getrobotbase/robotbase",
+  "repository": "https://github.com/getrobotbase/robotbase",
   "license": "MIT",
   "keywords": [
     "robotics",
