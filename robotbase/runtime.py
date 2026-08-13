@@ -163,7 +163,8 @@ class Runtime:
         # The recorder resets its output file on startup, so no stale data leaks.
         self._ros(
             "python3 /workspace/scripts/metrics_collector.py "
-            "--output /workspace/.robotbase/metrics.json",
+            "--output /workspace/.robotbase/metrics.json "
+            f"--world {shlex.quote(self.world)} --robot {shlex.quote(self.robot_name)}",
             detached=True,
             timeout=15,
         )

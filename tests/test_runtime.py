@@ -41,3 +41,15 @@ def test_start_telemetry_passes_world_and_robot(tmp_path, monkeypatch):
     monkeypatch.setattr(rt, "_ros", lambda cmd, **kw: calls.append(cmd))
     rt.start_telemetry()
     assert "--world maze" in calls[0] and "--robot my_robot" in calls[0]
+
+
+def test_start_recorder_passes_world_and_robot(tmp_path, monkeypatch):
+    # The metrics collector scores final pose/distance from the same ground-truth source, so it
+    # needs the world + robot names too — otherwise robot_reached_pose is scored in the odom frame.
+    rt = Runtime(str(tmp_path))
+    rt.world, rt.robot_name = "maze", "my_robot"
+    calls = []
+    monkeypatch.setattr(rt, "_ros", lambda cmd, **kw: calls.append(cmd))
+    rt._start_recorder()
+    assert "metrics_collector.py" in calls[0]
+    assert "--world maze" in calls[0] and "--robot my_robot" in calls[0]
