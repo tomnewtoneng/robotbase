@@ -12,8 +12,10 @@ never by reading code.** Drive everything through the `robotbase` CLI (no raw RO
 
 ## Setup (once)
 - Docker must be running.
-- Run the CLI with **no install** via `uvx robotbase-kit <cmd>`, or `pip install robotbase-kit`.
-  Everything below is then `robotbase <cmd>`.
+- Install the CLI so `robotbase` is on PATH: `pip install robotbase-kit` (or `uv tool install
+  robotbase-kit`). For a one-off with no install, prefix a command with `uvx --from robotbase-kit`,
+  e.g. `uvx --from robotbase-kit robotbase describe` (the package is `robotbase-kit`; the command is
+  `robotbase`). Everything below is written as `robotbase <cmd>`.
 
 ## 1. Orient
 - Already in a project? `robotbase describe` succeeds → work here, and read its `AGENTS.md`.
