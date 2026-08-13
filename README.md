@@ -1,3 +1,4 @@
+<!-- mcp-name: io.github.getrobotbase/robotbase -->
 ![robotbase — describe your robot, world, and scenarios in YAML; compile to a running headless ROS 2 + Gazebo sim; get pass/fail evidence.](https://raw.githubusercontent.com/getrobotbase/robotbase/main/assets/robotbase-header.png)
 
 **Declarative robotics.** Describe a robot, its sensors, its world, and the behaviours you want to
