@@ -1,0 +1,31 @@
+"""Unit tests for Runtime plumbing that doesn't need Docker (subprocess is mocked)."""
+import pytest
+
+from robotbase.runtime import Runtime, RuntimeUnavailable
+
+
+class _Proc:
+    def __init__(self, returncode=0, stderr=""):
+        self.returncode = returncode
+        self.stderr = stderr
+        self.stdout = ""
+
+
+def test_restart_container_recreates_the_service(tmp_path, monkeypatch):
+    # A pristine slate AND a container that was removed must both be handled: `up -d
+    # --force-recreate` (not a bare `restart`, which silently no-ops on a missing container).
+    calls = []
+    monkeypatch.setattr("robotbase.runtime.subprocess.run",
+                        lambda cmd, **kw: calls.append(cmd) or _Proc())
+    monkeypatch.setattr("robotbase.runtime.time.sleep", lambda *_: None)
+    Runtime(str(tmp_path))._restart_container()
+    assert calls[0][:5] == ["docker", "compose", "up", "-d", "--force-recreate"]
+
+
+def test_restart_container_raises_when_it_cannot_start(tmp_path, monkeypatch):
+    # A run against a container that won't start must fail loudly, not proceed to read stale metrics.
+    monkeypatch.setattr("robotbase.runtime.subprocess.run",
+                        lambda *a, **k: _Proc(returncode=1, stderr="no such image"))
+    monkeypatch.setattr("robotbase.runtime.time.sleep", lambda *_: None)
+    with pytest.raises(RuntimeUnavailable):
+        Runtime(str(tmp_path))._restart_container()

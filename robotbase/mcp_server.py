@@ -105,7 +105,14 @@ def validate_robot() -> dict:
         for p in spec.parts:
             if p.use == "custom" and p.urdf and not _os.path.isabs(p.urdf):
                 p.urdf = _os.path.join(PROJECT_DIR, p.urdf)
-        return summarize(_vr(spec))
+        findings = _vr(spec)
+        # Also validate placement: a robot spawned inside a wall/obstacle is a silent physics trap.
+        world_yaml = _os.path.join(PROJECT_DIR, "world.yaml")
+        if _os.path.exists(world_yaml):
+            from robotbase.worldspec.schema import WorldSpec
+            from robotbase.worldspec.validate import validate_spawn
+            findings = findings + validate_spawn(WorldSpec.from_yaml(world_yaml))
+        return summarize(findings)
     except Exception as e:  # a compile error is itself a validation failure — report it
         return {"ok": False, "errors": 1, "warnings": 0,
                 "findings": [{"severity": "error", "code": "compile-error", "message": str(e)}]}

@@ -77,20 +77,24 @@ class Runtime:
         return self._compose("bash", "-lc", setup + cmd, detached=detached, timeout=timeout)
 
     def _restart_container(self) -> None:
-        # Restart the whole compose service for a pristine slate. This is the
-        # only reliable way to clear a prior sim: the `gz sim` server orphans
-        # itself and survives pkill, so stale spawned entities leak between
-        # runs. The mounted build/install volume persists across the restart.
+        # Recreate the compose service for a pristine slate. `up -d --force-recreate` both
+        # (a) clears a prior sim — the `gz sim` server orphans itself and survives pkill, so stale
+        # spawned entities/controllers leak between runs — and (b) recreates a container that was
+        # never started or was removed (a plain `restart` silently no-ops on a missing container,
+        # which used to leave a run driving nothing and reading the PREVIOUS run's metrics.json).
+        # The mounted build/install volume persists across the recreate.
         try:
-            subprocess.run(
-                ["docker", "compose", "restart", self.service],
+            proc = subprocess.run(
+                ["docker", "compose", "up", "-d", "--force-recreate", self.service],
                 cwd=self.project_dir,
                 capture_output=True,
                 text=True,
                 timeout=120,
             )
         except subprocess.TimeoutExpired as e:
-            raise RuntimeUnavailable("container restart timed out") from e
+            raise RuntimeUnavailable("container recreate timed out") from e
+        if proc.returncode != 0:
+            raise RuntimeUnavailable(f"could not start the sim container: {proc.stderr[-400:]}")
         time.sleep(3)
 
     @staticmethod
@@ -124,6 +128,12 @@ class Runtime:
         # Create the scratch dir host-side so it is owned by the host user, not
         # by root inside the container (which would block host-side writes).
         os.makedirs(os.path.join(self.project_dir, ".robotbase"), exist_ok=True)
+        # Invalidate the previous run's metrics so a failed/short run can't read stale numbers:
+        # collect_metrics returns empty Metrics() on a missing file, not last run's values.
+        try:
+            os.remove(os.path.join(self.project_dir, ".robotbase", "metrics.json"))
+        except OSError:
+            pass
         self._ros(
             "mkdir -p /workspace/.robotbase && "
             f"ros2 launch {self.launch_package} {self.launch_file} gui:={self.gui} "

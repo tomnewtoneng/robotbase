@@ -63,10 +63,16 @@ class WorldSpec(BaseModel):
     name: str = "world"
     ground: bool = True
     light: str | None = "sun"
+    spawn: list[float] = [0.0, 0.0]          # robot start [x, y] for a bare launch (scenarios override)
     obstacles: list[Obstacle] = []
     walls: list[Wall] = []
     goals: list[Goal] = []
     include: list[str] = []
+
+    @model_validator(mode="after")
+    def _check(self):
+        _check_len(self.spawn, 2, "spawn [x, y]")
+        return self
 
     @classmethod
     def from_yaml(cls, path: str) -> "WorldSpec":

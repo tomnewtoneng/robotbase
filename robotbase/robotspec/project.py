@@ -52,7 +52,9 @@ def generate_launch_description():
     spawn_name = _cfg.get("robot_name", "{package}")
     spawn_args = ["-name", spawn_name, "-string", robot_desc]
     if not _cfg.get("fixed_base", False):
-        spawn_args += ["-z", str(_cfg.get("spawn_z", 0.1))]
+        spawn_args += ["-x", str(_cfg.get("spawn_x", 0.0)),
+                       "-y", str(_cfg.get("spawn_y", 0.0)),
+                       "-z", str(_cfg.get("spawn_z", 0.1))]
 
     # Headless Gazebo server: -s server-only, -r run unpaused, software rendering.
     gz = ExecuteProcess(

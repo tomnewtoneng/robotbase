@@ -222,11 +222,12 @@ def _compile_specs(dest: str, snake: str) -> None:
     # topics (the contact sensor's /world/<name>/.../bumper/contact bridge) must match the actual
     # world, or gz publishes on /world/maze/... while the bridge listens on /world/warehouse/... —
     # /bumper stays silent and no_contact passes vacuously (a silent false PASS).
-    world_name = "warehouse"
+    world_name, spawn_xy = "warehouse", [0.0, 0.0]
     _wy = os.path.join(dest, "world.yaml")
     if os.path.exists(_wy):
         from robotbase.worldspec.schema import WorldSpec
-        world_name = WorldSpec.from_yaml(_wy).name
+        _world = WorldSpec.from_yaml(_wy)
+        world_name, spawn_xy = _world.name, _world.spawn
     compiled = compile_robot(spec, world_name)
 
     urdf_dir = os.path.join(dest, "src", f"{snake}_description", "urdf")
@@ -244,6 +245,7 @@ def _compile_specs(dest: str, snake: str) -> None:
         # topics + the interface contract), and the launch reads the world name (resolved above).
         with open(os.path.join(urdf_dir, "launch_config.json"), "w", encoding="utf-8") as fh:
             json.dump({"robot_name": compiled.name, "world_name": world_name,
+                       "spawn_x": spawn_xy[0], "spawn_y": spawn_xy[1],
                        "spawn_z": compiled.spawn_z,
                        "fixed_base": bool(compiled.manifest.get("fixed_base"))}, fh, indent=2)
         _sync_manifest(dest, compiled, world_name)
