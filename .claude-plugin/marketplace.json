@@ -1,0 +1,23 @@
+{
+  "name": "robotbase",
+  "description": "Robotbase — ROS 2 + Gazebo robot simulation for coding agents.",
+  "owner": {
+    "name": "tomnewtoneng",
+    "email": "tominator172@gmail.com"
+  },
+  "plugins": [
+    {
+      "name": "robotbase",
+      "description": "Give your coding agent a robot to build and test — ROS 2 + Gazebo sims, driven from the CLI. Bundles the robotbase skill (declarative build/test loop) + a /robotbase:new command.",
+      "version": "0.3.0",
+      "source": "./",
+      "author": {
+        "name": "Tom Newton",
+        "email": "tominator172@gmail.com"
+      },
+      "homepage": "https://github.com/tomnewtoneng/robotbase",
+      "license": "MIT",
+      "keywords": ["robotics", "ros2", "gazebo", "simulation", "agent"]
+    }
+  ]
+}

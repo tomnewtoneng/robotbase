@@ -52,6 +52,26 @@ Every run is an objective result (metrics + assertions) plus a recorded **MCAP e
 (Foxglove/Rerun-openable). Every action is a verb with a structured result, so a human and a coding
 agent drive it the same way.
 
+## Use with Claude Code (or any coding agent)
+
+Robotbase is CLI-first, so any shell-capable agent can drive it — no MCP required. Give your agent
+Robotbase in one step:
+
+```
+/plugin marketplace add tomnewtoneng/robotbase
+/plugin install robotbase@robotbase
+```
+
+That installs the **robotbase skill** — your agent now knows the whole declarative build/test loop
+from an empty session — plus a **`/robotbase:new`** command. Then just ask:
+
+> **/robotbase:new** navigate an S-shaped maze to the goal without touching a wall
+
+and it will `create` a project, author the world + controller, and iterate until a scenario passes.
+No install needed for the CLI itself — the skill uses `uvx --from robotbase-kit robotbase …` (or
+`pip install robotbase-kit`). You still need Docker running. Watch it build live with `robotbase
+studio`.
+
 ### Build your own robot and world
 
 The scaffold is only a starting point — the robot, its sensors, the world, and the tests are all
