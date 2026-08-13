@@ -210,8 +210,15 @@ class Runtime:
         return {"running": False}
 
     def up(self) -> dict:
-        # Bring the project to a ready state: start the container (building the
-        # shared image on first run) and build the ROS workspace.
+        # Bring the project to a ready state: start the container and build the ROS workspace.
+        # Prefer the published runtime image — pull it first (best-effort) so `up` uses it instead
+        # of building the multi-GB image locally; the compose `build:` fallback covers an offline or
+        # unpublished dev machine where the pull fails.
+        try:
+            subprocess.run(["docker", "compose", *self._compose_files(), "pull", "-q"],
+                           cwd=self.project_dir, capture_output=True, text=True, timeout=1800)
+        except Exception:  # noqa: BLE001 — pull is an optimization; `up` builds if it's unavailable
+            pass
         try:
             proc = subprocess.run(
                 ["docker", "compose", *self._compose_files(), "up", "-d"],
