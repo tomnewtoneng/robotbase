@@ -78,6 +78,29 @@ def _hint(msg: str) -> None:
     print(f"\n→ {msg}", file=sys.stderr)
 
 
+def _warn_if_invalid(project: str) -> None:
+    """Surface physics/placement errors (non-blocking) on build/up, so a bad robot or a robot
+    spawned in a wall doesn't only reveal itself later as a silently-misbehaving sim."""
+    try:
+        from robotbase.robotspec.schema import RobotSpec
+        from robotbase.robotspec.validate import validate_robot as _vr
+        from robotbase.worldspec.schema import WorldSpec
+        from robotbase.worldspec.validate import validate_spawn
+        findings = []
+        rp = os.path.join(project, "robot.yaml")
+        if os.path.exists(rp):
+            findings += _vr(RobotSpec.from_yaml(rp))
+        wp = os.path.join(project, "world.yaml")
+        if os.path.exists(wp):
+            findings += validate_spawn(WorldSpec.from_yaml(wp))
+        errors = [f for f in findings if f.severity == "error"]
+        if errors:
+            _hint("⚠ " + str(len(errors)) + " validation error(s) (run `robotbase validate` for all):\n    "
+                  + "\n    ".join(f"{f.code}: {f.message}" for f in errors[:3]))
+    except Exception:  # noqa: BLE001 — validation is advisory; never block build/up on it
+        pass
+
+
 def _scenarios(project: str) -> dict[str, str]:
     directory = os.path.join(project, "simulation", "scenarios")
     return {
@@ -119,12 +142,13 @@ def _build_parser() -> argparse.ArgumentParser:
     sub = parser.add_subparsers(dest="cmd")
 
     create = sub.add_parser("create", help="generate a new project")
-    create.add_argument("name")
+    create.add_argument("name", help="project name; created as a <name>/ subdirectory under --path")
     create.add_argument(
         "--template", default="differential-drive",
         help="robot template to use (see: robotbase templates)",
     )
-    create.add_argument("--path", default=".", help="parent directory for the new project")
+    create.add_argument("--path", default=".",
+                        help="parent directory for the new project (the project goes in <path>/<name>)")
     create.add_argument("--from-urdf", dest="from_urdf", default=None,
                         help="import an existing URDF verbatim instead of the template robot")
 
@@ -248,7 +272,8 @@ def main(argv=None) -> None:
             sys.exit(2)
         from_urdf = os.path.abspath(args.from_urdf) if args.from_urdf else None
         dest = create_project(args.name, args.path, tdir, from_urdf=from_urdf)
-        print(f"Created Robotbase project: {dest}  (template: {args.template})")
+        origin = f"imported from {from_urdf}" if from_urdf else f"template: {args.template}"
+        print(f"Created Robotbase project: {dest}  ({origin})")
         _hint(f"Next:  cd {dest} && robotbase up   (then: robotbase test --gui)")
         return
 
@@ -374,6 +399,7 @@ def main(argv=None) -> None:
     if args.cmd == "up":
         if recompile_project(project):
             _hint("Recompiled robot.yaml/world.yaml → URDF/SDF.")
+        _warn_if_invalid(project)
         result = rt.up()
         print(json.dumps(result, indent=2))
         if result.get("build", {}).get("passed"):
@@ -385,6 +411,7 @@ def main(argv=None) -> None:
     elif args.cmd == "build":
         if recompile_project(project):
             _hint("Recompiled robot.yaml/world.yaml → URDF/SDF.")
+        _warn_if_invalid(project)
         result = rt.build()
         print(json.dumps(result, indent=2))
         _hint(

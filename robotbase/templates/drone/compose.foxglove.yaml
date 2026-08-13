@@ -1,0 +1,7 @@
+# Overlay applied by `robotbase launch/test --gui` (docker compose -f compose.yaml -f
+# compose.foxglove.yaml) to publish the Foxglove bridge port only when a human wants the GUI —
+# so headless runs, and multiple projects at once, never fight over host port 8765.
+services:
+  ros:
+    ports:
+      - "8765:8765"

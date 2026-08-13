@@ -12,8 +12,6 @@ services:
       - LIBGL_ALWAYS_SOFTWARE=1
       - OGRE_RTT_MODE=Copy
     command: sleep infinity
-    # Publish the optional Foxglove bridge port. (Host networking isn't used:
-    # all ROS/Gazebo processes share one container, and Docker Desktop doesn't
-    # expose host-networked ports to localhost anyway.)
-    ports:
-      - "8765:8765"
+    # The Foxglove bridge port (8765) is intentionally NOT published here: headless runs don't need
+    # it, and a fixed host port collides when two projects (or a leftover container) run at once.
+    # `robotbase launch/test --gui` layers compose.foxglove.yaml to publish it on demand.

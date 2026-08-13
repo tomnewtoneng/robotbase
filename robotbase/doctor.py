@@ -118,6 +118,13 @@ def diagnose_environment(project_dir: str) -> dict:
     ]
     status = overall(checks)
     problems = [c for c in checks if c["status"] != "ok"]
-    summary = ("Everything looks good." if status == "ok"
-               else f"{len(problems)} thing(s) need attention — see the fixes above.")
+    # A container that isn't up / an image not yet built are the EXPECTED state before the first
+    # `robotbase up` — reassure rather than alarm when those are the only non-ok checks.
+    expected_pre_up = {"container", "runtime-image"}
+    if problems and all(c["check"] in expected_pre_up for c in problems):
+        summary = "Ready to go — run `robotbase up` to start the container (it builds on first run)."
+    elif status == "ok":
+        summary = "Everything looks good."
+    else:
+        summary = f"{len(problems)} thing(s) need attention — see the fixes above."
     return {"status": status, "summary": summary, "checks": checks}

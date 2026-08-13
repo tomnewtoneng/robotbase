@@ -57,6 +57,21 @@ class Runtime:
                 pass  # keep defaults on a malformed manifest
 
     # ---- low-level exec ------------------------------------------------
+    def _compose_files(self) -> list[str]:
+        """Extra `-f` args: layer the Foxglove overlay (which publishes host port 8765) ONLY when a
+        GUI was requested. Headless runs publish no host port, so two projects never collide on it."""
+        if self.gui == "foxglove" and os.path.exists(
+                os.path.join(self.project_dir, "compose.foxglove.yaml")):
+            return ["-f", "compose.yaml", "-f", "compose.foxglove.yaml"]
+        return []
+
+    @staticmethod
+    def _port_conflict_hint(stderr: str) -> str | None:
+        if "already allocated" in stderr or "port is already" in stderr or "address already in use" in stderr:
+            return ("host port 8765 is in use — another Robotbase project's GUI sim is running. "
+                    "Run `robotbase down` in that project (find it with `docker ps`), then retry.")
+        return None
+
     def _compose(self, *args: str, detached: bool = False, timeout: float = 60.0):
         flags = ["-dT"] if detached else ["-T"]
         cmd = ["docker", "compose", "exec", *flags, self.service, *args]
@@ -85,7 +100,7 @@ class Runtime:
         # The mounted build/install volume persists across the recreate.
         try:
             proc = subprocess.run(
-                ["docker", "compose", "up", "-d", "--force-recreate", self.service],
+                ["docker", "compose", *self._compose_files(), "up", "-d", "--force-recreate", self.service],
                 cwd=self.project_dir,
                 capture_output=True,
                 text=True,
@@ -94,7 +109,8 @@ class Runtime:
         except subprocess.TimeoutExpired as e:
             raise RuntimeUnavailable("container recreate timed out") from e
         if proc.returncode != 0:
-            raise RuntimeUnavailable(f"could not start the sim container: {proc.stderr[-400:]}")
+            raise RuntimeUnavailable(
+                self._port_conflict_hint(proc.stderr) or f"could not start the sim container: {proc.stderr[-400:]}")
         time.sleep(3)
 
     @staticmethod
@@ -198,7 +214,7 @@ class Runtime:
         # shared image on first run) and build the ROS workspace.
         try:
             proc = subprocess.run(
-                ["docker", "compose", "up", "-d"],
+                ["docker", "compose", *self._compose_files(), "up", "-d"],
                 cwd=self.project_dir,
                 capture_output=True,
                 text=True,
@@ -207,7 +223,8 @@ class Runtime:
         except subprocess.TimeoutExpired as e:
             raise RuntimeUnavailable("container startup timed out") from e
         if proc.returncode != 0:
-            raise RuntimeUnavailable(f"docker compose up failed: {proc.stderr[-400:]}")
+            raise RuntimeUnavailable(
+                self._port_conflict_hint(proc.stderr) or f"docker compose up failed: {proc.stderr[-400:]}")
         return {"container": "up", "build": self.build()}
 
     def down(self) -> dict:

@@ -7,8 +7,9 @@ and the test scenarios — plus the control logic you implement. You edit, compi
 by the structured result, never by inspection.
 
 This project ships a working differential-drive robot with a LiDAR, one **smoke-test scenario**
-(`drive-forward`), and a **minimal working controller** that passes it. Everything here is yours to
-change. Run `robotbase describe` for ground
+(`drive-forward`), and a **minimal working controller that already passes it** — run
+`robotbase up && robotbase test drive-forward` right now to see a green result before you change
+anything. Everything here is yours to change. Run `robotbase describe` for ground
 truth and `robotbase schema` for the full authoring format (robot / world / **scenario**). When a
 task is about a specific scenario, **read its YAML first** — it declares exactly what it checks; don't
 assume the task from file names.

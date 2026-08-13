@@ -43,6 +43,22 @@ def test_start_telemetry_passes_world_and_robot(tmp_path, monkeypatch):
     assert "--world maze" in calls[0] and "--robot my_robot" in calls[0]
 
 
+def test_compose_files_layers_foxglove_only_with_gui(tmp_path):
+    # Headless runs must publish NO host port (so two projects don't collide on 8765); the overlay
+    # that publishes it is layered only when a GUI is requested.
+    (tmp_path / "compose.foxglove.yaml").write_text("services: {}\n")
+    rt = Runtime(str(tmp_path))
+    assert rt._compose_files() == []
+    rt.gui = "foxglove"
+    assert rt._compose_files() == ["-f", "compose.yaml", "-f", "compose.foxglove.yaml"]
+
+
+def test_port_conflict_gives_friendly_hint():
+    assert "8765" in Runtime._port_conflict_hint(
+        "Bind for 0.0.0.0:8765 failed: port is already allocated")
+    assert Runtime._port_conflict_hint("some other error") is None
+
+
 def test_start_recorder_passes_world_and_robot(tmp_path, monkeypatch):
     # The metrics collector scores final pose/distance from the same ground-truth source, so it
     # needs the world + robot names too — otherwise robot_reached_pose is scored in the odom frame.

@@ -79,8 +79,11 @@ class WorldSpec(BaseModel):
 
     @classmethod
     def from_yaml(cls, path: str) -> "WorldSpec":
-        with open(path) as f:
-            data = yaml.safe_load(f) or {}
+        try:
+            with open(path) as f:
+                data = yaml.safe_load(f) or {}
+        except yaml.YAMLError as e:
+            raise WorldSpecError(f"{path} is not valid YAML: {e}") from e
         try:
             return cls.model_validate(data)
         except ValidationError as e:
