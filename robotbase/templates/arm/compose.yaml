@@ -3,7 +3,7 @@ services:
     # The shared runtime is a generic ROS 2 + Gazebo image (no project code baked in — the
     # workspace is mounted). `robotbase up` pulls the published image; `build: .` is the local
     # fallback (offline, or an unpublished dev build) from this project's Dockerfile.
-    image: toddyholiday/robotbase-runtime:latest
+    image: toddyhoilday/robotbase-runtime:latest
     build: .
     working_dir: /workspace
     volumes:
