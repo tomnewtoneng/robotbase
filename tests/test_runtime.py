@@ -29,3 +29,15 @@ def test_restart_container_raises_when_it_cannot_start(tmp_path, monkeypatch):
     monkeypatch.setattr("robotbase.runtime.time.sleep", lambda *_: None)
     with pytest.raises(RuntimeUnavailable):
         Runtime(str(tmp_path))._restart_container()
+
+
+def test_start_telemetry_passes_world_and_robot(tmp_path, monkeypatch):
+    # The telemetry node needs the world + robot names to read the ground-truth pose from gz
+    # (/odom drifts). Without them it would silently fall back to the wrong-frame /odom pose.
+    rt = Runtime(str(tmp_path))
+    rt.world, rt.robot_name = "maze", "my_robot"
+    monkeypatch.setattr(rt, "_ensure_telemetry", lambda: "/workspace/.robotbase/telemetry.py")
+    calls = []
+    monkeypatch.setattr(rt, "_ros", lambda cmd, **kw: calls.append(cmd))
+    rt.start_telemetry()
+    assert "--world maze" in calls[0] and "--robot my_robot" in calls[0]

@@ -410,7 +410,9 @@ class Runtime:
         # No pre-launch pkill here: this shell's own command line contains "telemetry.py", so a
         # `pkill -f telemetry.py` would kill this launcher before python3 starts. The container
         # restart on reset already clears the old node; stop_telemetry handles explicit teardown.
-        self._ros(f"python3 {node} > /workspace/.robotbase/telemetry.log 2>&1",
+        self._ros(f"python3 {node} --world {shlex.quote(self.world)} "
+                  f"--robot {shlex.quote(self.robot_name)} "
+                  "> /workspace/.robotbase/telemetry.log 2>&1",
                   detached=True, timeout=20)
 
     def stop_telemetry(self) -> None:
