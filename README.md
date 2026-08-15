@@ -49,6 +49,10 @@ robotbase up                   # start the container + build (first run builds t
 robotbase test drive-forward   # run a scenario; prints a structured pass/fail result
 ```
 
+![A robot navigating an S-shaped maze live in Robotbase Studio's 3D viewer, driven from the terminal.](https://raw.githubusercontent.com/getrobotbase/robotbase/main/assets/studio-maze-3d.gif)
+
+*Live in `robotbase studio`: a differential-drive robot navigating a maze in a real, headless ROS 2 + Gazebo sim — driven from the terminal, rendered from ground-truth pose.*
+
 Every run is an objective result (metrics + assertions) plus a recorded **MCAP episode**
 (Foxglove/Rerun-openable). Every action is a verb with a structured result, so a human and a coding
 agent drive it the same way.
