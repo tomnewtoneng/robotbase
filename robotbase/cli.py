@@ -606,16 +606,33 @@ def main(argv=None) -> None:
             sys.exit(2)
         scenario = Scenario.from_yaml(scenarios[args.scenario])
 
+        from robotbase.runtime import MetricsUnavailable
+
+        def _no_metrics(e: MetricsUnavailable):
+            # A run with no recorded metrics has no verdict — say so plainly rather than printing a
+            # confident 0-metric FAIL the sim never earned (evidence-not-vibes cuts both ways).
+            print(f"error: {e}")
+            _hint("No metrics were recorded, so this run has no verdict. Fix the cause above "
+                  "(often the container/sim isn't healthy — try `robotbase down && robotbase up`), "
+                  "then rerun.")
+            sys.exit(2)
+
         if args.trials > 1:  # domain randomization: robustness over N randomized trials
             from robotbase.evals import run_trials
 
-            report = run_trials(scenario, rt, run_dir, args.trials, args.seed)
+            try:
+                report = run_trials(scenario, rt, run_dir, args.trials, args.seed)
+            except MetricsUnavailable as e:
+                _no_metrics(e)
             print(json.dumps(report, indent=2))
             _hint(f"{args.scenario}: robustness {report['robustness']} "
                   f"({report['passed']}/{report['trials']} trials passed).")
             sys.exit(0 if report["passed"] == report["trials"] else 1)
 
-        result = run_scenario(scenario, rt, run_dir)
+        try:
+            result = run_scenario(scenario, rt, run_dir)
+        except MetricsUnavailable as e:
+            _no_metrics(e)
         print(json.dumps(result.model_dump(), indent=2))
         if result.passed:
             _hint(f"{args.scenario} passed ✓")

@@ -1,7 +1,7 @@
 """Unit tests for Runtime plumbing that doesn't need Docker (subprocess is mocked)."""
 import pytest
 
-from robotbase.runtime import Runtime, RuntimeUnavailable
+from robotbase.runtime import MetricsUnavailable, Runtime, RuntimeUnavailable
 
 
 class _Proc:
@@ -69,3 +69,66 @@ def test_start_recorder_passes_world_and_robot(tmp_path, monkeypatch):
     rt._start_recorder()
     assert "metrics_collector.py" in calls[0]
     assert "--world maze" in calls[0] and "--robot my_robot" in calls[0]
+
+
+def test_ensure_collector_materializes_packaged_script(tmp_path):
+    # The collector must be materialized from the PACKAGE (like telemetry/policy_runner), not run
+    # from the project's scripts/ copy. A project scaffolded from an older template carries a stale
+    # collector whose args mismatch the runtime; running that copy silently records nothing.
+    rt = Runtime(str(tmp_path))
+    path = rt._ensure_collector()
+    assert path == "/workspace/.robotbase/metrics_collector.py"
+    written = (tmp_path / ".robotbase" / "metrics_collector.py").read_text()
+    # the canonical collector accepts the runtime's contract args
+    assert '"--world"' in written and '"--robot"' in written
+
+
+def test_start_recorder_runs_the_ensured_canonical_collector(tmp_path, monkeypatch):
+    # _start_recorder must run the materialized canonical collector in .robotbase, never the
+    # project's (possibly stale) /workspace/scripts/metrics_collector.py.
+    rt = Runtime(str(tmp_path))
+    rt.world, rt.robot_name = "maze", "my_robot"
+    calls = []
+    monkeypatch.setattr(rt, "_ros", lambda cmd, **kw: calls.append(cmd))
+    rt._start_recorder()
+    assert "/workspace/.robotbase/metrics_collector.py" in calls[0]
+    assert "/workspace/scripts/metrics_collector.py" not in calls[0]
+
+
+def test_collect_metrics_raises_when_collector_produced_nothing(tmp_path, monkeypatch):
+    # A crashed/never-started collector leaves NO metrics.json. Returning an empty Metrics() would
+    # report a 0-distance FAIL as if the robot never moved — a result that lies. Fail loudly instead.
+    rt = Runtime(str(tmp_path))
+    rt.recording.enabled = False
+    monkeypatch.setattr(rt, "_ros", lambda *a, **k: _Proc())
+    monkeypatch.setattr("robotbase.runtime.time.sleep", lambda *_: None)
+    with pytest.raises(MetricsUnavailable):
+        rt.collect_metrics()
+
+
+def test_collect_metrics_reads_real_metrics(tmp_path, monkeypatch):
+    # The happy path: a collector that wrote metrics.json is read back into a Metrics.
+    rt = Runtime(str(tmp_path))
+    rt.recording.enabled = False
+    monkeypatch.setattr(rt, "_ros", lambda *a, **k: _Proc())
+    monkeypatch.setattr("robotbase.runtime.time.sleep", lambda *_: None)
+    rbdir = tmp_path / ".robotbase"
+    rbdir.mkdir()
+    (rbdir / "metrics.json").write_text(
+        '{"distance_travelled_metres": 3.02, "topic_message_counts": {"/scan": 307}}')
+    m = rt.collect_metrics()
+    assert m.distance_travelled_metres == 3.02
+    assert m.topic_message_counts == {"/scan": 307}
+
+
+def test_collect_metrics_raises_on_unreadable_metrics(tmp_path, monkeypatch):
+    # A truncated/corrupt metrics file is also untrustworthy — surface it, don't silently zero out.
+    rt = Runtime(str(tmp_path))
+    rt.recording.enabled = False
+    monkeypatch.setattr(rt, "_ros", lambda *a, **k: _Proc())
+    monkeypatch.setattr("robotbase.runtime.time.sleep", lambda *_: None)
+    rbdir = tmp_path / ".robotbase"
+    rbdir.mkdir()
+    (rbdir / "metrics.json").write_text("{not valid json")
+    with pytest.raises(MetricsUnavailable):
+        rt.collect_metrics()

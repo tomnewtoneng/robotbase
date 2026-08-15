@@ -27,6 +27,12 @@ class RuntimeUnavailable(RuntimeError):
     """The container or ROS graph could not be reached within the timeout."""
 
 
+class MetricsUnavailable(RuntimeUnavailable):
+    """The metrics collector left no readable output, so the run has no trustworthy numbers.
+    Raised instead of returning an all-zero Metrics() — a 0-distance result that the collector never
+    actually measured is a result that lies (it reads as "the robot didn't move / FAILED")."""
+
+
 class Runtime:
     def __init__(self, project_dir: str, service: str = "ros"):
         self.project_dir = project_dir
@@ -177,10 +183,17 @@ class Runtime:
     def _start_recorder(self) -> None:
         # Record metrics across the whole episode (from launch until collect).
         # The recorder resets its output file on startup, so no stale data leaks.
+        # Run the CANONICAL package-owned collector materialized into .robotbase (see
+        # _ensure_collector) — NOT the project's scripts/ copy, which drifts: a project scaffolded
+        # from an older template ships a collector whose args predate the runtime's --world/--robot
+        # contract, so argparse rejects them, the collector dies before subscribing, and every run
+        # silently records nothing. Capture its stderr so a future crash is diagnosable.
+        node = self._ensure_collector()
         self._ros(
-            "python3 /workspace/scripts/metrics_collector.py "
+            f"python3 {node} "
             "--output /workspace/.robotbase/metrics.json "
-            f"--world {shlex.quote(self.world)} --robot {shlex.quote(self.robot_name)}",
+            f"--world {shlex.quote(self.world)} --robot {shlex.quote(self.robot_name)} "
+            "> /workspace/.robotbase/collector.log 2>&1",
             detached=True,
             timeout=15,
         )
@@ -392,8 +405,18 @@ class Runtime:
         try:
             with open(path) as f:
                 return Metrics(**json.load(f))
-        except (OSError, json.JSONDecodeError, TypeError):
-            return Metrics()
+        except OSError:
+            # No metrics file at all: the collector never started (or crashed before its first
+            # write). Do NOT fall back to an empty Metrics() — that would score every assertion
+            # against zeros and report a confident FAIL the sim never actually earned.
+            raise MetricsUnavailable(
+                "the metrics collector produced no output — it failed to start, or the simulation "
+                "never became ready. Check .robotbase/collector.log and .robotbase/launch.log."
+            ) from None
+        except (json.JSONDecodeError, TypeError) as e:
+            raise MetricsUnavailable(
+                f"the metrics file was unreadable ({e}); see .robotbase/collector.log."
+            ) from e
 
     # ---- episode inspection (Phase 2) ---------------------------------
     def _ensure_reader(self) -> str:
@@ -417,6 +440,17 @@ class Runtime:
         with open(os.path.join(dst_dir, "policy_runner.py"), "w") as f:
             f.write(src)
         return "/workspace/.robotbase/policy_runner.py"
+
+    def _ensure_collector(self) -> str:
+        # Materialize the package-owned metrics collector into the mounted .robotbase and run that
+        # (same pattern as the policy runner / episode reader). The project's own scripts/ copy is
+        # never used, so its CLI contract can't drift from the runtime that launches it.
+        src = ir.files("robotbase.container").joinpath("metrics_collector.py").read_text()
+        dst_dir = os.path.join(self.project_dir, ".robotbase")
+        os.makedirs(dst_dir, exist_ok=True)
+        with open(os.path.join(dst_dir, "metrics_collector.py"), "w") as f:
+            f.write(src)
+        return "/workspace/.robotbase/metrics_collector.py"
 
     def _ensure_telemetry(self) -> str:
         # Materialize the Studio telemetry node into the mounted .robotbase (same pattern as the
