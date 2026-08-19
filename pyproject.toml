@@ -1,6 +1,6 @@
 [project]
 name = "robotbase-kit"
-version = "0.3.1"
+version = "0.3.2"
 description = "The batteries-included developer-experience layer for agent-driven robotics."
 readme = "README.md"
 license = "MIT"
